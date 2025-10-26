@@ -57,10 +57,11 @@ class LangGraphAgent:
         self.llm = ChatGoogleGenerativeAI(
             model=settings.LLM_MODEL,
             temperature=settings.DEFAULT_LLM_TEMPERATURE,
-            api_key=settings.LLM_API_KEY,
+            google_api_key=settings.LLM_API_KEY,
             max_tokens=settings.MAX_TOKENS,
             **self._get_model_kwargs(),
         ).bind_tools(tools)
+        print("LLM: ", self.llm)
         self.tools_by_name = {tool.name: tool for tool in tools}
         self._connection_pool: Optional[AsyncConnectionPool] = None
         self._graph: Optional[CompiledStateGraph] = None
@@ -143,7 +144,7 @@ class LangGraphAgent:
 
         for attempt in range(max_retries):
             try:
-                with llm_inference_duration_seconds.labels(model=self.llm.model_name).time():
+                with llm_inference_duration_seconds.labels(model=self.llm.model).time():
                     generated_state = {"messages": [await self.llm.ainvoke(dump_messages(messages))]}
                 logger.info(
                     "llm_response_generated",
@@ -167,11 +168,11 @@ class LangGraphAgent:
 
                 # In production, we might want to fall back to a more reliable model
                 if settings.ENVIRONMENT == Environment.PRODUCTION and attempt == max_retries - 2:
-                    fallback_model = "gpt-4o"
+                    fallback_model = "models/gemini-2.5-flash"
                     logger.warning(
                         "using_fallback_model", model=fallback_model, environment=settings.ENVIRONMENT.value
                     )
-                    self.llm.model_name = fallback_model
+                    self.llm.model = fallback_model
 
                 continue
 

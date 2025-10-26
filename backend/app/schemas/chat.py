@@ -72,7 +72,16 @@ class ChatResponse(BaseModel):
         messages: List of messages in the conversation.
     """
 
-    messages: List[Message] = Field(..., description="List of messages in the conversation")
+    messages: List[Message] = Field(default_factory=list, description="List of messages in the conversation")
+    # TODO: potentially make this sub model and DRY out this and the GraphState model
+    student_responses: List[str] = Field(default_factory=list, description="List of student responses")
+    inline_feedback: List[str] = Field(default_factory=list, description="List of inline feedback")
+    summary_feedback: str = Field(default="", description="The summary feedback for the student responses")
+    summary: str = Field(default="", description="The summary of the student responses")
+    answering_student: int = Field(default=0, description="The student number that is answering")
+    appropriate_response: bool = Field(default=False, description="Whether the response is appropriate")
+    appropriate_explanation: str = Field(default="", description="The explanation for why the response is appropriate")
+    learning_goals_achieved: bool = Field(default=False, description="Whether the learning goals were achieved")
 
 
 class StreamResponse(BaseModel):

@@ -28,6 +28,7 @@ from app.core.prompts.students import (
     INLINE_FEEDBACK_SYSTEM_INSTRUCTIONS,
 )
 
+
 class LangGraphBuilder:
     def __init__(self, llm: BaseChatModel, connection_pool: AsyncConnectionPool):
         self.llm = llm
@@ -83,14 +84,14 @@ class LangGraphBuilder:
         graph_builder.add_node("generate_summary_feedback", self._generate_summary_feedback)
 
         # Edges
-        graph_builder.add_edge(START, "check_appropriate_response") 
+        graph_builder.add_edge(START, "check_appropriate_response")
         # TODO: change this node to be HITL
         graph_builder.add_edge("gather_new_human_response", "check_appropriate_response")
 
         graph_builder.add_conditional_edges(
-            "check_appropriate_response", 
+            "check_appropriate_response",
             self._route_appropriate_response,
-            {True: "pick_answering_student", False: "gather_new_human_response"}
+            {True: "pick_answering_student", False: "gather_new_human_response"},
         )
 
         graph_builder.add_edge("pick_answering_student", "student_1_agent")
@@ -98,12 +99,14 @@ class LangGraphBuilder:
         graph_builder.add_edge("pick_answering_student", "student_3_agent")
         graph_builder.add_edge("pick_answering_student", "inline_feedback_agent")
 
-        graph_builder.add_edge(["student_1_agent", "student_2_agent", "student_3_agent", "inline_feedback_agent"], "additional_user_input")
+        graph_builder.add_edge(
+            ["student_1_agent", "student_2_agent", "student_3_agent", "inline_feedback_agent"], "additional_user_input"
+        )
         graph_builder.add_edge("additional_user_input", "check_if_goals_achieved")
         graph_builder.add_conditional_edges(
-            "check_if_goals_achieved", 
+            "check_if_goals_achieved",
             self._route_if_goals_achieved,
-            {True: "generate_summary_feedback", False: "check_appropriate_response"} 
+            {True: "generate_summary_feedback", False: "check_appropriate_response"},
         )
         # TODO: add edge to add_messages node
         graph_builder.add_edge("generate_summary_feedback", END)
@@ -113,10 +116,16 @@ class LangGraphBuilder:
         if last_message.role != "user":
             raise ValueError("Last message must be a user message")
 
-        return await self.llm.with_structured_output(GeneralResponse).ainvoke([
-            SystemMessage(content=STUDENT_1_SYSTEM_INSTRUCTIONS),
-            HumanMessage(content=last_message.content),
-        ]).llm_response
+        return (
+            await self.llm.with_structured_output(GeneralResponse)
+            .ainvoke(
+                [
+                    SystemMessage(content=STUDENT_1_SYSTEM_INSTRUCTIONS),
+                    HumanMessage(content=last_message.content),
+                ]
+            )
+            .llm_response
+        )
 
     async def _student_1_agent(self, state: GraphState) -> GraphState:
         return {"student_responses": [await self._student_agent(state, STUDENT_1_SYSTEM_INSTRUCTIONS)]}
@@ -128,7 +137,9 @@ class LangGraphBuilder:
         return {"student_responses": [await self._student_agent(state, STUDENT_3_SYSTEM_INSTRUCTIONS).llm_response]}
 
     async def _inline_feedback_agent(self, state: GraphState) -> GraphState:
-        return {"inline_feedback": [await self._student_agent(state, INLINE_FEEDBACK_SYSTEM_INSTRUCTIONS).llm_response]}
+        return {
+            "inline_feedback": [await self._student_agent(state, INLINE_FEEDBACK_SYSTEM_INSTRUCTIONS).llm_response]
+        }
 
     async def _additional_user_input(self, state: GraphState) -> GraphState:
         pass

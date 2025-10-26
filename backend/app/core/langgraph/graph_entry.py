@@ -222,9 +222,9 @@ class LangGraphAgent:
             Optional[CompiledStateGraph]: The configured LangGraph instance or None if init fails
         """
         if self._graph is None:
-           connection_pool = await self._get_connection_pool()
-           langgraph_builder = LangGraphBuilder(self.llm, connection_pool)
-           self._graph = langgraph_builder.build_graph()
+            connection_pool = await self._get_connection_pool()
+            langgraph_builder = LangGraphBuilder(self.llm, connection_pool)
+            self._graph = langgraph_builder.build_graph()
         return self._graph
 
     async def get_response(

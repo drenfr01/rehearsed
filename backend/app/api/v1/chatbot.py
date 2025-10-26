@@ -32,7 +32,6 @@ router = APIRouter()
 agent = LangGraphAgent()
 
 
-
 @router.post("/chat", response_model=ChatResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["chat"][0])
 async def chat(
@@ -60,11 +59,7 @@ async def chat(
             message_count=len(chat_request.messages),
         )
 
-       
-
-        result: ChatResponse = await agent.get_response(
-            chat_request.messages, session.id, user_id=session.user_id
-        )
+        result: ChatResponse = await agent.get_response(chat_request.messages, session.id, user_id=session.user_id)
 
         logger.info("chat_request_processed", session_id=session.id)
 
@@ -115,7 +110,7 @@ async def chat_stream(
                 with llm_stream_duration_seconds.labels(model=agent.llm.model_name).time():
                     async for chunk in agent.get_stream_response(
                         chat_request.messages, session.id, user_id=session.user_id
-                     ):
+                    ):
                         full_response += chunk
                         response = StreamResponse(content=chunk, done=False)
                         yield f"data: {json.dumps(response.model_dump())}\n\n"

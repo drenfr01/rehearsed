@@ -132,7 +132,7 @@ class LangGraphAgent:
         Returns:
             dict: Updated state with new messages.
         """
-        messages = prepare_messages(state.messages, self.llm, SYSTEM_PROMPT)
+        messages = prepare_messages(state.messages, self.llm)
 
         llm_calls_num = 0
 

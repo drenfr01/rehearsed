@@ -54,7 +54,7 @@ class GraphState(BaseModel):
                 raise ValueError("Session ID must contain only alphanumeric characters, underscores, and hyphens")
             return v
 
-class StudentResponse(BaseModel):
+class GeneralResponse(BaseModel):
     """Model for the student response."""
 
     llm_response: str = Field(..., description="The response from the LLM")

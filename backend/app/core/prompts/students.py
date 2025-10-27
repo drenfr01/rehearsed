@@ -1,4 +1,5 @@
 # TODO: load these up from database
+APPROPRIATE_RESPONSE_INSTRUCTIONS = """Decide if the human response is appropriate for a middle school teacher. Return a json object with a boolean field of whether it's appropriate or not and a string field of an explanation"""
 
 STUDENT_PROFILES = """
  <OBJECTIVE_AND_PERSONA>

@@ -1,16 +1,20 @@
 """This file contains the graph builder for the application."""
 
 from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import (
+    HumanMessage,
+    SystemMessage,
+)
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from langgraph.graph import CompiledStateGraph
 from langgraph.graph.state import (
-    START,
     END,
+    START,
+    CompiledStateGraph,
     StateGraph,
 )
-from langchain_core.messages import (
-    SystemMessage,
-    HumanMessage,
+from langgraph.types import (
+    Command,
+    interrupt,
 )
 from psycopg_pool import AsyncConnectionPool
 
@@ -19,13 +23,19 @@ from app.core.config import (
     settings,
 )
 from app.core.logging import logger
-from app.schemas.graph import GraphState, GeneralResponse, StudentChoiceResponse, AppropriateResponse
 from app.core.prompts.students import (
-    STUDENT_PROFILES,
+    APPROPRIATE_RESPONSE_INSTRUCTIONS,
+    INLINE_FEEDBACK_SYSTEM_INSTRUCTIONS,
     STUDENT_1_SYSTEM_INSTRUCTIONS,
     STUDENT_2_SYSTEM_INSTRUCTIONS,
     STUDENT_3_SYSTEM_INSTRUCTIONS,
-    INLINE_FEEDBACK_SYSTEM_INSTRUCTIONS,
+    STUDENT_PROFILES,
+)
+from app.schemas.graph import (
+    AppropriateResponse,
+    GeneralResponse,
+    GraphState,
+    StudentChoiceResponse,
 )
 
 
@@ -110,48 +120,113 @@ class LangGraphBuilder:
         )
         # TODO: add edge to add_messages node
         graph_builder.add_edge("generate_summary_feedback", END)
+        return graph_builder
 
-    async def _student_agent(self, state: GraphState, system_instructions: str) -> GraphState:
+    async def _check_appropriate_response(self, state: GraphState) -> GraphState:
+        """This node is used to check if the human response is appropriate for a teacher."""
         last_message = state.messages[-1]
-        if last_message.role != "user":
-            raise ValueError("Last message must be a user message")
 
-        return (
-            await self.llm.with_structured_output(GeneralResponse)
-            .ainvoke(
-                [
-                    SystemMessage(content=STUDENT_1_SYSTEM_INSTRUCTIONS),
-                    HumanMessage(content=last_message.content),
-                ]
-            )
-            .llm_response
-        )
+        if not isinstance(last_message, HumanMessage):
+            raise ValueError("last message should be the human message input")
 
-    async def _student_1_agent(self, state: GraphState) -> GraphState:
-        return {"student_responses": [await self._student_agent(state, STUDENT_1_SYSTEM_INSTRUCTIONS)]}
+        # print("Last message: ", last_message)
+        messages = [
+            SystemMessage(content=APPROPRIATE_RESPONSE_INSTRUCTIONS),
+            HumanMessage(content=last_message.content),
+        ]
 
-    async def _student_2_agent(self, state: GraphState) -> GraphState:
-        return {"student_responses": [await self._student_agent(state, STUDENT_2_SYSTEM_INSTRUCTIONS).llm_response]}
-
-    async def _student_3_agent(self, state: GraphState) -> GraphState:
-        return {"student_responses": [await self._student_agent(state, STUDENT_3_SYSTEM_INSTRUCTIONS).llm_response]}
-
-    async def _inline_feedback_agent(self, state: GraphState) -> GraphState:
+        structured_llm = self.llm.with_structured_output(AppropriateResponse)
+        response = structured_llm.invoke(messages)
+        # print("Appopriateness Response: ", response)
         return {
-            "inline_feedback": [await self._student_agent(state, INLINE_FEEDBACK_SYSTEM_INSTRUCTIONS).llm_response]
+            "appropriate_response": response.appropriate_response,
+            "appropriate_explanation": response.appropriate_explanation,
         }
 
+    async def _pick_answering_student(self, state: GraphState) -> GraphState:
+        """This node is used to pick the answering student based on the user message."""
+        system_message = [
+            SystemMessage(
+                content=f"Based on the user message {STUDENT_PROFILES}",
+            ),
+        ]
+
+        structured_llm = self.llm.with_structured_output(StudentChoiceResponse)
+        response = structured_llm.invoke(system_message + state.messages)
+        return {"answering_student": response.student_number}
+
+    async def _call_general_llm(self, state: GraphState, system_instructions: str) -> GraphState:
+        """Helper function to call the student / feedback agent."""
+        last_message = state.messages[-1]
+        if not isinstance(last_message, HumanMessage):
+            raise ValueError("last message should be the human message input")
+
+        response = self.llm.with_structured_output(GeneralResponse).invoke(
+            [
+                SystemMessage(content=STUDENT_1_SYSTEM_INSTRUCTIONS),
+                HumanMessage(content=last_message.content),
+            ]
+        )
+
+        return response.llm_response
+
+    async def _student_1_agent(self, state: GraphState) -> GraphState:
+        """This node is used to call the student 1 agent."""
+        return {"student_responses": [await self._call_general_llm(state, STUDENT_1_SYSTEM_INSTRUCTIONS)]}
+
+    async def _student_2_agent(self, state: GraphState) -> GraphState:
+        """This node is used to call the student 2 agent."""
+        return {"student_responses": [await self._call_general_llm(state, STUDENT_2_SYSTEM_INSTRUCTIONS)]}
+
+    async def _student_3_agent(self, state: GraphState) -> GraphState:
+        """This node is used to call the student 3 agent."""
+        return {"student_responses": [await self._call_general_llm(state, STUDENT_3_SYSTEM_INSTRUCTIONS)]}
+
+    async def _inline_feedback_agent(self, state: GraphState) -> GraphState:
+        """This node is used to call the inline feedback agent."""
+        return {"inline_feedback": [await self._call_general_llm(state, INLINE_FEEDBACK_SYSTEM_INSTRUCTIONS)]}
+
+    async def _gather_new_human_response(self, state: GraphState) -> GraphState:
+        """This node is used to gather a new human response after the student agents have responded."""
+        return {"summary": "New Human Response"}
+
     async def _additional_user_input(self, state: GraphState) -> GraphState:
-        pass
+        """This node is used to gather additional user input after the student agents have responded."""
+        result = interrupt(
+            # TODO: figure out how to restore correct student response
+            {
+                "task": "Review the student_response",
+                "student_response": state.student_responses[state.answering_student - 1],
+            }
+        )
+
+        # Update the state with the edited text
+        return {"messages": HumanMessage(content=result["human_response"])}
 
     async def _check_if_goals_achieved(self, state: GraphState) -> GraphState:
-        pass
+        """This node is used to check if the learning goals have been achieved."""
+        # TODO: update this with real prompt
+        return {"learning_goals_achieved": True}
 
     async def _generate_summary_feedback(self, state: GraphState) -> GraphState:
-        pass
+        """This node is used to generate a summary feedback for the entire conversation"""
+        # TODO: replace with real prompt
+        return {"summary_feedback": "Summary feedback"}
 
     async def _route_appropriate_response(self, state: GraphState) -> GraphState:
-        pass
+        """This node is used to route the conversation based on if the human response is appropriate.
+
+        Note: having a routing function + a node is redundant here. But I can't figure out how to make a conditional edge either route to
+        a single node or a list of nodes as two distinct paths. So this is a hack for now
+        """
+        if state.appropriate_response:
+            return True
+        else:
+            return False
 
     async def _route_if_goals_achieved(self, state: GraphState) -> GraphState:
-        pass
+        """This node is used to route the conversation based on if the learning goals have been achieved."""
+        if state.learning_goals_achieved:
+            return True
+        else:
+            return False

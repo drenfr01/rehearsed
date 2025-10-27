@@ -224,7 +224,7 @@ class LangGraphAgent:
         if self._graph is None:
             connection_pool = await self._get_connection_pool()
             langgraph_builder = LangGraphBuilder(self.llm, connection_pool)
-            self._graph = langgraph_builder.build_graph()
+            self._graph = await langgraph_builder.build_graph()
         return self._graph
 
     async def get_response(
@@ -259,7 +259,17 @@ class LangGraphAgent:
             response: GraphState = await self._graph.ainvoke(
                 {"messages": dump_messages(messages), "session_id": session_id}, config
             )
-            return ChatResponse(messages=self.__process_messages(response["messages"]))
+            return ChatResponse(
+                messages=self.__process_messages(response["messages"]),
+                student_responses=response.get("student_responses", []),
+                inline_feedback=response.get("inline_feedback", []),
+                summary_feedback=response.get("summary_feedback", ""),
+                summary=response.get("summary", ""),
+                answering_student=response.get("answering_student", 0),
+                appropriate_response=response.get("appropriate_response", False),
+                appropriate_explanation=response.get("appropriate_explanation", ""),
+                learning_goals_achieved=response.get("learning_goals_achieved", False),
+            )
         except Exception as e:
             logger.error(f"Error getting response: {str(e)}")
             raise e

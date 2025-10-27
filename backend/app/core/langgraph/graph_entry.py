@@ -18,7 +18,7 @@ from langchain_core.messages import (
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langfuse.langchain import CallbackHandler
 from langgraph.graph.state import CompiledStateGraph
-from langgraph.types import StateSnapshot
+from langgraph.types import StateSnapshot, Command
 from psycopg_pool import AsyncConnectionPool
 
 from app.core.config import (
@@ -227,6 +227,46 @@ class LangGraphAgent:
             self._graph = await langgraph_builder.build_graph()
         return self._graph
 
+    # TODO: can probably combine this with the get_response function
+    async def get_resumption_response(
+        self,
+        resumption_text: str,
+        session_id: str,
+        user_id: Optional[str] = None,
+    ) -> ChatResponse:
+        """Get a resumption response from the LLM."""
+        config = {
+            "configurable": {"thread_id": session_id},
+            "callbacks": [CallbackHandler()],
+            "metadata": {
+                "user_id": user_id,
+                "session_id": session_id,
+                "environment": settings.ENVIRONMENT.value,
+                "debug": False,
+            },
+        }
+        try:
+            response: GraphState = await self._graph.ainvoke(
+                Command(
+                    resume={"response": resumption_text}
+                ), config
+            )
+            return ChatResponse(
+                messages=self.__process_messages(response["messages"]),
+                student_responses=response.get("student_responses", []),
+                inline_feedback=response.get("inline_feedback", []),
+                summary_feedback=response.get("summary_feedback", ""),
+                summary=response.get("summary", ""),
+                answering_student=response.get("answering_student", 0),
+                appropriate_response=response.get("appropriate_response", False),
+                appropriate_explanation=response.get("appropriate_explanation", ""),
+                learning_goals_achieved=response.get("learning_goals_achieved", False),
+                interrupt=response.get("__interrupt__", []),
+            )
+        except Exception as e:
+            logger.error(f"Error getting response: {str(e)}")
+            raise e
+
     async def get_response(
         self,
         messages: list[Message],
@@ -269,6 +309,7 @@ class LangGraphAgent:
                 appropriate_response=response.get("appropriate_response", False),
                 appropriate_explanation=response.get("appropriate_explanation", ""),
                 learning_goals_achieved=response.get("learning_goals_achieved", False),
+                interrupt=response.get("__interrupt__", []),
             )
         except Exception as e:
             logger.error(f"Error getting response: {str(e)}")

@@ -163,7 +163,7 @@ class LangGraphBuilder:
 
         response = self.llm.with_structured_output(GeneralResponse).invoke(
             [
-                SystemMessage(content=STUDENT_1_SYSTEM_INSTRUCTIONS),
+                SystemMessage(content=system_instructions),
                 HumanMessage(content=last_message.content),
             ]
         )
@@ -201,7 +201,7 @@ class LangGraphBuilder:
         )
 
         # Update the state with the edited text
-        return {"messages": HumanMessage(content=result["human_response"])}
+        return {"messages": HumanMessage(content=result["response"])}
 
     async def _check_if_goals_achieved(self, state: GraphState) -> GraphState:
         """This node is used to check if the learning goals have been achieved."""

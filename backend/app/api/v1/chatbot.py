@@ -59,7 +59,11 @@ async def chat(
             message_count=len(chat_request.messages),
         )
 
-        result: ChatResponse = await agent.get_response(chat_request.messages, session.id, user_id=session.user_id)
+        if chat_request.is_resumption:
+            result: ChatResponse = await agent.get_resumption_response(chat_request.resumption_text, session.id, user_id=session.user_id)
+        else:
+            result: ChatResponse = await agent.get_response(chat_request.messages, session.id, user_id=session.user_id)
+        
 
         logger.info("chat_request_processed", session_id=session.id)
 

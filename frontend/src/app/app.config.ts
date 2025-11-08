@@ -6,7 +6,12 @@ import { HttpEvent, HttpHandlerFn, HttpRequest, provideHttpClient, withIntercept
 import { Observable } from 'rxjs';
 
 function bearerTokenInterceptor(request: HttpRequest<any>, next: HttpHandlerFn): Observable<HttpEvent<any>> {
-  const token = localStorage.getItem('token');
+  // For session creation endpoint, use the userToken instead of the current session token
+  const isSessionCreation = request.url.includes('/api/v1/auth/session') && request.method === 'POST';
+  const token = isSessionCreation 
+    ? localStorage.getItem('userToken') 
+    : localStorage.getItem('token');
+  
   if (token) {
     request = request.clone({
       setHeaders: { Authorization: `Bearer ${token}` }

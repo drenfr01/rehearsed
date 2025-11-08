@@ -77,12 +77,7 @@ export class AuthService {
   }
 
   createSession(): Observable<SessionResponse> {
-    const userToken = localStorage.getItem('userToken');
-    return this.httpClient.post<SessionResponse>(`${environment.baseUrl}/api/v1/auth/session`, {}, {
-      headers: {
-        'Authorization': `Bearer ${userToken}`
-      }
-    }).pipe(
+    return this.httpClient.post<SessionResponse>(`${environment.baseUrl}/api/v1/auth/session`, {}).pipe(
       tap((response: SessionResponse) => {
         this.storeSessionToken(response.token.access_token);
         this.chatGraph.resetGraphMessages();

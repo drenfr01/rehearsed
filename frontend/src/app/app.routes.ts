@@ -21,7 +21,7 @@ export const routes: Routes = [
             {
                 path: 'scenario-overview',
                 component: ScenarioOverview,
-            }
+            },
             {
                 path: 'classroom', 
                 component: Classroom,

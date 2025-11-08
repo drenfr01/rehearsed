@@ -7,8 +7,8 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CommonModule } from '@angular/common';
+import { LoadingSpinner } from '../../shared/loading-spinner/loading-spinner';
 
 @Component({
   selector: 'app-scenario-overview',
@@ -18,8 +18,8 @@ import { CommonModule } from '@angular/common';
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
-    MatProgressSpinnerModule,
     CommonModule,
+    LoadingSpinner,
   ],
   templateUrl: './scenario-overview.html',
   styleUrl: './scenario-overview.css',

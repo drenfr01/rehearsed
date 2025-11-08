@@ -42,8 +42,8 @@ export class ScenarioOverview {
   form = new FormGroup({
     scenarioId: new FormControl('', [Validators.required]),
     scenarioName: new FormControl('', [Validators.required]),
-    scenarioDescription: new FormControl('', [Validators.required]),
-    initialPrompt: new FormControl(this.scenarioOverviewValue, [Validators.required]),
+    scenarioDescription: new FormControl(this.scenarioOverviewValue, [Validators.required]),
+    initialPrompt: new FormControl('', [Validators.required]),
   });
 
   onSubmit() {
@@ -57,21 +57,22 @@ export class ScenarioOverview {
       content: this.form.value.initialPrompt!,
     }
     
-    try {
-      // Sending initial graph request, hence the true flag
-      this.chatGraphService.sendGraphRequest({
+    // Sending initial graph request, hence the true flag
+    const subscription = this.chatGraphService.sendGraphRequest({
         messages: [newMessage],
         is_resumption: false,
         resumption_text: '',
         resumption_approved: false,
-      }, true);
+    }, true).subscribe({
+      error: (error: Error) => {
+        this.error.set(error.message);
+        this.isLoading.set(false);
+      },
+      complete: () => {
+        this.isLoading.set(false);
+        this.router.navigate(['/app/classroom']);
+      },
+    });
       
-      // Navigate to the next page after successful submission
-      this.router.navigate(['/app/classroom']);
-    } catch (err) {
-      this.error.set('Failed to submit scenario. Please try again.');
-    } finally {
-      this.isLoading.set(false);
-    }
   }
 }

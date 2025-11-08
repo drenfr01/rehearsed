@@ -2,6 +2,26 @@
   position: sticky;
   top: 0;
   z-index: 1000;
+  background-color: rgba(var(--mat-sys-primary-rgb), 0.95) !important;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Fallback for browsers that don't support CSS custom properties with rgb */
+.app-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    var(--mat-sys-primary-container) 0%,
+    var(--mat-sys-primary) 100%
+  );
+  opacity: 0.95;
+  z-index: -1;
 }
 
 .header-container {
@@ -12,6 +32,8 @@
   max-width: 1400px;
   margin: 0 auto;
   padding: 0 1rem;
+  position: relative;
+  z-index: 1;
 }
 
 .nav-center {

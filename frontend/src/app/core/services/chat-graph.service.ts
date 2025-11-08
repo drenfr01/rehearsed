@@ -23,17 +23,23 @@ export class ChatGraphService {
     this.graphMessages.set([]);
   }
 
-  sendGraphRequest (chatRequest: ChatRequest): Observable<ChatResponse> {
-    let humanText = 'Approved';
-    if (chatRequest.resumption_text) {
-      humanText = chatRequest.resumption_text;
-    }
+  sendGraphRequest (chatRequest: ChatRequest, initialGraphRequest: boolean = false): Observable<ChatResponse> {
+    // If this is the initial graph request, we need to add the human message to the graph messages
+    // otherwise we will build a new resumption message 
+    if (initialGraphRequest) {
+      let humanText = 'Approved';
+      if (chatRequest.resumption_text) {
+        humanText = chatRequest.resumption_text;
+      }
 
-    const humanMessage: Message = {
-      role: 'user',
-      content: humanText
+      const humanMessage: Message = {
+        role: 'user',
+        content: humanText
+      }
+      this.graphMessages.set([...this.graphMessages(), humanMessage]);
+    } else {
+      this.graphMessages.set([...this.graphMessages(), ...chatRequest.messages]);
     }
-    this.graphMessages.set([...this.graphMessages(), humanMessage]);
 
     return this.httpClient.post<ChatResponse>(`${environment.baseUrl}/api/v1/chatbot/chat`, chatRequest).
     pipe(

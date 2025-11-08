@@ -1,5 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, DestroyRef, inject } from '@angular/core';
 import { FormControl, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { ChatGraphService } from '../../core/services/chat-graph.service';
+import { Message } from '../../core/models/chat-graph.model';
 
 @Component({
   selector: 'app-scenario-overview',
@@ -8,6 +11,9 @@ import { FormControl, FormGroup, Validators, ReactiveFormsModule } from '@angula
   styleUrl: './scenario-overview.css',
 })
 export class ScenarioOverview {
+  private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
+  private chatGraphService = inject(ChatGraphService);
   private scenarioOverviewValue = `You are an 8th grade mathematics teacher in the middle of a Systems of Linear Equations unit.
     You gave the following task to your students:
     Consider the equation y = 2/5 x + 1 . Write a second linear equation to create a system of linear equations with only one solution.
@@ -25,6 +31,16 @@ export class ScenarioOverview {
   });
 
   onSubmit() {
-    console.log(this.form.value);
+    const newMessage: Message = {
+      role: 'user',
+      content: this.form.value.initialPrompt!,
+    }
+    // Sending initial graph request, hence the true flag
+    this.chatGraphService.sendGraphRequest({
+      messages: [newMessage],
+      is_resumption: false,
+      resumption_text: '',
+      resumption_approved: false,
+    }, true);
   }
 }

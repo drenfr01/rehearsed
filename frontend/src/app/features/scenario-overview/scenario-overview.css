@@ -76,24 +76,32 @@
   width: 100%;
 }
 
+.inline-fields {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+  animation: slideIn 0.4s ease-out 0.1s backwards;
+}
+
+.scenario-id-field {
+  flex: 0 0 100px;
+  min-width: 80px;
+}
+
+.scenario-name-field {
+  flex: 1;
+}
+
 mat-form-field {
   animation: slideIn 0.4s ease-out backwards;
 }
 
-mat-form-field:nth-child(1) {
-  animation-delay: 0.1s;
-}
-
-mat-form-field:nth-child(2) {
+.full-width:nth-of-type(1) {
   animation-delay: 0.2s;
 }
 
-mat-form-field:nth-child(3) {
+.full-width:nth-of-type(2) {
   animation-delay: 0.3s;
-}
-
-mat-form-field:nth-child(4) {
-  animation-delay: 0.4s;
 }
 
 @keyframes slideIn {
@@ -209,6 +217,15 @@ mat-card-content {
   
   mat-card-content {
     padding: 0.75rem 1.5rem 1.5rem;
+  }
+
+  .inline-fields {
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .scenario-id-field {
+    flex: 1;
   }
 }
 

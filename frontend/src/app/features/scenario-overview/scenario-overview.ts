@@ -40,8 +40,8 @@ export class ScenarioOverview {
     You have decided to use the following student work to do this.`;
 
   form = new FormGroup({
-    scenarioId: new FormControl('', [Validators.required]),
-    scenarioName: new FormControl('', [Validators.required]),
+    scenarioId: new FormControl('1', [Validators.required]),
+    scenarioName: new FormControl('System of Linear Equations', [Validators.required]),
     scenarioDescription: new FormControl(this.scenarioOverviewValue, [Validators.required]),
     initialPrompt: new FormControl('', [Validators.required]),
   });

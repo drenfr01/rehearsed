@@ -1,12 +1,12 @@
 <div class="scenario-overview-container">
   <mat-card class="scenario-overview-card">
     <mat-card-header>
-      <mat-card-title>Create Your Scenario</mat-card-title>
+      <mat-card-title>Start Your Scenario</mat-card-title>
     </mat-card-header>
     <mat-card-content>
       <form [formGroup]="form" (ngSubmit)="onSubmit()" class="scenario-overview-form">
         <div class="inline-fields">
-          <mat-form-field appearance="outline" class="scenario-id-field">
+          <mat-form-field appearance="outline" class="scenario-id-field readonly-field">
             <mat-label>ID</mat-label>
             <input matInput type="text" formControlName="scenarioId" readonly />
             @if (form.get('scenarioId')?.hasError('required') && form.get('scenarioId')?.touched) {
@@ -14,7 +14,7 @@
             }
           </mat-form-field>
 
-          <mat-form-field appearance="outline" class="scenario-name-field">
+          <mat-form-field appearance="outline" class="scenario-name-field readonly-field">
             <mat-label>Scenario Name</mat-label>
             <input matInput type="text" formControlName="scenarioName" readonly />
             @if (form.get('scenarioName')?.hasError('required') && form.get('scenarioName')?.touched) {
@@ -23,18 +23,12 @@
           </mat-form-field>
         </div>
 
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Scenario Description</mat-label>
-          <textarea 
-            matInput 
-            formControlName="scenarioDescription" 
-            rows="10"
-            readonly
-          ></textarea>
-          @if (form.get('scenarioDescription')?.hasError('required') && form.get('scenarioDescription')?.touched) {
-            <mat-error>Scenario Description is required</mat-error>
-          }
-        </mat-form-field>
+        <div class="full-width">
+          <label class="description-label">Scenario Description</label>
+          <div class="description-content">
+            {{ form.get('scenarioDescription')?.value }}
+          </div>
+        </div>
 
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Initial Prompt</mat-label>

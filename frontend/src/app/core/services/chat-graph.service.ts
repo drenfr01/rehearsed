@@ -8,7 +8,7 @@ import { environment } from '../../../environments/environment';
 @Injectable({
   providedIn: 'root',
 })
-export class ChatGraph {
+export class ChatGraphService {
   private httpClient = inject(HttpClient);
   private graphMessages = signal<Message[]>([]);
 

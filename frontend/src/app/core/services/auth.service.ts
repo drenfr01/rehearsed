@@ -5,6 +5,7 @@ import { Observable, tap } from 'rxjs';
 import { SessionResponse } from '../models/login-session.model';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
+import { ChatGraphService } from './chat-graph.service';
 
 @Injectable({
   providedIn: 'root',
@@ -13,6 +14,7 @@ export class AuthService {
   private router = inject(Router);
   private httpClient = inject(HttpClient);
   private destroyRef = inject(DestroyRef);
+  private chatGraph = inject(ChatGraphService);
 
   private tokenSignal = signal<string | null>(localStorage.getItem('token'));
   isLoggedIn = computed(() => !!this.tokenSignal());
@@ -75,10 +77,15 @@ export class AuthService {
   }
 
   createSession(): Observable<SessionResponse> {
-    return this.httpClient.post<SessionResponse>(`${environment.baseUrl}/api/v1/auth/session`, {}).pipe(
+    const userToken = localStorage.getItem('userToken');
+    return this.httpClient.post<SessionResponse>(`${environment.baseUrl}/api/v1/auth/session`, {}, {
+      headers: {
+        'Authorization': `Bearer ${userToken}`
+      }
+    }).pipe(
       tap((response: SessionResponse) => {
         this.storeSessionToken(response.token.access_token);
-        // TODO: reset graph state messages
+        this.chatGraph.resetGraphMessages();
       })
     );
   }

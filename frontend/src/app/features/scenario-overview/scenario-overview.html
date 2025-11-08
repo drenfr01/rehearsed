@@ -1,1 +1,73 @@
-<p>scenario-overview works!</p>
+<div class="scenario-overview-container">
+  <mat-card class="scenario-overview-card">
+    <mat-card-header>
+      <mat-card-title>Create Your Scenario</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="scenario-overview-form">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Scenario ID</mat-label>
+          <input matInput type="text" formControlName="scenarioId" placeholder="Enter scenario ID" />
+          @if (form.get('scenarioId')?.hasError('required') && form.get('scenarioId')?.touched) {
+            <mat-error>Scenario ID is required</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Scenario Name</mat-label>
+          <input matInput type="text" formControlName="scenarioName" placeholder="Enter scenario name" />
+          @if (form.get('scenarioName')?.hasError('required') && form.get('scenarioName')?.touched) {
+            <mat-error>Scenario Name is required</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Scenario Description</mat-label>
+          <textarea 
+            matInput 
+            formControlName="scenarioDescription" 
+            placeholder="Enter scenario description"
+            rows="3"
+          ></textarea>
+          @if (form.get('scenarioDescription')?.hasError('required') && form.get('scenarioDescription')?.touched) {
+            <mat-error>Scenario Description is required</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Initial Prompt</mat-label>
+          <textarea 
+            matInput 
+            formControlName="initialPrompt" 
+            placeholder="Enter initial prompt"
+            rows="8"
+          ></textarea>
+          @if (form.get('initialPrompt')?.hasError('required') && form.get('initialPrompt')?.touched) {
+            <mat-error>Initial Prompt is required</mat-error>
+          }
+        </mat-form-field>
+
+        @if (error()) {
+          <div class="error-message">
+            {{ error() }}
+          </div>
+        }
+
+        <button
+          mat-raised-button
+          color="primary"
+          type="submit"
+          class="full-width submit-button"
+          [disabled]="form.invalid || isLoading()"
+        >
+          @if (isLoading()) {
+            <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
+            <span class="button-text">Submitting...</span>
+          } @else {
+            <span class="button-text">Start Scenario</span>
+          }
+        </button>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>

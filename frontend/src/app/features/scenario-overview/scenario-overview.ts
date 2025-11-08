@@ -1,12 +1,26 @@
-import { Component, DestroyRef, inject } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ChatGraphService } from '../../core/services/chat-graph.service';
 import { Message } from '../../core/models/chat-graph.model';
+import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-scenario-overview',
-  imports: [ReactiveFormsModule],
+  imports: [
+    ReactiveFormsModule,
+    MatCardModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatProgressSpinnerModule,
+    CommonModule,
+  ],
   templateUrl: './scenario-overview.html',
   styleUrl: './scenario-overview.css',
 })
@@ -14,6 +28,8 @@ export class ScenarioOverview {
   private router = inject(Router);
   private destroyRef = inject(DestroyRef);
   private chatGraphService = inject(ChatGraphService);
+  protected isLoading = signal(false);
+  protected error = signal<string>('');
   private scenarioOverviewValue = `You are an 8th grade mathematics teacher in the middle of a Systems of Linear Equations unit.
     You gave the following task to your students:
     Consider the equation y = 2/5 x + 1 . Write a second linear equation to create a system of linear equations with only one solution.
@@ -31,16 +47,31 @@ export class ScenarioOverview {
   });
 
   onSubmit() {
+    if (this.form.invalid) return;
+    
+    this.isLoading.set(true);
+    this.error.set('');
+    
     const newMessage: Message = {
       role: 'user',
       content: this.form.value.initialPrompt!,
     }
-    // Sending initial graph request, hence the true flag
-    this.chatGraphService.sendGraphRequest({
-      messages: [newMessage],
-      is_resumption: false,
-      resumption_text: '',
-      resumption_approved: false,
-    }, true);
+    
+    try {
+      // Sending initial graph request, hence the true flag
+      this.chatGraphService.sendGraphRequest({
+        messages: [newMessage],
+        is_resumption: false,
+        resumption_text: '',
+        resumption_approved: false,
+      }, true);
+      
+      // Navigate to the next page after successful submission
+      this.router.navigate(['/app/classroom']);
+    } catch (err) {
+      this.error.set('Failed to submit scenario. Please try again.');
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 }

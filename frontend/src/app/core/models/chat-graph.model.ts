@@ -22,12 +22,7 @@ export interface ChatRequest {
 
 export interface ChatResponse {
     messages: Message[];
-    studentResponses: string[];
-    inlineFeedback: string[];
-    summaryFeedback: string;
-    summary: string;
-    answeringStudent: number;
-    appropriateResponse: boolean;
-    appropriateExplanation: string;
-    learningGoalsAchieved: boolean;
+    interrupt_task: string;
+    interrupt_value: string;
+    interrupt_value_type: 'text' | 'image' | 'audio' | 'video';
 }

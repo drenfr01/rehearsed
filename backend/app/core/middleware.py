@@ -8,9 +8,9 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
 from app.core.metrics import (
-    http_requests_total,
-    http_request_duration_seconds,
     db_connections,
+    http_request_duration_seconds,
+    http_requests_total,
 )
 
 

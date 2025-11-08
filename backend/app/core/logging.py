@@ -133,7 +133,8 @@ def setup_logging() -> None:
     # Get shared processors
     shared_processors = get_structlog_processors(
         # Include detailed file info only in development and test
-        include_file_info=settings.ENVIRONMENT in [Environment.DEVELOPMENT, Environment.TEST]
+        include_file_info=settings.ENVIRONMENT
+        in [Environment.DEVELOPMENT, Environment.TEST]
     )
 
     # Configure standard logging

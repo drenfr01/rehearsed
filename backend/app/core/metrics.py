@@ -3,8 +3,15 @@
 This module sets up and configures Prometheus metrics for monitoring the application.
 """
 
-from prometheus_client import Counter, Histogram, Gauge
-from starlette_prometheus import metrics, PrometheusMiddleware
+from prometheus_client import (
+    Counter,
+    Gauge,
+    Histogram,
+)
+from starlette_prometheus import (
+    PrometheusMiddleware,
+    metrics,
+)
 
 # Request metrics
 http_requests_total = Counter("http_requests_total", "Total number of HTTP requests", ["method", "endpoint", "status"])
@@ -23,16 +30,15 @@ llm_inference_duration_seconds = Histogram(
     "llm_inference_duration_seconds",
     "Time spent processing LLM inference",
     ["model"],
-    buckets=[0.1, 0.3, 0.5, 1.0, 2.0, 5.0]
+    buckets=[0.1, 0.3, 0.5, 1.0, 2.0, 5.0],
 )
-
 
 
 llm_stream_duration_seconds = Histogram(
     "llm_stream_duration_seconds",
     "Time spent processing LLM stream inference",
     ["model"],
-    buckets=[0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
+    buckets=[0.1, 0.5, 1.0, 2.0, 5.0, 10.0],
 )
 
 

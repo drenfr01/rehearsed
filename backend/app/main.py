@@ -27,6 +27,7 @@ from app.core.limiter import limiter
 from app.core.logging import logger
 from app.core.metrics import setup_metrics
 from app.core.middleware import MetricsMiddleware
+from app.seed_data.scenario_seed_data import seed_scenario_data
 from app.services.database import database_service
 
 # Load environment variables
@@ -115,6 +116,9 @@ app.add_middleware(
 
 # Include API router
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# Populate seed data
+seed_scenario_data()
 
 
 @app.get("/")

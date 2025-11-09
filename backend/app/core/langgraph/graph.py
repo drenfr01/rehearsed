@@ -206,7 +206,7 @@ class LangGraphBuilder:
     async def _check_if_goals_achieved(self, state: GraphState) -> GraphState:
         """This node is used to check if the learning goals have been achieved."""
         # TODO: update this with real prompt
-        return {"learning_goals_achieved": True}
+        return {"learning_goals_achieved": False}
 
     async def _generate_summary_feedback(self, state: GraphState) -> GraphState:
         """This node is used to generate a summary feedback for the entire conversation"""

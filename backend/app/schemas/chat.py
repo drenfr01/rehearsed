@@ -61,8 +61,7 @@ class ChatRequest(BaseModel):
 
     messages: List[Message] = Field(
         ...,
-        description="List of messages in the conversation",
-        min_length=1,
+        description="List of messages in the conversation"
     )
     is_resumption: bool = Field(default=False, description="Whether the conversation is being resumed")
     resumption_text: str = Field(default="", description="The text to resume the conversation")

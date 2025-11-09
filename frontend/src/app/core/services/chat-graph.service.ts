@@ -46,7 +46,8 @@ export class ChatGraphService {
         if (response.interrupt_task) {
         const responseMessage: Message = {
           role: 'assistant',
-          content: response.interrupt_value
+          content: response.interrupt_value,
+          student_number: response.answering_student
         }
         this.interruptionContent.set(response.interrupt_value);
         this.interruptionType.set(response.interrupt_value_type);

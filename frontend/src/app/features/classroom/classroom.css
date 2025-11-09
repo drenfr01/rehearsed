@@ -202,6 +202,21 @@ mat-card-content {
   color: var(--mat-sys-on-secondary);
 }
 
+.icon-label-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.student-label {
+  font-style: italic;
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+  text-align: center;
+  line-height: 1;
+}
+
 .no-messages {
   display: flex;
   flex-direction: column;

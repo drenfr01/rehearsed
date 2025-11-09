@@ -232,7 +232,8 @@ class LangGraphAgent:
         chat_response = ChatResponse(
             messages = self.__process_messages(response['messages']),
             inline_feedback = response.get('inline_feedback', []),
-            student_responses = response.get('student_responses', [])
+            student_responses = response.get('student_responses', []),
+            answering_student = response.get('answering_student', 0),
         )
         if response_interrupt:
             interrupt_value = response_interrupt[0].value

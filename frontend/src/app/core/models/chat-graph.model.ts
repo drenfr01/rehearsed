@@ -3,6 +3,7 @@ export type role = "user" | "assistant"
 export interface Message {
     role: role;
     content: string;
+    student_number?: number;
 }
 
 export interface ChatRequest {

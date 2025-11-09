@@ -272,6 +272,7 @@ class DatabaseService:
             statement = select(Scenario).where(Scenario.id == scenario_id)
             scenario = session.exec(statement).one()
             self.current_scenario = scenario
+            return scenario
 
     def get_all_scenarios(self) -> list[Scenario]:
         with Session(self.engine) as session:

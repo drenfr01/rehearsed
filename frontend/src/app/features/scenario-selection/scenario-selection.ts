@@ -9,6 +9,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { CommonModule } from '@angular/common';
 import { LoadingSpinner } from '../../shared/loading-spinner/loading-spinner';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-scenario-selection',
@@ -31,7 +32,7 @@ export class ScenarioSelection {
   private scenarioService = inject(ScenarioService);
   protected scenarios = this.scenarioService.loadedScenarios;
   private destroyRef = inject(DestroyRef);
-
+  private router = inject(Router);
   form = new FormGroup({
     selectedScenario: new FormControl<Scenario | null>(null, [Validators.required]),
   });
@@ -62,7 +63,21 @@ export class ScenarioSelection {
     
     const selectedScenario = this.form.value.selectedScenario;
     if (selectedScenario) {
-      console.log('Selected Scenario ID:', selectedScenario.id);
+      this.isLoading.set(true)
+      const subscription = this.scenarioService.setCurrentScenario(selectedScenario.id).subscribe({
+        error: (error: Error) => {
+          this.error.set(error.message);
+          this.isLoading.set(false);
+        },
+        complete: () => {
+          this.isLoading.set(false);
+          this.router.navigate(['/app/scenario-overview'], { replaceUrl: true });
+        },
+      });
+
+      this.destroyRef.onDestroy(() => {
+        subscription.unsubscribe();
+      });
     }
   }
 }

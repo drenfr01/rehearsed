@@ -33,7 +33,7 @@ from app.models.scenario import Scenario
 router = APIRouter()
 database_service = DatabaseService()
 
-@router.post("/get-all", response_model=List[Scenario])
+@router.get("/get-all", response_model=List[Scenario])
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_all_scenarios"][0])
 async def get_all_scenarios(
     request: Request,

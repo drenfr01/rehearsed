@@ -1,1 +1,72 @@
-<p>scenario-selection works!</p>
+<div class="scenario-selection-container">
+  <mat-card class="scenario-selection-card">
+    <mat-card-header>
+      <mat-card-title>Select Your Scenario</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      @if (isLoading()) {
+        <div class="loading-container">
+          <app-loading-spinner></app-loading-spinner>
+          <p class="loading-text">Loading scenarios...</p>
+        </div>
+      } @else {
+        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="scenario-selection-form">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Select Scenario</mat-label>
+            <mat-select formControlName="selectedScenario">
+              @for (scenario of scenarios(); track scenario.id) {
+                <mat-option [value]="scenario">{{ scenario.name }}</mat-option>
+              }
+            </mat-select>
+            @if (form.get('selectedScenario')?.hasError('required') && form.get('selectedScenario')?.touched) {
+              <mat-error>Please select a scenario</mat-error>
+            }
+          </mat-form-field>
+
+          @if (selectedScenario) {
+            <div class="scenario-details">
+              <div class="inline-fields">
+                <mat-form-field appearance="outline" class="scenario-id-field readonly-field">
+                  <mat-label>ID</mat-label>
+                  <input matInput type="text" [value]="selectedScenario.id" readonly />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="scenario-name-field readonly-field">
+                  <mat-label>Scenario Name</mat-label>
+                  <input matInput type="text" [value]="selectedScenario.name" readonly />
+                </mat-form-field>
+              </div>
+
+              <div class="full-width">
+                <label class="field-label">Overview</label>
+                <div class="field-content">
+                  {{ selectedScenario.overview }}
+                </div>
+              </div>
+            </div>
+          }
+
+          @if (error()) {
+            <div class="error-message">
+              {{ error() }}
+            </div>
+          }
+
+          <button
+            mat-raised-button
+            color="primary"
+            type="submit"
+            class="full-width submit-button"
+            [disabled]="form.invalid || isLoading()"
+          >
+            @if (isLoading()) {
+              <span class="button-text">Submitting...</span>
+            } @else {
+              <span class="button-text">Select Scenario</span>
+            }
+          </button>
+        </form>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

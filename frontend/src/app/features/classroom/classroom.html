@@ -1,0 +1,107 @@
+<div class="classroom-container">
+  <mat-card class="classroom-card">
+    <mat-card-header>
+      <mat-card-title>Classroom Discussion</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="two-column-layout">
+        <!-- Left Column: Messages and Chat Input -->
+        <div class="messages-column">
+          <div class="messages-container">
+            @for (message of messages(); track $index) {
+              <div class="message-wrapper" [class.user-message]="message.role === 'user'" [class.assistant-message]="message.role === 'assistant'">
+                @if (message.role === 'user') {
+                  <div class="message-content-wrapper">
+                    <mat-icon class="message-icon user-icon">school</mat-icon>
+                    <div class="message-bubble user-bubble">
+                      {{ message.content }}
+                    </div>
+                  </div>
+                } @else {
+                  <div class="message-content-wrapper">
+                    <div class="message-bubble assistant-bubble">
+                      {{ message.content }}
+                    </div>
+                    <div class="icon-label-wrapper">
+                      <mat-icon class="message-icon assistant-icon">smart_toy</mat-icon>
+                      <div class="student-label">Student {{ message.student_number }}</div>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+            @if (messages().length === 0) {
+              <div class="no-messages">
+                <mat-icon class="empty-icon">chat_bubble_outline</mat-icon>
+                <p>No messages yet. Start the conversation!</p>
+              </div>
+            }
+          </div>
+
+          <!-- Chat Input Area -->
+          <div class="chat-input-area">
+            @if (error()) {
+              <div class="error-message">
+                {{ error() }}
+              </div>
+            }
+            
+            <div class="input-controls">
+              <mat-form-field appearance="outline" class="chat-input-field">
+                <mat-label>Your message</mat-label>
+                <textarea 
+                  matInput 
+                  [(ngModel)]="userInput"
+                  [value]="userInput()"
+                  (ngModelChange)="userInput.set($event)"
+                  placeholder="Type your message here..."
+                  rows="3"
+                  [disabled]="isLoading()"
+                ></textarea>
+              </mat-form-field>
+              
+              <button
+                mat-raised-button
+                color="primary"
+                type="button"
+                (click)="onSubmit()"
+                [disabled]="!userInput() || isLoading()"
+                class="submit-button"
+              >
+                @if (isLoading()) {
+                  <app-loading-spinner></app-loading-spinner>
+                  <span>Sending...</span>
+                } @else {
+                  <span>Submit</span>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Inline Feedback -->
+        <div class="feedback-column">
+          <div class="feedback-header">
+            <mat-icon class="feedback-icon">feedback</mat-icon>
+            <h3>Inline Feedback</h3>
+          </div>
+          <div class="feedback-content">
+            @if (inlineFeedback().length > 0) {
+              @for (feedback of inlineFeedback(); track $index) {
+                <div class="feedback-item">
+                  <div class="feedback-number">{{ $index + 1 }}</div>
+                  <div class="feedback-text">{{ feedback }}</div>
+                </div>
+              }
+            } @else {
+              <div class="no-feedback">
+                <mat-icon class="empty-feedback-icon">info_outline</mat-icon>
+                <p>No feedback available yet.</p>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

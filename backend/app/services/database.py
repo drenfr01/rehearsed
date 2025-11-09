@@ -21,7 +21,9 @@ from app.core.config import (
 )
 from app.core.logging import logger
 from app.models.session import Session as ChatSession
+# Models: note, you need to import models here so they are created by create_all below
 from app.models.user import User
+from app.models.scenario import Scenario
 
 
 class DatabaseService:
@@ -63,6 +65,10 @@ class DatabaseService:
                 pool_size=pool_size,
                 max_overflow=max_overflow,
             )
+
+            # TODO: potentially move this to a separate service
+            self.current_scenario: Scenario | None = None
+
         except SQLAlchemyError as e:
             logger.error("database_initialization_error", error=str(e), environment=settings.ENVIRONMENT.value)
             # In production, don't raise - allow app to start even with DB issues
@@ -246,6 +252,33 @@ class DatabaseService:
             logger.error("database_health_check_failed", error=str(e))
             return False
 
+    def get_current_scenario(self) -> Scenario:
+        """
+        Returns the scenario data for the currently set scenario
+
+        Returns:
+            The scenario data for the current scenario
+        """
+        return self.scenario
+
+    def set_scenario(self, scenario_id: int) -> None:
+        """
+        Sets the scenario data for the currently set scenario
+
+        Args:
+            scenario: The scenario to set
+        """
+        with Session(self.engine) as session:
+            statement = select(Scenario).where(Scenario.id == scenario_id)
+            scenario = session.exec(statement).one()
+            self.current_scenario = scenario
+            return scenario
+
+    def get_all_scenarios(self) -> list[Scenario]:
+        with Session(self.engine) as session:
+            statement = select(Scenario)
+            scenarios = session.exec(statement).all()
+            return scenarios
 
 # Create a singleton instance
 database_service = DatabaseService()

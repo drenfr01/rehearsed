@@ -227,6 +227,21 @@ class LangGraphAgent:
             self._graph = await langgraph_builder.build_graph()
         return self._graph
 
+    def _hydrate_chat_response(self, response: GraphState) -> ChatResponse:
+        response_interrupt = response.get('__interrupt__')
+        chat_response = ChatResponse(
+            messages = self.__process_messages(response['messages']),
+            inline_feedback = response.get('inline_feedback', []),
+            student_responses = response.get('student_responses', []),
+            answering_student = response.get('answering_student', 0),
+        )
+        if response_interrupt:
+            interrupt_value = response_interrupt[0].value
+            chat_response.interrupt_task = interrupt_value.get('task', '')
+            chat_response.interrupt_value = interrupt_value.get('student_response', '')
+
+        return chat_response
+
     # TODO: can probably combine this with the get_response function
     async def get_resumption_response(
         self,
@@ -251,18 +266,7 @@ class LangGraphAgent:
                     resume={"response": resumption_text}
                 ), config
             )
-            return ChatResponse(
-                messages=self.__process_messages(response["messages"]),
-                student_responses=response.get("student_responses", []),
-                inline_feedback=response.get("inline_feedback", []),
-                summary_feedback=response.get("summary_feedback", ""),
-                summary=response.get("summary", ""),
-                answering_student=response.get("answering_student", 0),
-                appropriate_response=response.get("appropriate_response", False),
-                appropriate_explanation=response.get("appropriate_explanation", ""),
-                learning_goals_achieved=response.get("learning_goals_achieved", False),
-                interrupt=response.get("__interrupt__", []),
-            )
+            return self._hydrate_chat_response(response)
         except Exception as e:
             logger.error(f"Error getting response: {str(e)}")
             raise e
@@ -299,18 +303,7 @@ class LangGraphAgent:
             response: GraphState = await self._graph.ainvoke(
                 {"messages": dump_messages(messages), "session_id": session_id}, config
             )
-            return ChatResponse(
-                messages=self.__process_messages(response["messages"]),
-                student_responses=response.get("student_responses", []),
-                inline_feedback=response.get("inline_feedback", []),
-                summary_feedback=response.get("summary_feedback", ""),
-                summary=response.get("summary", ""),
-                answering_student=response.get("answering_student", 0),
-                appropriate_response=response.get("appropriate_response", False),
-                appropriate_explanation=response.get("appropriate_explanation", ""),
-                learning_goals_achieved=response.get("learning_goals_achieved", False),
-                interrupt=response.get("__interrupt__", []),
-            )
+            return self._hydrate_chat_response(response)
         except Exception as e:
             logger.error(f"Error getting response: {str(e)}")
             raise e

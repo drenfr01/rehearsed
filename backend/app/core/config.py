@@ -179,6 +179,9 @@ class Settings:
 
         # Rate limit endpoints defaults
         default_endpoints = {
+            "get_all_scenarios": ["10 per minute"],
+            "get_scenario_by_id": ["10 per minute"],
+            "set_scenario_by_id": ["10 per minute"],
             "chat": ["30 per minute"],
             "chat_stream": ["20 per minute"],
             "messages": ["50 per minute"],

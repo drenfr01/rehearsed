@@ -1,0 +1,68 @@
+<div class="scenario-overview-container">
+  <mat-card class="scenario-overview-card">
+    <mat-card-header>
+      <mat-card-title>Start Your Scenario</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="scenario-overview-form">
+        <div class="inline-fields">
+          <mat-form-field appearance="outline" class="scenario-id-field readonly-field">
+            <mat-label>ID</mat-label>
+            <input matInput type="text" formControlName="scenarioId" readonly />
+            @if (form.get('scenarioId')?.hasError('required') && form.get('scenarioId')?.touched) {
+              <mat-error>Scenario ID is required</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="scenario-name-field readonly-field">
+            <mat-label>Scenario Name</mat-label>
+            <input matInput type="text" formControlName="scenarioName" readonly />
+            @if (form.get('scenarioName')?.hasError('required') && form.get('scenarioName')?.touched) {
+              <mat-error>Scenario Name is required</mat-error>
+            }
+          </mat-form-field>
+        </div>
+
+        <div class="full-width">
+          <label class="description-label">Scenario Description</label>
+          <div class="description-content">
+            {{ form.get('scenarioDescription')?.value }}
+          </div>
+        </div>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Initial Prompt</mat-label>
+          <textarea 
+            matInput 
+            formControlName="initialPrompt" 
+            placeholder="Enter initial prompt"
+            rows="8"
+          ></textarea>
+          @if (form.get('initialPrompt')?.hasError('required') && form.get('initialPrompt')?.touched) {
+            <mat-error>Initial Prompt is required</mat-error>
+          }
+        </mat-form-field>
+
+        @if (error()) {
+          <div class="error-message">
+            {{ error() }}
+          </div>
+        }
+
+        <button
+          mat-raised-button
+          color="primary"
+          type="submit"
+          class="full-width submit-button"
+          [disabled]="form.invalid || isLoading()"
+        >
+          @if (isLoading()) {
+            <span class="button-text">Submitting...</span>
+          } @else {
+            <span class="button-text">Start Scenario</span>
+          }
+        </button>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>

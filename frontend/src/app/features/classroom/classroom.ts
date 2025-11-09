@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { LoadingSpinner } from '../../shared/loading-spinner/loading-spinner';
 
 @Component({
   selector: 'app-classroom',
@@ -21,6 +22,7 @@ import { FormsModule } from '@angular/forms';
     MatSlideToggleModule,
     CommonModule,
     FormsModule,
+    LoadingSpinner,
   ],
   templateUrl: './classroom.html',
   styleUrl: './classroom.css',

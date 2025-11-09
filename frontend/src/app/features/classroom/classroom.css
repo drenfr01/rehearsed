@@ -243,27 +243,24 @@ mat-card-content {
   width: 100%;
 }
 
-.input-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-}
-
 .submit-button {
+  width: 100%;
+  margin-top: 0.75rem;
+  height: 52px;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  padding: 0 1.5rem;
-  height: 42px;
-  border-radius: 8px !important;
+  font-size: 1rem;
   font-weight: 500;
+  letter-spacing: 0.5px;
+  border-radius: 8px !important;
   transition: all 0.3s ease;
 }
 
 .submit-button:not([disabled]):hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
 
 .submit-button:not([disabled]):active {

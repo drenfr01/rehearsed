@@ -57,25 +57,21 @@
                 ></textarea>
               </mat-form-field>
               
-              <div class="input-actions">
-                
-                <button
-                  mat-raised-button
-                  color="primary"
-                  type="button"
-                  (click)="onSubmit()"
-                  [disabled]="!userInput() || isLoading()"
-                  class="submit-button"
-                >
-                  @if (isLoading()) {
-                    <mat-icon>hourglass_empty</mat-icon>
-                    <span>Sending...</span>
-                  } @else {
-                    <mat-icon>send</mat-icon>
-                    <span>Submit</span>
-                  }
-                </button>
-              </div>
+              <button
+                mat-raised-button
+                color="primary"
+                type="button"
+                (click)="onSubmit()"
+                [disabled]="!userInput() || isLoading()"
+                class="submit-button"
+              >
+                @if (isLoading()) {
+                  <app-loading-spinner></app-loading-spinner>
+                  <span>Sending...</span>
+                } @else {
+                  <span>Submit</span>
+                }
+              </button>
             </div>
           </div>
         </div>

@@ -48,7 +48,7 @@ export class Classroom {
       resumption_approved: this.isApproved()!,
       messages: [],
     }
-    const subscription = this.chatGraphService.sendGraphRequest(newChatRequest).subscribe({
+    const subscription = this.chatGraphService.sendGraphRequest(newChatRequest, false).subscribe({
       error: (error: Error) => {
         this.error.set(error.message);
         this.isLoading.set(false);

@@ -58,15 +58,6 @@
               </mat-form-field>
               
               <div class="input-actions">
-                <mat-slide-toggle
-                  [(ngModel)]="isApproved"
-                  [checked]="isApproved()"
-                  (ngModelChange)="isApproved.set($event)"
-                  color="primary"
-                  [disabled]="isLoading()"
-                >
-                  Approved
-                </mat-slide-toggle>
                 
                 <button
                   mat-raised-button

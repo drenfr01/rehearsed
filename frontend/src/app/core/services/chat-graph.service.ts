@@ -27,18 +27,13 @@ export class ChatGraphService {
     this.inlineFeedback.set([]);
   }
 
-  sendGraphRequest (chatRequest: ChatRequest, initialGraphRequest: boolean = false): Observable<ChatResponse> {
+  sendGraphRequest (chatRequest: ChatRequest, initialGraphRequest: boolean): Observable<ChatResponse> {
     // If this is the initial graph request, we need to add the human message to the graph messages
     // otherwise we will build a new resumption message 
-    if (initialGraphRequest) {
-      let humanText = 'Approved';
-      if (chatRequest.resumption_text) {
-        humanText = chatRequest.resumption_text;
-      }
-
+    if (!initialGraphRequest) {
       const humanMessage: Message = {
         role: 'user',
-        content: humanText
+        content: chatRequest.resumption_text
       }
       this.graphMessages.set([...this.graphMessages(), humanMessage]);
     } else {
@@ -51,7 +46,7 @@ export class ChatGraphService {
         if (response.interrupt_task) {
         const responseMessage: Message = {
           role: 'assistant',
-          content: response.interrupt_task
+          content: response.interrupt_value
         }
         this.interruptionContent.set(response.interrupt_value);
         this.interruptionType.set(response.interrupt_value_type);

@@ -76,6 +76,9 @@ class ChatResponse(BaseModel):
     """
 
     messages: List[Message] = Field(default_factory=list, description="List of messages in the conversation")
+    interrupt_task: str = Field(default="", description="The task to interrupt the conversation")
+    interrupt_value: str = Field(default="", description="The value to interrupt the conversation")
+    interrupt_value_type: Literal['text', 'image', 'audio', 'video'] = Field(default="text", description="The type of the interrupt value")
     # TODO: potentially make this sub model and DRY out this and the GraphState model
     student_responses: List[str] = Field(default_factory=list, description="List of student responses")
     inline_feedback: List[str] = Field(default_factory=list, description="List of inline feedback")

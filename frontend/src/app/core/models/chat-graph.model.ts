@@ -17,4 +17,13 @@ export interface ChatResponse {
     interrupt_task: string;
     interrupt_value: string;
     interrupt_value_type: 'text' | 'image' | 'audio' | 'video';
+    student_responses: string[];
+    inline_feedback: string[];
+    summary_feedback: string;
+    summary: string;
+    answering_student: number;
+    appropriate_response: boolean;
+    appropriate_explanation: string;
+    learning_goals_achieved: boolean;
+    interrupt: object[];
 }

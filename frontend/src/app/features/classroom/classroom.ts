@@ -1,10 +1,27 @@
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { ChatGraphService } from '../../core/services/chat-graph.service';
 import { ChatRequest } from '../../core/models/chat-graph.model';
+import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-classroom',
-  imports: [],
+  imports: [
+    MatCardModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatIconModule,
+    MatSlideToggleModule,
+    CommonModule,
+    FormsModule,
+  ],
   templateUrl: './classroom.html',
   styleUrl: './classroom.css',
 })
@@ -17,6 +34,10 @@ export class Classroom {
 
   protected userInput = signal<string>('');
   protected isApproved = signal<boolean>(false);
+
+  // Expose readonly signals from the service
+  protected messages = this.chatGraphService.loadedGraphMessages;
+  protected inlineFeedback = this.chatGraphService.loadedInlineFeedback;
 
   onSubmit() {
     this.isLoading.set(true);

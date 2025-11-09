@@ -14,13 +14,17 @@ export class ChatGraphService {
 
   private interruptionContent = signal<string>('')
   private interruptionType = signal<string>('')
+  // TODO: make this not an array? 
+  private inlineFeedback = signal<string[]>([]);
 
   loadedGraphMessages = this.graphMessages.asReadonly();
   loadedInterruptionContent = this.interruptionContent.asReadonly();
   loadedInterruptionType = this.interruptionType.asReadonly();
+  loadedInlineFeedback = this.inlineFeedback.asReadonly();
 
   resetGraphMessages() {
     this.graphMessages.set([]);
+    this.inlineFeedback.set([]);
   }
 
   sendGraphRequest (chatRequest: ChatRequest, initialGraphRequest: boolean = false): Observable<ChatResponse> {
@@ -52,6 +56,7 @@ export class ChatGraphService {
         this.interruptionContent.set(response.interrupt_value);
         this.interruptionType.set(response.interrupt_value_type);
         this.graphMessages.set([...this.graphMessages(), responseMessage]);
+        this.inlineFeedback.set(response.inline_feedback);
       }
     })
     );

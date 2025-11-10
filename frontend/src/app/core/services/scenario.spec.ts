@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 
-import { Scenario } from './scenario';
+import { Scenario } from './scenario.service';
 
 describe('Scenario', () => {
   let service: Scenario;

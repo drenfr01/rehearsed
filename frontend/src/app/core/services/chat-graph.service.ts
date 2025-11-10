@@ -17,8 +17,11 @@ export class ChatGraphService {
 
   private interruptionContent = signal<string>('')
   private interruptionType = signal<string>('')
+  private summaryFeedback = signal<string>('')
   // TODO: make this not an array? 
   private inlineFeedback = signal<string[]>(this.loadInlineFeedbackFromStorage());
+
+  loadedSummaryFeedback = this.summaryFeedback.asReadonly();
 
   constructor() {
     // Effect to persist graphMessages to localStorage
@@ -82,18 +85,21 @@ export class ChatGraphService {
     return this.httpClient.post<ChatResponse>(`${environment.baseUrl}/api/v1/chatbot/chat`, chatRequest).
     pipe(
       tap((response: ChatResponse) => {
-        if (response.interrupt_task) {
-        const responseMessage: Message = {
-          role: 'assistant',
-          content: response.interrupt_value,
-          student_number: response.answering_student
-        }
-        this.interruptionContent.set(response.interrupt_value);
-        this.interruptionType.set(response.interrupt_value_type);
-        this.graphMessages.set([...this.graphMessages(), responseMessage]);
+        console.log('Response: ', response);
         this.inlineFeedback.set(response.inline_feedback);
-      }
-    })
+        this.summaryFeedback.set(response.summary_feedback);
+        
+        if (response.interrupt_task) {
+          const responseMessage: Message = {
+            role: 'assistant',
+            content: response.interrupt_value,
+            student_number: response.answering_student
+          }
+          this.interruptionContent.set(response.interrupt_value);
+          this.interruptionType.set(response.interrupt_value_type);
+          this.graphMessages.set([...this.graphMessages(), responseMessage]);
+        }
+      })
     );
   }
 }

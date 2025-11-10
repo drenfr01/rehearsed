@@ -1,1 +1,12 @@
-<p>scenario-feedback works!</p>
+<div class="scenario-feedback-container">
+  <mat-card class="scenario-feedback-card">
+    <mat-card-header>
+      <mat-card-title>Scenario Summary Feedback</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="feedback-content">
+        <div class="markdown-content" [innerHTML]="summaryFeedbackHtml()"></div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

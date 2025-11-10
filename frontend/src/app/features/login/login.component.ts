@@ -39,7 +39,7 @@ export class Login {
     this.isLoading.set(true);
     const subscription = this.authService.login(this.form.value.email!, this.form.value.password!).subscribe({
       next: () => {
-        this.router.navigate(['/app/scenario-overview'], { replaceUrl: true });
+        this.router.navigate(['/app/scenario-selection'], { replaceUrl: true });
       },
       error: (error: Error) => {
         this.error.set(error.message);

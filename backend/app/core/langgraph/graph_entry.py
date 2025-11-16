@@ -234,6 +234,7 @@ class LangGraphAgent:
             inline_feedback = response.get('inline_feedback', []),
             student_responses = response.get('student_responses', []),
             answering_student = response.get('answering_student', 0),
+            summary_feedback = response.get('summary_feedback', ''),
         )
         if response_interrupt:
             interrupt_value = response_interrupt[0].value

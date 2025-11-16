@@ -4,6 +4,7 @@ import { Login } from './features/login/login.component';
 import { ScenarioSelection } from './features/scenario-selection/scenario-selection';
 import { ScenarioOverview } from './features/scenario-overview/scenario-overview';
 import { Classroom } from './features/classroom/classroom';
+import { ScenarioFeedback } from './features/scenario-feedback/scenario-feedback';
 
 export const routes: Routes = [
     {
@@ -25,6 +26,10 @@ export const routes: Routes = [
             {
                 path: 'classroom', 
                 component: Classroom,
+            },
+            {
+                path: 'scenario-feedback',
+                component: ScenarioFeedback,
             }
         ]
     }

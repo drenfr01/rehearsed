@@ -1,4 +1,5 @@
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal, effect } from '@angular/core';
+import { Router } from '@angular/router';
 import { ChatGraphService } from '../../core/services/chat-graph.service';
 import { ChatRequest } from '../../core/models/chat-graph.model';
 import { MatCardModule } from '@angular/material/card';
@@ -33,6 +34,7 @@ export class Classroom {
   protected error = signal<string>('');
   private chatGraphService = inject(ChatGraphService);
   private destroyRef = inject(DestroyRef);
+  private router = inject(Router);
 
   protected userInput = signal<string>('');
   protected isApproved = signal<boolean>(false);
@@ -40,6 +42,16 @@ export class Classroom {
   // Expose readonly signals from the service
   protected messages = this.chatGraphService.loadedGraphMessages;
   protected inlineFeedback = this.chatGraphService.loadedInlineFeedback;
+
+  constructor() {
+    // Watch for summary feedback and navigate when available
+    effect(() => {
+      const summaryFeedback = this.chatGraphService.loadedSummaryFeedback();
+      if (summaryFeedback && summaryFeedback.trim().length > 0) {
+        this.router.navigate(['/app/scenario-feedback']);
+      }
+    });
+  }
 
   onSubmit() {
     this.isLoading.set(true);

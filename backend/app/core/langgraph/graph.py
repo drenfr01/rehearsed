@@ -4,6 +4,7 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import (
     HumanMessage,
     SystemMessage,
+    AIMessage,
 )
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph.state import (
@@ -30,6 +31,7 @@ from app.core.prompts.students import (
     STUDENT_2_SYSTEM_INSTRUCTIONS,
     STUDENT_3_SYSTEM_INSTRUCTIONS,
     STUDENT_PROFILES,
+    OVERALL_FEEDBACK_SYSTEM_INSTRUCTIONS,
 )
 from app.schemas.graph import (
     AppropriateResponse,
@@ -192,26 +194,39 @@ class LangGraphBuilder:
 
     async def _additional_user_input(self, state: GraphState) -> GraphState:
         """This node is used to gather additional user input after the student agents have responded."""
+        student_message = state.student_responses[state.answering_student - 1]
         result = interrupt(
             # TODO: figure out how to restore correct student response
             {
                 "task": "Review the student_response",
-                "student_response": state.student_responses[state.answering_student - 1],
+                "student_response": student_message,
             }
         )
 
         # Update the state with the edited text
-        return {"messages": HumanMessage(content=result["response"])}
+        return {"messages": [
+            AIMessage(content=student_message),
+            HumanMessage(content=result["response"]),
+        ]}
 
     async def _check_if_goals_achieved(self, state: GraphState) -> GraphState:
         """This node is used to check if the learning goals have been achieved."""
         # TODO: update this with real prompt
-        return {"learning_goals_achieved": False}
+        if "goals achieved" in state.messages[-1].content.lower():
+            return {"learning_goals_achieved": True}
+        else:
+            return {"learning_goals_achieved": False}
 
     async def _generate_summary_feedback(self, state: GraphState) -> GraphState:
         """This node is used to generate a summary feedback for the entire conversation"""
         # TODO: replace with real prompt
-        return {"summary_feedback": "Summary feedback"}
+
+        prompt = [
+            SystemMessage(content=OVERALL_FEEDBACK_SYSTEM_INSTRUCTIONS),
+            *state.messages,
+        ]
+        response = self.llm.with_structured_output(GeneralResponse).invoke(prompt)
+        return {"summary_feedback": response.llm_response}
 
     async def _route_appropriate_response(self, state: GraphState) -> GraphState:
         """This node is used to route the conversation based on if the human response is appropriate.

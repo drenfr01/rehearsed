@@ -221,10 +221,11 @@ class LangGraphBuilder:
         """This node is used to generate a summary feedback for the entire conversation"""
         # TODO: replace with real prompt
 
-        response = self.llm.with_structured_output(GeneralResponse).invoke([
+        prompt = [
             SystemMessage(content=OVERALL_FEEDBACK_SYSTEM_INSTRUCTIONS),
             *state.messages,
-        ])
+        ]
+        response = self.llm.with_structured_output(GeneralResponse).invoke(prompt)
         return {"summary_feedback": response.llm_response}
 
     async def _route_appropriate_response(self, state: GraphState) -> GraphState:

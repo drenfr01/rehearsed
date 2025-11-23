@@ -152,7 +152,7 @@ async def list_users(request: Request, admin_user: User = Depends(get_current_ad
                 id=user.id,
                 email=user.email,
                 is_admin=user.is_admin,
-                created_at=user.created_at.isoformat() if user.created_at else None,
+                created_at=user.created_at,
             )
             for user in users
         ]
@@ -183,7 +183,7 @@ async def get_user(request: Request, user_id: int, admin_user: User = Depends(ge
             id=user.id,
             email=user.email,
             is_admin=user.is_admin,
-            created_at=user.created_at.isoformat() if user.created_at else None,
+            created_at=user.created_at,
         )
     except HTTPException:
         raise
@@ -228,7 +228,7 @@ async def create_user(
             id=user.id,
             email=user.email,
             is_admin=user.is_admin,
-            created_at=user.created_at.isoformat() if user.created_at else None,
+            created_at=user.created_at,
             token=create_access_token(str(user.id)),
         )
     except HTTPException:
@@ -289,7 +289,7 @@ async def update_user(
             id=user.id,
             email=user.email,
             is_admin=user.is_admin,
-            created_at=user.created_at.isoformat() if user.created_at else None,
+            created_at=user.created_at,
         )
     except HTTPException:
         raise
@@ -304,7 +304,10 @@ async def update_user(
 @router.delete("/users/{user_id}" , response_model=DeleteUserResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["delete_user"][0])
 async def delete_user(request: Request, user_id: int, admin_user: User = Depends(get_current_admin_user)):
-    """Delete a user (admin only).
+    """Delete a user and all their sessions (admin only).
+
+    This endpoint first deletes all sessions associated with the user,
+    then deletes the user account itself.
 
     Args:
         request: The FastAPI request object for rate limiting.
@@ -323,11 +326,21 @@ async def delete_user(request: Request, user_id: int, admin_user: User = Depends
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
+        # First, delete all sessions associated with this user
+        user_sessions = await db_service.get_user_sessions(user_id)
+        sessions_deleted = 0
+        for session in user_sessions:
+            await db_service.delete_session(session.id)
+            sessions_deleted += 1
+
+        logger.info("admin_deleted_user_sessions", admin_id=admin_user.id, user_id=user_id, sessions_deleted=sessions_deleted)
+
+        # Then delete the user
         success = await db_service.delete_user(user_id)
         if not success:
             raise HTTPException(status_code=404, detail="User not found")
 
-        logger.info("admin_deleted_user", admin_id=admin_user.id, deleted_user_id=user_id)
+        logger.info("admin_deleted_user", admin_id=admin_user.id, deleted_user_id=user_id, sessions_deleted=sessions_deleted)
 
         return DeleteUserResponse(message="User deleted successfully")
     except HTTPException:

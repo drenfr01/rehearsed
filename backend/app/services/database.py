@@ -280,5 +280,85 @@ class DatabaseService:
             scenarios = session.exec(statement).all()
             return scenarios
 
+    async def get_all_users(self) -> List[User]:
+        """Get all users in the system.
+
+        Returns:
+            List[User]: List of all users
+        """
+        with Session(self.engine) as session:
+            statement = select(User).order_by(User.created_at)
+            users = session.exec(statement).all()
+            return users
+
+    async def update_user_email(self, user_id: int, email: str) -> User:
+        """Update a user's email address.
+
+        Args:
+            user_id: The ID of the user to update
+            email: The new email address
+
+        Returns:
+            User: The updated user
+
+        Raises:
+            HTTPException: If user is not found
+        """
+        with Session(self.engine) as session:
+            user = session.get(User, user_id)
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+
+            user.email = email
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+            logger.info("user_email_updated", user_id=user_id, email=email)
+            return user
+
+    async def update_user_admin_status(self, user_id: int, is_admin: bool) -> User:
+        """Update a user's admin status.
+
+        Args:
+            user_id: The ID of the user to update
+            is_admin: The new admin status
+
+        Returns:
+            User: The updated user
+
+        Raises:
+            HTTPException: If user is not found
+        """
+        with Session(self.engine) as session:
+            user = session.get(User, user_id)
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+
+            user.is_admin = is_admin
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+            logger.info("user_admin_status_updated", user_id=user_id, is_admin=is_admin)
+            return user
+
+    async def delete_user(self, user_id: int) -> bool:
+        """Delete a user by ID.
+
+        Args:
+            user_id: The ID of the user to delete
+
+        Returns:
+            bool: True if deletion was successful, False if user not found
+        """
+        with Session(self.engine) as session:
+            user = session.get(User, user_id)
+            if not user:
+                return False
+
+            session.delete(user)
+            session.commit()
+            logger.info("user_deleted", user_id=user_id)
+            return True
+
 # Create a singleton instance
 database_service = DatabaseService()

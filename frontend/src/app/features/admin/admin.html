@@ -1,0 +1,172 @@
+<div class="admin-container">
+  <mat-card class="header-card">
+    <mat-card-header>
+      <mat-card-title>User Management</mat-card-title>
+      <mat-card-subtitle>Manage system users and permissions</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <button 
+        mat-raised-button 
+        color="primary" 
+        (click)="toggleCreateForm()"
+        class="create-button"
+      >
+        <mat-icon>{{ showCreateForm() ? 'close' : 'add' }}</mat-icon>
+        {{ showCreateForm() ? 'Cancel' : 'Create New User' }}
+      </button>
+
+      @if (showCreateForm()) {
+        <mat-card class="create-form-card">
+          <mat-card-content>
+            <form [formGroup]="createUserForm" (ngSubmit)="createUser()" class="create-form">
+              <h3>Create New User</h3>
+              
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Email</mat-label>
+                <input matInput formControlName="email" type="email" placeholder="user@example.com">
+                @if (createUserForm.get('email')?.hasError('required')) {
+                  <mat-error>Email is required</mat-error>
+                }
+                @if (createUserForm.get('email')?.hasError('email')) {
+                  <mat-error>Please enter a valid email</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Password</mat-label>
+                <input matInput formControlName="password" type="password" placeholder="Password">
+                @if (createUserForm.get('password')?.hasError('required')) {
+                  <mat-error>Password is required</mat-error>
+                }
+                @if (createUserForm.get('password')?.hasError('minlength')) {
+                  <mat-error>Password must be at least 8 characters</mat-error>
+                }
+              </mat-form-field>
+
+              <div class="form-actions">
+                <button 
+                  mat-raised-button 
+                  color="primary" 
+                  type="submit"
+                  [disabled]="!createUserForm.valid"
+                >
+                  <mat-icon>person_add</mat-icon>
+                  Create User
+                </button>
+              </div>
+            </form>
+          </mat-card-content>
+        </mat-card>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="table-card">
+    <mat-card-content>
+      @if (isLoading()) {
+        <div class="loading-container">
+          <app-loading-spinner></app-loading-spinner>
+          <p>Loading users...</p>
+        </div>
+      } @else {
+        <div class="table-container">
+          <table mat-table [dataSource]="users()" class="users-table">
+            <!-- ID Column -->
+            <ng-container matColumnDef="id">
+              <th mat-header-cell *matHeaderCellDef>ID</th>
+              <td mat-cell *matCellDef="let user">{{ user.id }}</td>
+            </ng-container>
+
+            <!-- Email Column -->
+            <ng-container matColumnDef="email">
+              <th mat-header-cell *matHeaderCellDef>Email</th>
+              <td mat-cell *matCellDef="let user">
+                @if (editingUser()?.id === user.id) {
+                  <mat-form-field appearance="outline" class="inline-edit">
+                    <input matInput [formControl]="editUserForm.get('email')" type="email">
+                  </mat-form-field>
+                } @else {
+                  {{ user.email }}
+                }
+              </td>
+            </ng-container>
+
+            <!-- Admin Status Column -->
+            <ng-container matColumnDef="is_admin">
+              <th mat-header-cell *matHeaderCellDef>Admin</th>
+              <td mat-cell *matCellDef="let user">
+                @if (editingUser()?.id === user.id) {
+                  <mat-slide-toggle [formControl]="editUserForm.get('is_admin')">
+                    Admin
+                  </mat-slide-toggle>
+                } @else {
+                  <mat-icon [class.admin-icon]="user.is_admin" [class.user-icon]="!user.is_admin">
+                    {{ user.is_admin ? 'admin_panel_settings' : 'person' }}
+                  </mat-icon>
+                }
+              </td>
+            </ng-container>
+
+            <!-- Created At Column -->
+            <ng-container matColumnDef="created_at">
+              <th mat-header-cell *matHeaderCellDef>Created At</th>
+              <td mat-cell *matCellDef="let user">{{ formatDate(user.created_at) }}</td>
+            </ng-container>
+
+            <!-- Actions Column -->
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef>Actions</th>
+              <td mat-cell *matCellDef="let user">
+                @if (editingUser()?.id === user.id) {
+                  <button 
+                    mat-icon-button 
+                    color="primary" 
+                    (click)="saveEdit(user.id)"
+                    matTooltip="Save changes"
+                  >
+                    <mat-icon>save</mat-icon>
+                  </button>
+                  <button 
+                    mat-icon-button 
+                    (click)="cancelEdit()"
+                    matTooltip="Cancel"
+                  >
+                    <mat-icon>close</mat-icon>
+                  </button>
+                } @else {
+                  <button 
+                    mat-icon-button 
+                    color="primary" 
+                    (click)="startEdit(user)"
+                    matTooltip="Edit user"
+                  >
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button 
+                    mat-icon-button 
+                    color="warn" 
+                    (click)="deleteUser(user.id, user.email)"
+                    matTooltip="Delete user"
+                  >
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                }
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+          </table>
+
+          @if (users().length === 0) {
+            <div class="no-data">
+              <mat-icon>people_outline</mat-icon>
+              <p>No users found</p>
+            </div>
+          }
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>
+

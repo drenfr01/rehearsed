@@ -4,6 +4,7 @@ export interface LoginResponse {
     access_token: string;
     token_type: string;
     expires_at: string;
+    is_admin: boolean;
 }
 
 export interface SessionResponse {

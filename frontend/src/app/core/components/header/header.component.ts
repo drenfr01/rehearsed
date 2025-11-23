@@ -26,12 +26,18 @@ export class Header {
 
   isLoggedIn = this.authService.isLoggedIn;
   token = this.authService.token;
+  isAdmin = this.authService.isAdmin;
 
   // Navigation routes
   routes = [
     { path: '/app/scenario-selection', label: 'Scenario Selection' },
     { path: '/app/scenario-overview', label: 'Scenario Overview' },
     { path: '/app/classroom', label: 'Classroom' }
+  ];
+
+  // Admin routes
+  adminRoutes = [
+    { path: '/app/admin', label: 'User Management' }
   ];
 
   getTruncatedSessionId(): string {

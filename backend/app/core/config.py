@@ -179,6 +179,11 @@ class Settings:
 
         # Rate limit endpoints defaults
         default_endpoints = {
+            "get_all_users": ["10 per minute"],
+            "get_user_by_id": ["10 per minute"],
+            "create_user": ["10 per minute"],
+            "update_user": ["10 per minute"],
+            "delete_user": ["10 per minute"],
             "get_all_scenarios": ["10 per minute"],
             "get_scenario_by_id": ["10 per minute"],
             "set_scenario_by_id": ["10 per minute"],

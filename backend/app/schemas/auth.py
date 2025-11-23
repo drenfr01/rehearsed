@@ -33,11 +33,13 @@ class TokenResponse(BaseModel):
         access_token: The JWT access token
         token_type: The type of token (always "bearer")
         expires_at: When the token expires
+        is_admin: Whether the user is an admin
     """
 
     access_token: str = Field(..., description="The JWT access token")
     token_type: str = Field(default="bearer", description="The type of token")
     expires_at: datetime = Field(..., description="When the token expires")
+    is_admin: bool = Field(default=False, description="Whether the user is an admin")
 
 
 class UserCreate(BaseModel):

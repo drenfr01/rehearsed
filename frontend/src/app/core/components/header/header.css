@@ -53,6 +53,30 @@
   background-color: rgba(255, 255, 255, 0.15);
 }
 
+.nav-divider {
+  margin: 0 0.5rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 300;
+}
+
+.admin-link {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background-color: rgba(255, 152, 0, 0.2);
+  border: 1px solid rgba(255, 152, 0, 0.4);
+}
+
+.admin-link:hover {
+  background-color: rgba(255, 152, 0, 0.3);
+}
+
+.admin-link mat-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
 .nav-right {
   display: flex;
   align-items: center;

@@ -64,6 +64,7 @@ async def get_current_user(
         # Sanitize token
         token = sanitize_string(credentials.credentials)
 
+        # Note: this only works for user ID tokens, not session ID tokens
         user_id = verify_token(token)
         if user_id is None:
             logger.error("invalid_token", token_part=token[:10] + "...")
@@ -224,7 +225,7 @@ async def login(
             )
 
         token = create_access_token(str(user.id))
-        return TokenResponse(access_token=token.access_token, token_type="bearer", expires_at=token.expires_at)
+        return TokenResponse(access_token=token.access_token, token_type="bearer", expires_at=token.expires_at, is_admin=user.is_admin)
     except ValueError as ve:
         logger.error("login_validation_failed", error=str(ve), exc_info=True)
         raise HTTPException(status_code=422, detail=str(ve))

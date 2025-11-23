@@ -146,7 +146,7 @@ async def get_current_session(
 
 @router.post("/register", response_model=UserResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["register"][0])
-async def register_user(request: Request, user_data: UserCreate):
+async def register_user(request: Request, user_data: UserCreate, admin_user = Depends(get_current_user)):
     """Register a new user.
 
     Args:
@@ -156,6 +156,9 @@ async def register_user(request: Request, user_data: UserCreate):
     Returns:
         UserResponse: The created user info
     """
+    if not admin_user.is_admin:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
     try:
         # Sanitize email
         sanitized_email = sanitize_email(user_data.email)

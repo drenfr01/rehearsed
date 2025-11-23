@@ -6,6 +6,9 @@ import { ScenarioOverview } from './features/scenario-overview/scenario-overview
 import { Classroom } from './features/classroom/classroom';
 import { ScenarioFeedback } from './features/scenario-feedback/scenario-feedback';
 import { Admin } from './features/admin/admin';
+import { AdminAgentPersonalities } from './features/admin-agent-personalities/admin-agent-personalities';
+import { AdminAgents } from './features/admin-agents/admin-agents';
+import { AdminScenarios } from './features/admin-scenarios/admin-scenarios';
 
 export const routes: Routes = [
     {
@@ -35,6 +38,18 @@ export const routes: Routes = [
             {
                 path: 'admin',
                 component: Admin,
+            },
+            {
+                path: 'admin/agent-personalities',
+                component: AdminAgentPersonalities,
+            },
+            {
+                path: 'admin/agents',
+                component: AdminAgents,
+            },
+            {
+                path: 'admin/scenarios',
+                component: AdminScenarios,
             }
         ]
     }

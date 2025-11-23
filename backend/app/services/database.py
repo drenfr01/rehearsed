@@ -276,7 +276,12 @@ class DatabaseService:
             self.current_scenario = scenario
             return scenario
 
-    def get_all_scenarios(self) -> list[Scenario]:
+    async def get_all_scenarios(self) -> list[Scenario]:
+        """Get all scenarios in the system.
+
+        Returns:
+            List[Scenario]: List of all scenarios
+        """
         with Session(self.engine) as session:
             statement = select(Scenario)
             scenarios = session.exec(statement).all()

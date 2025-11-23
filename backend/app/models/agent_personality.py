@@ -14,9 +14,7 @@ if TYPE_CHECKING:
     from app.models.agent import Agent
 
 class AgentPersonality(BaseModel, table=True):
-    id: int = Field(default=None, primary_key=True, unique=True)
-    name: str = Field(default=None)
-    description: str = Field(default=None)
-    system_instructions: str = Field(default=None)
-    initial_prompt: str = Field(default=None)
+    id: int = Field(..., primary_key=True, unique=True)
+    name: str = Field(...)
+    personality_description: str = Field(...)
     agents: List["Agent"] = Relationship(back_populates="agent_personality")

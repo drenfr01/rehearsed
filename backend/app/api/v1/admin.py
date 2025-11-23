@@ -23,9 +23,14 @@ from app.core.logging import logger
 from app.models.user import User
 from app.schemas.auth import (
     UserCreate,
+    UserResponse,
+    DeleteUserResponse,
 )
 from app.services.database import DatabaseService
-from app.utils.auth import verify_token
+from app.utils.auth import (
+    create_access_token,
+    verify_token,
+)
 from app.utils.sanitization import (
     sanitize_email,
     sanitize_string,
@@ -128,7 +133,7 @@ async def get_current_admin_user(
         )
 
 
-@router.get("/users")
+@router.get("/users", response_model=List[UserResponse])
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_all_users"][0])
 async def list_users(request: Request, admin_user: User = Depends(get_current_admin_user)):
     """List all users in the system.
@@ -143,12 +148,12 @@ async def list_users(request: Request, admin_user: User = Depends(get_current_ad
     try:
         users = await db_service.get_all_users()
         return [
-            {
-                "id": user.id,
-                "email": user.email,
-                "is_admin": user.is_admin,
-                "created_at": user.created_at.isoformat() if user.created_at else None,
-            }
+            UserResponse(
+                id=user.id,
+                email=user.email,
+                is_admin=user.is_admin,
+                created_at=user.created_at.isoformat() if user.created_at else None,
+            )
             for user in users
         ]
     except Exception as e:
@@ -156,7 +161,7 @@ async def list_users(request: Request, admin_user: User = Depends(get_current_ad
         raise HTTPException(status_code=500, detail="Failed to retrieve users")
 
 
-@router.get("/users/{user_id}")
+@router.get("/users/{user_id}", response_model=UserResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_user_by_id"][0])
 async def get_user(request: Request, user_id: int, admin_user: User = Depends(get_current_admin_user)):
     """Get a specific user by ID.
@@ -174,12 +179,12 @@ async def get_user(request: Request, user_id: int, admin_user: User = Depends(ge
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        return {
-            "id": user.id,
-            "email": user.email,
-            "is_admin": user.is_admin,
-            "created_at": user.created_at.isoformat() if user.created_at else None,
-        }
+        return UserResponse(
+            id=user.id,
+            email=user.email,
+            is_admin=user.is_admin,
+            created_at=user.created_at.isoformat() if user.created_at else None,
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -187,11 +192,11 @@ async def get_user(request: Request, user_id: int, admin_user: User = Depends(ge
         raise HTTPException(status_code=500, detail="Failed to retrieve user")
 
 
-@router.post("/users")
+@router.post("/users", response_model=UserResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["create_user"][0])
 async def create_user(
     request: Request, user_data: UserCreate, admin_user: User = Depends(get_current_admin_user)
-):
+) -> UserResponse:
     """Create a new user (admin only).
 
     Args:
@@ -219,12 +224,13 @@ async def create_user(
 
         logger.info("admin_created_user", admin_id=admin_user.id, new_user_id=user.id, email=sanitized_email)
 
-        return {
-            "id": user.id,
-            "email": user.email,
-            "is_admin": user.is_admin,
-            "created_at": user.created_at.isoformat() if user.created_at else None,
-        }
+        return UserResponse(
+            id=user.id,
+            email=user.email,
+            is_admin=user.is_admin,
+            created_at=user.created_at.isoformat() if user.created_at else None,
+            token=create_access_token(str(user.id)),
+        )
     except HTTPException:
         raise
     except ValueError as ve:
@@ -235,11 +241,11 @@ async def create_user(
         raise HTTPException(status_code=500, detail="Failed to create user")
 
 
-@router.put("/users/{user_id}")
+@router.put("/users/{user_id}", response_model=UserResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["update_user"][0])
 async def update_user(
     request: Request, user_id: int, email: str = None, is_admin: bool = None, admin_user: User = Depends(get_current_admin_user)
-):
+) -> UserResponse:
     """Update a user (admin only).
 
     Args:
@@ -279,12 +285,12 @@ async def update_user(
         if updated:
             logger.info("admin_updated_user", admin_id=admin_user.id, updated_user_id=user_id)
 
-        return {
-            "id": user.id,
-            "email": user.email,
-            "is_admin": user.is_admin,
-            "created_at": user.created_at.isoformat() if user.created_at else None,
-        }
+        return UserResponse(
+            id=user.id,
+            email=user.email,
+            is_admin=user.is_admin,
+            created_at=user.created_at.isoformat() if user.created_at else None,
+        )
     except HTTPException:
         raise
     except ValueError as ve:
@@ -295,7 +301,7 @@ async def update_user(
         raise HTTPException(status_code=500, detail="Failed to update user")
 
 
-@router.delete("/users/{user_id}")
+@router.delete("/users/{user_id}" , response_model=DeleteUserResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["delete_user"][0])
 async def delete_user(request: Request, user_id: int, admin_user: User = Depends(get_current_admin_user)):
     """Delete a user (admin only).
@@ -323,7 +329,7 @@ async def delete_user(request: Request, user_id: int, admin_user: User = Depends
 
         logger.info("admin_deleted_user", admin_id=admin_user.id, deleted_user_id=user_id)
 
-        return {"message": "User deleted successfully"}
+        return DeleteUserResponse(message="User deleted successfully")
     except HTTPException:
         raise
     except Exception as e:

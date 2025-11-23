@@ -95,12 +95,24 @@ class UserResponse(BaseModel):
         id: User's ID
         email: User's email address
         token: Authentication token
+        is_admin: Whether the user is an admin
+        created_at: When the user was created
     """
 
     id: int = Field(..., description="User's ID")
     email: str = Field(..., description="User's email address")
-    token: Token = Field(..., description="Authentication token")
+    token: Token | None = Field(default=None, description="Authentication token")
+    is_admin: bool = Field(default=False, description="Whether the user is an admin")
+    created_at: datetime = Field(..., description="When the user was created")
 
+class DeleteUserResponse(BaseModel):
+    """Response model for user deletion.
+
+    Attributes:
+        message: The success message
+    """
+
+    message: str = Field(..., description="The success message")
 
 class SessionResponse(BaseModel):
     """Response model for session creation.

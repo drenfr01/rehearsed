@@ -19,6 +19,7 @@ from langgraph.types import (
 )
 from psycopg_pool import AsyncConnectionPool
 
+from app.services.database import database_service
 from app.core.config import (
     Environment,
     settings,
@@ -27,15 +28,14 @@ from app.core.logging import logger
 from app.core.prompts.students import (
     APPROPRIATE_RESPONSE_INSTRUCTIONS,
     INLINE_FEEDBACK_SYSTEM_INSTRUCTIONS,
-    STUDENT_1_SYSTEM_INSTRUCTIONS,
-    STUDENT_2_SYSTEM_INSTRUCTIONS,
-    STUDENT_3_SYSTEM_INSTRUCTIONS,
     STUDENT_PROFILES,
+    STUDENT_SYSTEM_INSTRUCTIONS_TEMPLATE,
     OVERALL_FEEDBACK_SYSTEM_INSTRUCTIONS,
 )
 from app.schemas.graph import (
     AppropriateResponse,
     GeneralResponse,
+    StudentResponse,
     GraphState,
     StudentChoiceResponse,
 )
@@ -174,15 +174,55 @@ class LangGraphBuilder:
 
     async def _student_1_agent(self, state: GraphState) -> GraphState:
         """This node is used to call the student 1 agent."""
-        return {"student_responses": [await self._call_general_llm(state, STUDENT_1_SYSTEM_INSTRUCTIONS)]}
+        # TODO: make this more dynamic  
+        agent = await database_service.get_agent("student_1_isaiah")
+        system_instructions = STUDENT_SYSTEM_INSTRUCTIONS_TEMPLATE.format(
+            objective_and_persona=agent.objective,
+            instructions=agent.instructions,
+            constraints=agent.constraints,
+            context=agent.context,
+            # personality=agent.agent_personality.personality_description if agent.agent_personality else "",
+            personality="Confident and assertive",
+        )
+        response = await self._call_general_llm(state, system_instructions)
+        return {"student_responses": [
+            StudentResponse(student_response=response, student_details=agent, student_personality=agent.agent_personality)
+            ]
+            }
 
     async def _student_2_agent(self, state: GraphState) -> GraphState:
         """This node is used to call the student 2 agent."""
-        return {"student_responses": [await self._call_general_llm(state, STUDENT_2_SYSTEM_INSTRUCTIONS)]}
+        agent = await database_service.get_agent("student_2_maura")
+        system_instructions = STUDENT_SYSTEM_INSTRUCTIONS_TEMPLATE.format(
+            objective_and_persona=agent.objective,
+            instructions=agent.instructions,
+            constraints=agent.constraints,
+            context=agent.context,
+            # personality=agent.agent_personality.personality_description if agent.agent_personality else "",
+            personality="Shy and quiet",
+        )
+        response = await self._call_general_llm(state, system_instructions)
+        return {"student_responses": [
+            StudentResponse(student_response=response, student_details=agent, student_personality=agent.agent_personality)
+            ]
+            }
 
     async def _student_3_agent(self, state: GraphState) -> GraphState:
         """This node is used to call the student 3 agent."""
-        return {"student_responses": [await self._call_general_llm(state, STUDENT_3_SYSTEM_INSTRUCTIONS)]}
+        agent = await database_service.get_agent("student_3_isabel")
+        system_instructions = STUDENT_SYSTEM_INSTRUCTIONS_TEMPLATE.format(
+            objective_and_persona=agent.objective,
+            instructions=agent.instructions,
+            constraints=agent.constraints,
+            context=agent.context,
+            # personality=agent.agent_personality.personality_description if agent.agent_personality else "",
+            personality="Curious and analytical",
+        )
+        response = await self._call_general_llm(state, system_instructions)
+        return {"student_responses": [
+            StudentResponse(student_response=response, student_details=agent, student_personality=agent.agent_personality)
+            ]
+            }
 
     async def _inline_feedback_agent(self, state: GraphState) -> GraphState:
         """This node is used to call the inline feedback agent."""
@@ -194,7 +234,7 @@ class LangGraphBuilder:
 
     async def _additional_user_input(self, state: GraphState) -> GraphState:
         """This node is used to gather additional user input after the student agents have responded."""
-        student_message = state.student_responses[state.answering_student - 1]
+        student_message = state.student_responses[state.answering_student - 1].student_response
         result = interrupt(
             # TODO: figure out how to restore correct student response
             {

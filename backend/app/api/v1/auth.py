@@ -64,6 +64,7 @@ async def get_current_user(
         # Sanitize token
         token = sanitize_string(credentials.credentials)
 
+        # Note: this only works for user ID tokens, not session ID tokens
         user_id = verify_token(token)
         if user_id is None:
             logger.error("invalid_token", token_part=token[:10] + "...")
@@ -144,42 +145,6 @@ async def get_current_session(
         )
 
 
-@router.post("/register", response_model=UserResponse)
-@limiter.limit(settings.RATE_LIMIT_ENDPOINTS["register"][0])
-async def register_user(request: Request, user_data: UserCreate):
-    """Register a new user.
-
-    Args:
-        request: The FastAPI request object for rate limiting.
-        user_data: User registration data
-
-    Returns:
-        UserResponse: The created user info
-    """
-    try:
-        # Sanitize email
-        sanitized_email = sanitize_email(user_data.email)
-
-        # Extract and validate password
-        password = user_data.password.get_secret_value()
-        validate_password_strength(password)
-
-        # Check if user exists
-        if await db_service.get_user_by_email(sanitized_email):
-            raise HTTPException(status_code=400, detail="Email already registered")
-
-        # Create user
-        user = await db_service.create_user(email=sanitized_email, password=User.hash_password(password))
-
-        # Create access token
-        token = create_access_token(str(user.id))
-
-        return UserResponse(id=user.id, email=user.email, token=token)
-    except ValueError as ve:
-        logger.error("user_registration_validation_failed", error=str(ve), exc_info=True)
-        raise HTTPException(status_code=422, detail=str(ve))
-
-
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["login"][0])
 async def login(
@@ -221,7 +186,7 @@ async def login(
             )
 
         token = create_access_token(str(user.id))
-        return TokenResponse(access_token=token.access_token, token_type="bearer", expires_at=token.expires_at)
+        return TokenResponse(access_token=token.access_token, token_type="bearer", expires_at=token.expires_at, is_admin=user.is_admin)
     except ValueError as ve:
         logger.error("login_validation_failed", error=str(ve), exc_info=True)
         raise HTTPException(status_code=422, detail=str(ve))

@@ -5,6 +5,7 @@ import { ScenarioSelection } from './features/scenario-selection/scenario-select
 import { ScenarioOverview } from './features/scenario-overview/scenario-overview';
 import { Classroom } from './features/classroom/classroom';
 import { ScenarioFeedback } from './features/scenario-feedback/scenario-feedback';
+import { Admin } from './features/admin/admin';
 
 export const routes: Routes = [
     {
@@ -30,6 +31,10 @@ export const routes: Routes = [
             {
                 path: 'scenario-feedback',
                 component: ScenarioFeedback,
+            },
+            {
+                path: 'admin',
+                component: Admin,
             }
         ]
     }

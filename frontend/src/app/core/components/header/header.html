@@ -12,6 +12,20 @@
             {{ route.label }}
           </a>
         }
+        @if (isAdmin()) {
+          <span class="nav-divider">|</span>
+          @for (route of adminRoutes; track route.path) {
+            <a 
+              mat-button
+              [routerLink]="route.path" 
+              routerLinkActive="active-link"
+              class="nav-link admin-link"
+            >
+              <mat-icon>admin_panel_settings</mat-icon>
+              {{ route.label }}
+            </a>
+          }
+        }
       </nav>
       
       <div class="nav-right">

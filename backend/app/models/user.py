@@ -32,6 +32,7 @@ class User(BaseModel, table=True):
     email: str = Field(unique=True, index=True)
     hashed_password: str
     sessions: List["Session"] = Relationship(back_populates="user")
+    is_admin: bool = Field(default=False)
 
     def verify_password(self, password: str) -> bool:
         """Verify if the provided password matches the hash."""

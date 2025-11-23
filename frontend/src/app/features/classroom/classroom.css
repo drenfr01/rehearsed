@@ -336,6 +336,7 @@ mat-card-content {
   gap: 1rem;
 }
 
+/* Feedback Items */
 .feedback-item {
   display: flex;
   gap: 1rem;

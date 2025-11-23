@@ -65,18 +65,18 @@
   overflow-x: auto;
 }
 
-.users-table {
+.personalities-table {
   width: 100%;
   margin-top: 20px;
 }
 
-.users-table th {
+.personalities-table th {
   font-weight: 600;
   background-color: #f5f5f5;
   padding: 16px;
 }
 
-.users-table td {
+.personalities-table td {
   padding: 12px 16px;
 }
 
@@ -85,12 +85,18 @@
   margin: -8px 0;
 }
 
-.admin-icon {
-  color: #ff6b6b;
+.inline-edit-textarea {
+  width: 100%;
+  margin: -8px 0;
 }
 
-.user-icon {
-  color: #4caf50;
+.description-cell {
+  max-width: 400px;
+}
+
+.description-content {
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .loading-container {
@@ -129,13 +135,17 @@
     padding: 10px;
   }
 
-  .users-table {
+  .personalities-table {
     font-size: 14px;
   }
 
-  .users-table th,
-  .users-table td {
+  .personalities-table th,
+  .personalities-table td {
     padding: 8px;
+  }
+  
+  .description-cell {
+    max-width: 200px;
   }
 }
 

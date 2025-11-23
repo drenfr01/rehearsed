@@ -37,7 +37,7 @@ export class Header {
 
   // Admin routes
   adminRoutes = [
-    { path: '/app/admin', label: 'User Management' }
+    { path: '/app/admin', label: 'Admin Dashboard' }
   ];
 
   getTruncatedSessionId(): string {

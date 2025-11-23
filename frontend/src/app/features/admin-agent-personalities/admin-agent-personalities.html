@@ -6,7 +6,7 @@
     </mat-card-header>
     <mat-card-content>
       <div class="admin-nav">
-        <a mat-raised-button routerLink="/app/admin" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">
+        <a mat-raised-button routerLink="/app/admin">
           <mat-icon>people</mat-icon>
           Users
         </a>
@@ -18,7 +18,7 @@
           <mat-icon>smart_toy</mat-icon>
           Agents
         </a>
-        <a mat-raised-button routerLink="/app/admin/agent-personalities">
+        <a mat-raised-button routerLink="/app/admin/agent-personalities" routerLinkActive="active">
           <mat-icon>psychology</mat-icon>
           Personalities
         </a>
@@ -28,8 +28,8 @@
 
   <mat-card class="header-card">
     <mat-card-header>
-      <mat-card-title>User Management</mat-card-title>
-      <mat-card-subtitle>Manage system users and permissions</mat-card-subtitle>
+      <mat-card-title>Agent Personality Management</mat-card-title>
+      <mat-card-subtitle>Manage agent personality traits and characteristics</mat-card-subtitle>
     </mat-card-header>
     <mat-card-content>
       <button 
@@ -39,34 +39,39 @@
         class="create-button"
       >
         <mat-icon>{{ showCreateForm() ? 'close' : 'add' }}</mat-icon>
-        {{ showCreateForm() ? 'Cancel' : 'Create New User' }}
+        {{ showCreateForm() ? 'Cancel' : 'Create New Personality' }}
       </button>
 
       @if (showCreateForm()) {
         <mat-card class="create-form-card">
           <mat-card-content>
-            <form [formGroup]="createUserForm" (ngSubmit)="createUser()" class="create-form">
-              <h3>Create New User</h3>
+            <form [formGroup]="createPersonalityForm" (ngSubmit)="createPersonality()" class="create-form">
+              <h3>Create New Agent Personality</h3>
               
               <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Email</mat-label>
-                <input matInput formControlName="email" type="email" placeholder="user@example.com">
-                @if (createUserForm.get('email')?.hasError('required')) {
-                  <mat-error>Email is required</mat-error>
+                <mat-label>Name</mat-label>
+                <input matInput formControlName="name" placeholder="e.g., Professional, Friendly, Empathetic">
+                @if (createPersonalityForm.get('name')?.hasError('required')) {
+                  <mat-error>Name is required</mat-error>
                 }
-                @if (createUserForm.get('email')?.hasError('email')) {
-                  <mat-error>Please enter a valid email</mat-error>
+                @if (createPersonalityForm.get('name')?.hasError('minlength')) {
+                  <mat-error>Name must be at least 2 characters</mat-error>
                 }
               </mat-form-field>
 
               <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Password</mat-label>
-                <input matInput formControlName="password" type="password" placeholder="Password">
-                @if (createUserForm.get('password')?.hasError('required')) {
-                  <mat-error>Password is required</mat-error>
+                <mat-label>Personality Description</mat-label>
+                <textarea 
+                  matInput 
+                  formControlName="personality_description" 
+                  rows="4"
+                  placeholder="Describe the personality traits, communication style, and behavioral characteristics"
+                ></textarea>
+                @if (createPersonalityForm.get('personality_description')?.hasError('required')) {
+                  <mat-error>Description is required</mat-error>
                 }
-                @if (createUserForm.get('password')?.hasError('minlength')) {
-                  <mat-error>Password must be at least 8 characters</mat-error>
+                @if (createPersonalityForm.get('personality_description')?.hasError('minlength')) {
+                  <mat-error>Description must be at least 10 characters</mat-error>
                 }
               </mat-form-field>
 
@@ -75,10 +80,10 @@
                   mat-raised-button 
                   color="primary" 
                   type="submit"
-                  [disabled]="!createUserForm.valid"
+                  [disabled]="!createPersonalityForm.valid"
                 >
-                  <mat-icon>person_add</mat-icon>
-                  Create User
+                  <mat-icon>psychology</mat-icon>
+                  Create Personality
                 </button>
               </div>
             </form>
@@ -93,43 +98,45 @@
       @if (isLoading()) {
         <div class="loading-container">
           <app-loading-spinner></app-loading-spinner>
-          <p>Loading users...</p>
+          <p>Loading agent personalities...</p>
         </div>
       } @else {
         <div class="table-container">
-          <table mat-table [dataSource]="users()" class="users-table">
+          <table mat-table [dataSource]="personalities()" class="personalities-table">
             <!-- ID Column -->
             <ng-container matColumnDef="id">
               <th mat-header-cell *matHeaderCellDef>ID</th>
-              <td mat-cell *matCellDef="let user">{{ user.id }}</td>
+              <td mat-cell *matCellDef="let personality">{{ personality.id }}</td>
             </ng-container>
 
-            <!-- Email Column -->
-            <ng-container matColumnDef="email">
-              <th mat-header-cell *matHeaderCellDef>Email</th>
-              <td mat-cell *matCellDef="let user">
-                @if (editingUser()?.id === user.id) {
+            <!-- Name Column -->
+            <ng-container matColumnDef="name">
+              <th mat-header-cell *matHeaderCellDef>Name</th>
+              <td mat-cell *matCellDef="let personality">
+                @if (editingPersonality()?.id === personality.id) {
                   <mat-form-field appearance="outline" class="inline-edit">
-                    <input matInput [formControl]="$any(editUserForm.get('email'))" type="email">
+                    <input matInput [formControl]="$any(editPersonalityForm.get('name'))">
                   </mat-form-field>
                 } @else {
-                  {{ user.email }}
+                  {{ personality.name }}
                 }
               </td>
             </ng-container>
 
-            <!-- Admin Status Column -->
-            <ng-container matColumnDef="is_admin">
-              <th mat-header-cell *matHeaderCellDef>Admin</th>
-              <td mat-cell *matCellDef="let user">
-                @if (editingUser()?.id === user.id) {
-                  <mat-slide-toggle [formControl]="$any(editUserForm.get('is_admin'))">
-                    Admin
-                  </mat-slide-toggle>
+            <!-- Description Column -->
+            <ng-container matColumnDef="personality_description">
+              <th mat-header-cell *matHeaderCellDef>Description</th>
+              <td mat-cell *matCellDef="let personality" class="description-cell">
+                @if (editingPersonality()?.id === personality.id) {
+                  <mat-form-field appearance="outline" class="inline-edit-textarea">
+                    <textarea 
+                      matInput 
+                      [formControl]="$any(editPersonalityForm.get('personality_description'))"
+                      rows="3"
+                    ></textarea>
+                  </mat-form-field>
                 } @else {
-                  <mat-icon [class.admin-icon]="user.is_admin" [class.user-icon]="!user.is_admin">
-                    {{ user.is_admin ? 'admin_panel_settings' : 'person' }}
-                  </mat-icon>
+                  <div class="description-content">{{ personality.personality_description }}</div>
                 }
               </td>
             </ng-container>
@@ -137,18 +144,18 @@
             <!-- Created At Column -->
             <ng-container matColumnDef="created_at">
               <th mat-header-cell *matHeaderCellDef>Created At</th>
-              <td mat-cell *matCellDef="let user">{{ formatDate(user.created_at) }}</td>
+              <td mat-cell *matCellDef="let personality">{{ formatDate(personality.created_at) }}</td>
             </ng-container>
 
             <!-- Actions Column -->
             <ng-container matColumnDef="actions">
               <th mat-header-cell *matHeaderCellDef>Actions</th>
-              <td mat-cell *matCellDef="let user">
-                @if (editingUser()?.id === user.id) {
+              <td mat-cell *matCellDef="let personality">
+                @if (editingPersonality()?.id === personality.id) {
                   <button 
                     mat-icon-button 
                     color="primary" 
-                    (click)="saveEdit(user.id)"
+                    (click)="saveEdit(personality.id)"
                     matTooltip="Save changes"
                   >
                     <mat-icon>save</mat-icon>
@@ -164,16 +171,16 @@
                   <button 
                     mat-icon-button 
                     color="primary" 
-                    (click)="startEdit(user)"
-                    matTooltip="Edit user"
+                    (click)="startEdit(personality)"
+                    matTooltip="Edit personality"
                   >
                     <mat-icon>edit</mat-icon>
                   </button>
                   <button 
                     mat-icon-button 
                     color="warn" 
-                    (click)="deleteUser(user.id, user.email)"
-                    matTooltip="Delete user"
+                    (click)="deletePersonality(personality.id, personality.name)"
+                    matTooltip="Delete personality"
                   >
                     <mat-icon>delete</mat-icon>
                   </button>
@@ -185,10 +192,10 @@
             <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
           </table>
 
-          @if (users().length === 0) {
+          @if (personalities().length === 0) {
             <div class="no-data">
-              <mat-icon>people_outline</mat-icon>
-              <p>No users found</p>
+              <mat-icon>psychology</mat-icon>
+              <p>No agent personalities found</p>
             </div>
           }
         </div>

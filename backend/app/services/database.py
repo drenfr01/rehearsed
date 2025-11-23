@@ -7,6 +7,7 @@ from typing import (
 
 from fastapi import HTTPException
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import selectinload
 from sqlalchemy.pool import QueuePool
 from sqlmodel import (
     Session,
@@ -24,6 +25,7 @@ from app.models.session import Session as ChatSession
 # Models: note, you need to import models here so they are created by create_all below
 from app.models.user import User
 from app.models.scenario import Scenario
+from app.models.agent import Agent, AgentPersonality
 
 
 class DatabaseService:
@@ -358,6 +360,398 @@ class DatabaseService:
             session.delete(user)
             session.commit()
             logger.info("user_deleted", user_id=user_id)
+            return True
+
+    # ========== Agent Methods ==========
+    
+    async def create_agent(
+        self,
+        agent_id: str,
+        name: str,
+        scenario_id: int,
+        agent_personality_id: int,
+        voice: str = "",
+        display_text_color: str = "",
+        objective: str = "",
+        instructions: str = "",
+        constraints: str = "",
+        context: str = "",
+    ) -> Agent:
+        """Create a new agent.
+
+        Args:
+            agent_id: The ID for the agent
+            name: Name of the agent
+            scenario_id: ID of the scenario this agent belongs to
+            agent_personality_id: ID of the agent's personality
+            voice: Voice identifier for TTS
+            display_text_color: Color for display
+            objective: Agent's objective
+            instructions: Agent's instructions
+            constraints: Agent's constraints
+            context: Agent's context
+
+        Returns:
+            Agent: The created agent
+        """
+        with Session(self.engine) as session:
+            agent = Agent(
+                id=agent_id,
+                name=name,
+                scenario_id=scenario_id,
+                agent_personality_id=agent_personality_id,
+                voice=voice,
+                display_text_color=display_text_color,
+                objective=objective,
+                instructions=instructions,
+                constraints=constraints,
+                context=context,
+            )
+            session.add(agent)
+            session.commit()
+            session.refresh(agent)
+            logger.info("agent_created", agent_id=agent_id, name=name)
+            return agent
+
+    async def get_agent(self, agent_id: str) -> Optional[Agent]:
+        """Get an agent by ID.
+
+        Args:
+            agent_id: The ID of the agent to retrieve
+
+        Returns:
+            Optional[Agent]: The agent if found, None otherwise
+        """
+        with Session(self.engine) as session:
+            statement = select(Agent).where(Agent.id == agent_id).options(selectinload(Agent.agent_personality))
+            agent = session.exec(statement).first()
+            return agent
+
+    async def get_all_agents(self) -> List[Agent]:
+        """Get all agents in the system.
+
+        Returns:
+            List[Agent]: List of all agents
+        """
+        with Session(self.engine) as session:
+            statement = select(Agent).options(selectinload(Agent.agent_personality)).order_by(Agent.created_at)
+            agents = session.exec(statement).all()
+            return agents
+
+    async def get_agents_by_scenario(self, scenario_id: int) -> List[Agent]:
+        """Get all agents for a specific scenario.
+
+        Args:
+            scenario_id: The ID of the scenario
+
+        Returns:
+            List[Agent]: List of agents for the scenario
+        """
+        with Session(self.engine) as session:
+            statement = select(Agent).where(Agent.scenario_id == scenario_id).options(selectinload(Agent.agent_personality)).order_by(Agent.created_at)
+            agents = session.exec(statement).all()
+            return agents
+
+    async def update_agent(
+        self,
+        agent_id: str,
+        name: Optional[str] = None,
+        voice: Optional[str] = None,
+        display_text_color: Optional[str] = None,
+        objective: Optional[str] = None,
+        instructions: Optional[str] = None,
+        constraints: Optional[str] = None,
+        context: Optional[str] = None,
+        scenario_id: Optional[int] = None,
+        agent_personality_id: Optional[int] = None,
+    ) -> Agent:
+        """Update an agent's attributes.
+
+        Args:
+            agent_id: The ID of the agent to update
+            name: Optional new name
+            voice: Optional new voice
+            display_text_color: Optional new display color
+            objective: Optional new objective
+            instructions: Optional new instructions
+            constraints: Optional new constraints
+            context: Optional new context
+            scenario_id: Optional new scenario ID
+            agent_personality_id: Optional new personality ID
+
+        Returns:
+            Agent: The updated agent
+
+        Raises:
+            HTTPException: If agent is not found
+        """
+        with Session(self.engine) as session:
+            agent = session.get(Agent, agent_id)
+            if not agent:
+                raise HTTPException(status_code=404, detail="Agent not found")
+
+            if name is not None:
+                agent.name = name
+            if voice is not None:
+                agent.voice = voice
+            if display_text_color is not None:
+                agent.display_text_color = display_text_color
+            if objective is not None:
+                agent.objective = objective
+            if instructions is not None:
+                agent.instructions = instructions
+            if constraints is not None:
+                agent.constraints = constraints
+            if context is not None:
+                agent.context = context
+            if scenario_id is not None:
+                agent.scenario_id = scenario_id
+            if agent_personality_id is not None:
+                agent.agent_personality_id = agent_personality_id
+
+            session.add(agent)
+            session.commit()
+            session.refresh(agent)
+            logger.info("agent_updated", agent_id=agent_id)
+            return agent
+
+    async def delete_agent(self, agent_id: str) -> bool:
+        """Delete an agent by ID.
+
+        Args:
+            agent_id: The ID of the agent to delete
+
+        Returns:
+            bool: True if deletion was successful, False if agent not found
+        """
+        with Session(self.engine) as session:
+            agent = session.get(Agent, agent_id)
+            if not agent:
+                return False
+
+            session.delete(agent)
+            session.commit()
+            logger.info("agent_deleted", agent_id=agent_id)
+            return True
+
+    # ========== Scenario Methods ==========
+
+    async def create_scenario(
+        self,
+        name: str,
+        description: str,
+        overview: str,
+        system_instructions: str,
+        initial_prompt: str,
+    ) -> Scenario:
+        """Create a new scenario.
+
+        Args:
+            name: Name of the scenario
+            description: Description of the scenario
+            overview: Overview of the scenario
+            system_instructions: System instructions for the scenario
+            initial_prompt: Initial prompt for the scenario
+
+        Returns:
+            Scenario: The created scenario
+        """
+        with Session(self.engine) as session:
+            scenario = Scenario(
+                name=name,
+                description=description,
+                overview=overview,
+                system_instructions=system_instructions,
+                initial_prompt=initial_prompt,
+            )
+            session.add(scenario)
+            session.commit()
+            session.refresh(scenario)
+            logger.info("scenario_created", scenario_id=scenario.id, name=name)
+            return scenario
+
+    async def get_scenario(self, scenario_id: int) -> Optional[Scenario]:
+        """Get a scenario by ID.
+
+        Args:
+            scenario_id: The ID of the scenario to retrieve
+
+        Returns:
+            Optional[Scenario]: The scenario if found, None otherwise
+        """
+        with Session(self.engine) as session:
+            scenario = session.get(Scenario, scenario_id)
+            return scenario
+
+    async def update_scenario(
+        self,
+        scenario_id: int,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        overview: Optional[str] = None,
+        system_instructions: Optional[str] = None,
+        initial_prompt: Optional[str] = None,
+    ) -> Scenario:
+        """Update a scenario's attributes.
+
+        Args:
+            scenario_id: The ID of the scenario to update
+            name: Optional new name
+            description: Optional new description
+            overview: Optional new overview
+            system_instructions: Optional new system instructions
+            initial_prompt: Optional new initial prompt
+
+        Returns:
+            Scenario: The updated scenario
+
+        Raises:
+            HTTPException: If scenario is not found
+        """
+        with Session(self.engine) as session:
+            scenario = session.get(Scenario, scenario_id)
+            if not scenario:
+                raise HTTPException(status_code=404, detail="Scenario not found")
+
+            if name is not None:
+                scenario.name = name
+            if description is not None:
+                scenario.description = description
+            if overview is not None:
+                scenario.overview = overview
+            if system_instructions is not None:
+                scenario.system_instructions = system_instructions
+            if initial_prompt is not None:
+                scenario.initial_prompt = initial_prompt
+
+            session.add(scenario)
+            session.commit()
+            session.refresh(scenario)
+            logger.info("scenario_updated", scenario_id=scenario_id)
+            return scenario
+
+    async def delete_scenario(self, scenario_id: int) -> bool:
+        """Delete a scenario by ID.
+
+        Args:
+            scenario_id: The ID of the scenario to delete
+
+        Returns:
+            bool: True if deletion was successful, False if scenario not found
+        """
+        with Session(self.engine) as session:
+            scenario = session.get(Scenario, scenario_id)
+            if not scenario:
+                return False
+
+            session.delete(scenario)
+            session.commit()
+            logger.info("scenario_deleted", scenario_id=scenario_id)
+            return True
+
+    # ========== AgentPersonality Methods ==========
+
+    async def create_agent_personality(
+        self,
+        name: str,
+        personality_description: str,
+    ) -> AgentPersonality:
+        """Create a new agent personality.
+
+        Args:
+            name: Name of the personality
+            personality_description: Description of the personality
+
+        Returns:
+            AgentPersonality: The created agent personality
+        """
+        with Session(self.engine) as session:
+            agent_personality = AgentPersonality(
+                name=name,
+                personality_description=personality_description,
+            )
+            session.add(agent_personality)
+            session.commit()
+            session.refresh(agent_personality)
+            logger.info("agent_personality_created", personality_id=agent_personality.id, name=name)
+            return agent_personality
+
+    async def get_agent_personality(self, personality_id: int) -> Optional[AgentPersonality]:
+        """Get an agent personality by ID.
+
+        Args:
+            personality_id: The ID of the agent personality to retrieve
+
+        Returns:
+            Optional[AgentPersonality]: The agent personality if found, None otherwise
+        """
+        with Session(self.engine) as session:
+            agent_personality = session.get(AgentPersonality, personality_id)
+            return agent_personality
+
+    async def get_all_agent_personalities(self) -> List[AgentPersonality]:
+        """Get all agent personalities in the system.
+
+        Returns:
+            List[AgentPersonality]: List of all agent personalities
+        """
+        with Session(self.engine) as session:
+            statement = select(AgentPersonality).order_by(AgentPersonality.created_at)
+            agent_personalities = session.exec(statement).all()
+            return agent_personalities
+
+    async def update_agent_personality(
+        self,
+        personality_id: int,
+        name: Optional[str] = None,
+        personality_description: Optional[str] = None,
+    ) -> AgentPersonality:
+        """Update an agent personality's attributes.
+
+        Args:
+            personality_id: The ID of the agent personality to update
+            name: Optional new name
+            personality_description: Optional new personality description
+
+        Returns:
+            AgentPersonality: The updated agent personality
+
+        Raises:
+            HTTPException: If agent personality is not found
+        """
+        with Session(self.engine) as session:
+            agent_personality = session.get(AgentPersonality, personality_id)
+            if not agent_personality:
+                raise HTTPException(status_code=404, detail="Agent personality not found")
+
+            if name is not None:
+                agent_personality.name = name
+            if personality_description is not None:
+                agent_personality.personality_description = personality_description
+
+            session.add(agent_personality)
+            session.commit()
+            session.refresh(agent_personality)
+            logger.info("agent_personality_updated", personality_id=personality_id)
+            return agent_personality
+
+    async def delete_agent_personality(self, personality_id: int) -> bool:
+        """Delete an agent personality by ID.
+
+        Args:
+            personality_id: The ID of the agent personality to delete
+
+        Returns:
+            bool: True if deletion was successful, False if agent personality not found
+        """
+        with Session(self.engine) as session:
+            agent_personality = session.get(AgentPersonality, personality_id)
+            if not agent_personality:
+                return False
+
+            session.delete(agent_personality)
+            session.commit()
+            logger.info("agent_personality_deleted", personality_id=personality_id)
             return True
 
 # Create a singleton instance

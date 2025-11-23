@@ -20,8 +20,10 @@ export class ChatGraphService {
   private summaryFeedback = signal<string>('')
   // TODO: make this not an array? 
   private inlineFeedback = signal<string[]>(this.loadInlineFeedbackFromStorage());
+  private studentResponses = signal<ChatResponse['student_responses']>([]);
 
   loadedSummaryFeedback = this.summaryFeedback.asReadonly();
+  loadedStudentResponses = this.studentResponses.asReadonly();
 
   constructor() {
     // Effect to persist graphMessages to localStorage
@@ -88,12 +90,13 @@ export class ChatGraphService {
         console.log('Response: ', response);
         this.inlineFeedback.set(response.inline_feedback);
         this.summaryFeedback.set(response.summary_feedback);
+        this.studentResponses.set(response.student_responses);
         
         if (response.interrupt_task) {
           const responseMessage: Message = {
             role: 'assistant',
             content: response.interrupt_value,
-            student_number: response.answering_student
+            student_name: response.student_responses[response.answering_student - 1].student_details.name
           }
           this.interruptionContent.set(response.interrupt_value);
           this.interruptionType.set(response.interrupt_value_type);

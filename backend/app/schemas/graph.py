@@ -12,6 +12,15 @@ from pydantic import (
     field_validator,
 )
 
+from app.models.agent import Agent, AgentPersonality
+
+class StudentResponse(BaseModel):
+    """Model for the student response."""
+
+    student_response: str = Field(..., description="The response from the student")
+    student_details: "Agent"
+    student_personality: "AgentPersonality"
+
 
 class GraphState(BaseModel):
     """State definition for the LangGraph Agent/Workflow."""
@@ -21,7 +30,7 @@ class GraphState(BaseModel):
     )
     session_id: str = Field(..., description="The unique identifier for the conversation session")
 
-    student_responses: Annotated[list[str], operator.add] = Field(
+    student_responses: Annotated[list[StudentResponse], operator.add] = Field(
         default_factory=list, description="The student responses"
     )
     inline_feedback: Annotated[list[str], operator.add] = Field(

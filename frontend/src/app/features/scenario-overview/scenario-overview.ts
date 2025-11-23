@@ -20,7 +20,6 @@ import { ScenarioService } from '../../core/services/scenario.service';
     MatInputModule,
     MatButtonModule,
     CommonModule,
-    LoadingSpinner,
   ],
   templateUrl: './scenario-overview.html',
   styleUrl: './scenario-overview.css',

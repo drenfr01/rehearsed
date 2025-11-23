@@ -83,7 +83,7 @@
               <td mat-cell *matCellDef="let user">
                 @if (editingUser()?.id === user.id) {
                   <mat-form-field appearance="outline" class="inline-edit">
-                    <input matInput [formControl]="editUserForm.get('email')" type="email">
+                    <input matInput [formControl]="$any(editUserForm.get('email'))" type="email">
                   </mat-form-field>
                 } @else {
                   {{ user.email }}
@@ -96,7 +96,7 @@
               <th mat-header-cell *matHeaderCellDef>Admin</th>
               <td mat-cell *matCellDef="let user">
                 @if (editingUser()?.id === user.id) {
-                  <mat-slide-toggle [formControl]="editUserForm.get('is_admin')">
+                  <mat-slide-toggle [formControl]="$any(editUserForm.get('is_admin'))">
                     Admin
                   </mat-slide-toggle>
                 } @else {

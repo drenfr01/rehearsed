@@ -5,6 +5,7 @@ from langgraph.types import Interrupt
 from typing import (
     List,
     Literal,
+    TYPE_CHECKING,
 )
 
 from pydantic import (
@@ -13,6 +14,7 @@ from pydantic import (
     field_validator,
 )
 
+from app.schemas.graph import StudentResponse
 
 class Message(BaseModel):
     """Message model for chat endpoint.
@@ -79,7 +81,7 @@ class ChatResponse(BaseModel):
     interrupt_value: str = Field(default="", description="The value to interrupt the conversation")
     interrupt_value_type: Literal['text', 'image', 'audio', 'video'] = Field(default="text", description="The type of the interrupt value")
     # TODO: potentially make this sub model and DRY out this and the GraphState model
-    student_responses: List[str] = Field(default_factory=list, description="List of student responses")
+    student_responses: List[StudentResponse] = Field(default_factory=list, description="List of student responses")
     inline_feedback: List[str] = Field(default_factory=list, description="List of inline feedback")
     summary_feedback: str = Field(default="", description="The summary feedback for the student responses")
     summary: str = Field(default="", description="The summary of the student responses")

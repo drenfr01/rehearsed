@@ -14,7 +14,14 @@ from app.models.base import BaseModel
 if TYPE_CHECKING:
     from app.models.user import User
     from app.models.scenario import Scenario
-    from app.models.agent_personality import AgentPersonality
+
+class AgentPersonality(BaseModel, table=True):
+    __tablename__ = "agent_personality"
+    
+    id: int = Field(..., primary_key=True, unique=True)
+    name: str = Field(...)
+    personality_description: str = Field(...)
+    agents: List["Agent"] = Relationship(back_populates="agent_personality")
 
 class Agent(BaseModel, table=True):
     """Agent model for storing chat agent prompts and metadata.

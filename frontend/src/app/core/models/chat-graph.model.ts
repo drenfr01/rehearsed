@@ -3,7 +3,21 @@ export type role = "user" | "assistant"
 export interface Message {
     role: role;
     content: string;
-    student_number?: number;
+    student_name?: string;
+}
+
+export interface Agent {
+    id: string;
+    name: string;
+    objective: string;
+    instructions: string;
+    constraints: string;
+}
+
+export interface AgentPersonality {
+    id: string;
+    name: string;
+    personality_description: string;
 }
 
 export interface ChatRequest {
@@ -13,12 +27,18 @@ export interface ChatRequest {
     resumption_approved: boolean;
 }
 
+export interface StudentResponse {
+    student_response: string;
+    student_details: Agent;
+    student_personality: AgentPersonality;
+}
+
 export interface ChatResponse {
     messages: Message[];
     interrupt_task: string;
     interrupt_value: string;
     interrupt_value_type: 'text' | 'image' | 'audio' | 'video';
-    student_responses: string[];
+    student_responses: StudentResponse[];
     inline_feedback: string[];
     summary_feedback: string;
     summary: string;

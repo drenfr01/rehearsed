@@ -42,6 +42,7 @@ export class Classroom {
   // Expose readonly signals from the service
   protected messages = this.chatGraphService.loadedGraphMessages;
   protected inlineFeedback = this.chatGraphService.loadedInlineFeedback;
+  protected studentResponses = this.chatGraphService.loadedStudentResponses;
 
   constructor() {
     // Watch for summary feedback and navigate when available

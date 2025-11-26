@@ -54,7 +54,7 @@ async def get_all_scenarios(
             "get_all_scenarios_request_received",
         )
 
-        return database_service.get_all_scenarios()
+        return await database_service.get_all_scenarios()
         
     except Exception as e:
         logger.error("get_all_scenarios_request_failed", error=str(e), exc_info=True)
@@ -83,7 +83,7 @@ async def get_scenario_by_id(
             "get_scenario_by_id_request_received",
         )
 
-        return database_service.get_scenario_by_id(scenario_id)
+        return await database_service.get_scenario(scenario_id)
         
     except Exception as e:
         logger.error("get_scenario_by_id_request_failed", error=str(e), exc_info=True)

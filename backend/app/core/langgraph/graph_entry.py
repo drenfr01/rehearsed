@@ -96,6 +96,7 @@ class LangGraphAgent:
                 # Configure pool size based on environment
                 max_size = settings.POSTGRES_POOL_SIZE
 
+                # TODO: add in production connectinon url here
                 connection_url = (
                     "postgresql://"
                     f"{quote_plus(settings.POSTGRES_USER)}:{quote_plus(settings.POSTGRES_PASSWORD)}"

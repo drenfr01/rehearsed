@@ -1,0 +1,39 @@
+service: default
+runtime: nodejs22
+handlers:
+  # Serve static files from the 'dist' folder (where Angular builds its output)
+  - url: /(.*\.js)
+    static_files: dist/browser/\1 # Adjust path based on your Angular build output
+    upload: dist/browser/(.*\.js)
+    secure: always
+
+  - url: /(.*\.css)
+    static_files: dist/browser/\1
+    upload: dist/browser/(.*\.css)
+    secure: always
+
+  - url: /(.*\.png)
+    static_files: dist/browser/\1
+    upload: dist/browser/(.*\.png)
+    secure: always
+
+  - url: /(.*\.jpg)
+    static_files: dist/browser/\1
+    upload: dist/browser/(.*\.jpg)
+    secure: always
+
+  - url: /(.*\.svg)
+    static_files: dist/browser/\1
+    upload: dist/browser/(.*\.svg)
+    secure: always
+
+  - url: /favicon.ico
+    static_files: dist/browser/favicon.ico
+    upload: dist/browser/favicon.ico
+    secure: always
+
+  # Catch-all for Angular routing: serve index.html for all other URLs
+  - url: /.*
+    static_files: dist/browser/index.html
+    upload: dist/browser/.*
+    secure: alwaysindex.html

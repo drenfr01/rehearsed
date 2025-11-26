@@ -17,9 +17,10 @@ yarn-error.log*
 .env
 .env.local
 .env.*.local
-.env.development.local
-.env.staging.local
-.env.production.local
+.env.development
+.env.staging
+.env.production
+.env.test
 
 # Python
 __pycache__/

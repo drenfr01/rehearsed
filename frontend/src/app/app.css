@@ -1,0 +1,365 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f7f6f6;
+}
+
+main {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  background-color: #f7f6f6;
+}
+
+.app-header {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    font-family: 'Erode', serif;
+    padding: 1.5rem 2rem !important;
+    min-height: auto !important;
+    height: auto !important;
+}
+
+.app-header.mat-toolbar,
+.app-header.mat-mdc-toolbar {
+    background-color: transparent !important;
+    color: #333333;
+    padding: 1.5rem 2rem !important;
+    height: auto !important;
+    min-height: auto !important;
+}
+
+.app-header::before {
+    display: none;
+}
+
+/* The white pill-shaped bar */
+.header-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 90%;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1rem 2rem;
+    background-color: #ffffff;
+    border-radius: 100px;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+/* Logo */
+.header-logo {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    padding-right: 2rem;
+}
+
+.header-logo svg {
+    height: 28px;
+    width: auto;
+}
+
+/* Center Navigation */
+.nav-center {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+}
+
+.nav-link {
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 15px;
+    color: #666666 !important;
+    font-family: 'Erode', serif;
+    padding: 6px 12px !important;
+    transition: color 0.2s ease;
+    background: transparent !important;
+    min-width: auto !important;
+    height: auto !important;
+    line-height: 1.4 !important;
+}
+
+.nav-link:hover {
+    color: #15616D !important;
+    background: transparent !important;
+}
+
+.nav-link.active-link {
+    color: #15616D !important;
+    background-color: transparent !important;
+}
+
+/* Override Material button ripple */
+.nav-link .mat-button-focus-overlay,
+.nav-link .mat-button-ripple {
+    display: none !important;
+}
+
+/* Scenario Selection Dropdown */
+.scenario-dropdown {
+    position: relative;
+}
+
+.scenario-trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    color: #15616D !important;
+    font-weight: 500;
+    font-size: 15px;
+    padding: 6px 12px !important;
+    background: transparent !important;
+    font-family: 'Erode', serif;
+    min-width: auto !important;
+    height: auto !important;
+    line-height: 1.4 !important;
+}
+
+.scenario-trigger:hover {
+    background: transparent !important;
+}
+
+.scenario-trigger .mat-button-focus-overlay,
+.scenario-trigger .mat-button-ripple {
+    display: none !important;
+}
+
+.scenario-trigger mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    transition: transform 0.2s ease;
+}
+
+.scenario-trigger.open mat-icon {
+    transform: rotate(180deg);
+}
+
+/* Dropdown Menu */
+.dropdown-menu {
+    position: absolute;
+    top: calc(100% + 12px);
+    left: 0;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    padding: 0.75rem;
+    min-width: 260px;
+    z-index: 1001;
+    display: none;
+}
+
+.dropdown-menu.open {
+    display: block;
+    animation: fadeInDown 0.2s ease-out;
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    color: #333333;
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 400;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+    font-family: 'Erode', serif;
+}
+
+.dropdown-item:hover {
+    background-color: #F5F0E8;
+}
+
+.dropdown-item mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    color: #9ECFD5;
+}
+
+/* Right Navigation */
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex: 0 0 auto;
+    padding-left: 2rem;
+}
+
+.new-session-button {
+    height: 36px !important;
+    padding: 0 18px 0 10px !important;
+    background-color: #15616D !important;
+    color: #ffffff !important;
+    border-radius: 20px !important;
+    font-size: 14px !important;
+    font-weight: 500;
+    font-family: 'Erode', serif;
+    box-shadow: none !important;
+    transition: all 0.2s ease;
+    display: flex !important;
+    align-items: center;
+    gap: 6px;
+    min-width: auto !important;
+    line-height: 1 !important;
+}
+
+.new-session-button:hover {
+    background-color: #124d57 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(21, 97, 109, 0.2) !important;
+}
+
+.new-session-button .mat-button-focus-overlay,
+.new-session-button .mat-button-ripple {
+    display: none !important;
+}
+
+/* White dot icon */
+.new-session-button .session-dot {
+    width: 10px;
+    height: 10px;
+    background-color: #ffffff;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.new-session-button mat-icon {
+    display: none;
+}
+
+.logout-link {
+    color: #666666 !important;
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 500;
+    font-family: 'Erode', serif;
+    padding: 6px 12px !important;
+    transition: color 0.2s ease;
+    background: transparent !important;
+    min-width: auto !important;
+    height: auto !important;
+    line-height: 1.4 !important;
+}
+
+.logout-link:hover {
+    color: #333333 !important;
+    background: transparent !important;
+}
+
+.logout-link .mat-button-focus-overlay,
+.logout-link .mat-button-ripple {
+    display: none !important;
+}
+
+/* Hide elements we don't need */
+.nav-divider,
+.session-id,
+.admin-link {
+    display: none;
+}
+
+/* Responsive design */
+@media (max-width: 1200px) {
+    .header-container {
+        width: 95%;
+    }
+}
+
+@media (max-width: 1024px) {
+    .header-container {
+        padding: 1rem 1.5rem;
+    }
+
+    .nav-center {
+        gap: 1rem;
+    }
+
+    .nav-right {
+        gap: 1rem;
+        padding-left: 1rem;
+    }
+
+    .header-logo {
+        padding-right: 1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .app-header {
+        padding: 1rem !important;
+    }
+
+    .header-container {
+        border-radius: 24px;
+        flex-wrap: wrap;
+        padding: 1rem;
+        gap: 1rem;
+        width: 100%;
+    }
+
+    .header-logo {
+        order: 1;
+        padding-right: 0;
+    }
+
+    .nav-right {
+        order: 2;
+        margin-left: auto;
+        padding-left: 0;
+    }
+
+    .nav-center {
+        order: 3;
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+}
+
+@media (max-width: 640px) {
+
+    .nav-link,
+    .logout-link,
+    .scenario-trigger {
+        font-size: 13px;
+        padding: 5px 10px !important;
+    }
+
+    .new-session-button {
+        height: 32px !important;
+        padding: 0 14px 0 8px !important;
+        font-size: 13px !important;
+    }
+
+    .new-session-button .session-dot {
+        width: 8px;
+        height: 8px;
+    }
+}

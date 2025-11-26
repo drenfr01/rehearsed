@@ -1,4 +1,14 @@
 <div class="login-container">
+
+  <!-- Company logo -->
+  <div class="company-logo">
+    <img src="rehearsed_logo.svg" alt="Rehearsed" />
+  </div>
+
+  <!-- Decorative arrows -->
+  <img class="arrow-left" src="arrow_left.svg" alt="" />
+  <img class="arrow-right" src="arrow_right.svg" alt="" />
+
   <mat-card class="login-card">
     <mat-card-header>
       <mat-card-title>Login</mat-card-title>
@@ -9,10 +19,10 @@
           <mat-label>Email</mat-label>
           <input matInput type="email" formControlName="email" placeholder="Enter your email" />
           @if (form.get('email')?.hasError('required') && form.get('email')?.touched) {
-            <mat-error>Email is required</mat-error>
+          <mat-error>Email is required</mat-error>
           }
           @if (form.get('email')?.hasError('email') && form.get('email')?.touched) {
-            <mat-error>Please enter a valid email</mat-error>
+          <mat-error>Please enter a valid email</mat-error>
           }
         </mat-form-field>
 
@@ -20,31 +30,26 @@
           <mat-label>Password</mat-label>
           <input matInput type="password" formControlName="password" placeholder="Enter your password" />
           @if (form.get('password')?.hasError('required') && form.get('password')?.touched) {
-            <mat-error>Password is required</mat-error>
+          <mat-error>Password is required</mat-error>
           }
           @if (form.get('password')?.hasError('minlength') && form.get('password')?.touched) {
-            <mat-error>Password must be at least 6 characters</mat-error>
+          <mat-error>Password must be at least 6 characters</mat-error>
           }
         </mat-form-field>
 
         @if (error()) {
-          <div class="error-message">
-            {{ error() }}
-          </div>
+        <div class="error-message">
+          {{ error() }}
+        </div>
         }
 
-        <button
-          mat-raised-button
-          color="primary"
-          type="submit"
-          class="full-width submit-button"
-          [disabled]="form.invalid || isLoading()"
-        >
+        <button mat-raised-button color="primary" type="submit" class="full-width submit-button"
+          [disabled]="form.invalid || isLoading()">
           @if (isLoading()) {
-            <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
-            <span class="button-text">Logging in...</span>
+          <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
+          <span class="button-text">Logging in...</span>
           } @else {
-            <span class="button-text">Login</span>
+          <span class="button-text">Login</span>
           }
         </button>
       </form>

@@ -1,14 +1,14 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-footer',
   imports: [
     RouterModule,
-    MatToolbarModule,
     MatButtonModule,
     MatIconModule
   ],
@@ -16,6 +16,9 @@ import { MatIconModule } from '@angular/material/icon';
   styleUrl: './footer.css',
 })
 export class Footer {
+  private authService = inject(AuthService);
+  isLoggedIn = this.authService.isLoggedIn;
+  
   currentYear = new Date().getFullYear();
   
   footerLinks = [

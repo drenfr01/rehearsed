@@ -4,10 +4,7 @@
   align-items: center;
   min-height: 100vh;
   padding: 1rem;
-  background: linear-gradient(135deg, 
-    var(--mat-sys-primary-container) 0%, 
-    var(--mat-sys-secondary-container) 50%,
-    var(--mat-sys-tertiary-container) 100%);
+  background: #f7f6f6;
   position: relative;
   overflow: hidden;
 }

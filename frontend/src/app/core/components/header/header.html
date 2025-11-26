@@ -1,61 +1,51 @@
 @if (isLoggedIn()) {
-  <mat-toolbar color="primary" class="app-header">
-    <div class="header-container">
-      <nav class="nav-center">
-        @for (route of routes; track route.path) {
-          <a 
-            mat-button
-            [routerLink]="route.path" 
-            routerLinkActive="active-link"
-            class="nav-link"
-          >
-            {{ route.label }}
-          </a>
-        }
-        @if (isAdmin()) {
-          <span class="nav-divider">|</span>
-          @for (route of adminRoutes; track route.path) {
-            <a 
-              mat-button
-              [routerLink]="route.path" 
-              routerLinkActive="active-link"
-              class="nav-link admin-link"
-            >
-              <mat-icon>admin_panel_settings</mat-icon>
-              {{ route.label }}
-            </a>
-          }
-        }
-      </nav>
-      
-      <div class="nav-right">
-        <span 
-          class="session-id" 
-          [matTooltip]="token() || ''"
-          matTooltipPosition="below"
-        >
-          <mat-icon>vpn_key</mat-icon>
-          {{ getTruncatedSessionId() }}
-        </span>
-        
-        <button 
-          mat-raised-button 
-          color="accent"
-          (click)="createSession()"
-        >
-          <mat-icon>add_circle</mat-icon>
-          New Session
-        </button>
-        
-        <button 
-          mat-raised-button 
-          color="warn"
-          (click)="logout()"
-        >
-          <mat-icon>logout</mat-icon>
-          Logout
-        </button>
-      </div>
+<mat-toolbar class="app-header">
+  <div class="header-container">
+    <!-- Logo -->
+    <div class="header-logo">
+      <img src="rehearsed_logo.svg" alt="Rehearsed" />
     </div>
-  </mat-toolbar>
+
+    <!-- Center Navigation -->
+    <nav class="nav-center">
+      <!-- Scenario Selection with Dropdown -->
+      <div class="scenario-dropdown">
+        <button mat-button class="scenario-trigger" [class.open]="isDropdownOpen" (click)="toggleDropdown()">
+          Scenario Selection
+          <mat-icon>expand_more</mat-icon>
+        </button>
+
+        <div class="dropdown-menu" [class.open]="isDropdownOpen">
+          <a class="dropdown-item" *ngFor="let scenario of scenarios"
+            (click)="selectScenario(scenario); closeDropdown()">
+            <img src="scenario_icon.svg" alt="" class="scenario-icon" />
+            {{ scenario.name }}
+          </a>
+        </div>
+      </div>
+
+      <!-- Other Navigation Links -->
+      <a mat-button routerLink="/app/scenario-overview" routerLinkActive="active-link" class="nav-link">
+        Scenario Overview
+      </a>
+
+      <a mat-button routerLink="/app/classroom" routerLinkActive="active-link" class="nav-link">
+        Classroom
+      </a>
+    </nav>
+
+    <!-- Right Navigation -->
+    <div class="nav-right">
+      <button mat-raised-button class="new-session-button" (click)="createSession()">
+        <img src = "scenario_icon.svg" alt="" class="new-session-icon" />
+        New Session
+      </button>
+
+
+      <a mat-button class="logout-link" (click)="logout()">
+        Logout
+      </a>
+    </div>
+  </div>
+</mat-toolbar>
 }

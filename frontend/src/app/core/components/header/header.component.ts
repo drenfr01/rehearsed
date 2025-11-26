@@ -1,4 +1,5 @@
-import { Component, DestroyRef, inject } from '@angular/core';
+import { Component, DestroyRef, inject, HostListener } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,9 +8,17 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '../../services/auth.service';
 import { Router } from '@angular/router';
 
+interface Scenario {
+  id: string;
+  name: string;
+  path?: string;
+}
+
 @Component({
   selector: 'app-header',
+  standalone: true,
   imports: [
+    CommonModule,
     RouterModule,
     MatToolbarModule,
     MatButtonModule,
@@ -27,6 +36,14 @@ export class Header {
   isLoggedIn = this.authService.isLoggedIn;
   token = this.authService.token;
   isAdmin = this.authService.isAdmin;
+  isDropdownOpen = false;
+
+  // Scenarios for dropdown
+  scenarios: Scenario[] = [
+    { id: '1', name: 'System of Linear Equations' },
+    { id: '2', name: 'Negative Numbers' },
+    { id: '3', name: 'Fractals' }
+  ];
 
   // Navigation routes
   routes = [
@@ -35,17 +52,29 @@ export class Header {
     { path: '/app/classroom', label: 'Classroom' }
   ];
 
-  // Admin routes
-  adminRoutes = [
-    { path: '/app/admin', label: 'Admin Dashboard' }
-  ];
+  toggleDropdown() {
+    this.isDropdownOpen = !this.isDropdownOpen;
+  }
 
-  getTruncatedSessionId(): string {
-    const sessionToken = this.token();
-    if (!sessionToken) return '';
-    // Show first 8 and last 4 characters
-    if (sessionToken.length <= 12) return sessionToken;
-    return `${sessionToken.slice(0, 8)}...${sessionToken.slice(-4)}`;
+  closeDropdown() {
+    this.isDropdownOpen = false;
+  }
+
+  selectScenario(scenario: Scenario) {
+    console.log('Selected scenario:', scenario);
+    // Navigate to scenario or handle selection
+    // this.router.navigate(['/app/scenario-selection', scenario.id]);
+  }
+
+  // Close dropdown when clicking outside
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    const dropdown = target.closest('.scenario-dropdown');
+
+    if (!dropdown && this.isDropdownOpen) {
+      this.closeDropdown();
+    }
   }
 
   logout() {
@@ -61,9 +90,9 @@ export class Header {
         console.log(error.message);
       },
     });
+
     this.destroyRef.onDestroy(() => {
       subscription.unsubscribe();
     });
   }
-
 }

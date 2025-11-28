@@ -27,10 +27,12 @@ from app.core.config import (
 from app.core.logging import logger
 from app.core.prompts.students import (
     APPROPRIATE_RESPONSE_INSTRUCTIONS,
-    INLINE_FEEDBACK_SYSTEM_INSTRUCTIONS,
     STUDENT_PROFILES,
     STUDENT_SYSTEM_INSTRUCTIONS_TEMPLATE,
-    OVERALL_FEEDBACK_SYSTEM_INSTRUCTIONS,
+)
+from app.core.prompts.feedback import (
+    INLINE_FEEDBACK_SYSTEM_INSTRUCTIONS,
+    SUMMARY_FEEDBACK_SYSTEM_INSTRUCTIONS,
 )
 from app.schemas.graph import (
     AppropriateResponse,

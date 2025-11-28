@@ -96,11 +96,11 @@ class LangGraphAgent:
                 # Configure pool size based on environment
                 max_size = settings.POSTGRES_POOL_SIZE
 
-                # TODO: DRY out with database.py 
-                # TODO: make db name an environment variable
                 if settings.ENVIRONMENT == Environment.PRODUCTION:
+                    # Note: psycopg_pool uses libpq connection strings, NOT SQLAlchemy URLs
+                    # So we use 'postgresql://' here, not 'postgresql+psycopg2://'
                     connection_url = (
-                    f"postgresql+psycopg2://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}"
+                    f"postgresql://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}"
                     f"@/rehearsed?host=/cloudsql/{settings.POSTGRES_HOST}"
                     )
 

@@ -1,5 +1,6 @@
 
 .env
+.env.production
 .venv
 __pycache__
 postgres-data

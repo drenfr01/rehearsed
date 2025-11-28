@@ -9,13 +9,14 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatDialogModule } from '@angular/material/dialog';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LoadingSpinner } from '../../shared/loading-spinner/loading-spinner';
 import { AdminService } from '../../core/services/admin.service';
 import { Agent, AgentCreate, AgentPersonality } from '../../core/models/agent.model';
 import { Scenario } from '../../core/models/scenario.model';
+import { EditAgentDialog, EditAgentDialogData, EditAgentDialogResult } from '../../shared/dialogs/edit-agent-dialog/edit-agent-dialog';
 
 @Component({
   selector: 'app-admin-agents',
@@ -43,6 +44,7 @@ export class AdminAgents implements OnInit {
   private destroyRef = inject(DestroyRef);
   private fb = inject(FormBuilder);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
 
   agents = signal<Agent[]>([]);
   scenarios = signal<Scenario[]>([]);
@@ -52,24 +54,10 @@ export class AdminAgents implements OnInit {
   showCreateForm = signal(false);
 
   createAgentForm: FormGroup;
-  editingAgent = signal<Agent | null>(null);
-  editAgentForm: FormGroup;
 
   constructor() {
     this.createAgentForm = this.fb.group({
       id: ['', [Validators.required, Validators.minLength(2)]],
-      name: ['', [Validators.required, Validators.minLength(2)]],
-      scenario_id: [null, [Validators.required]],
-      agent_personality_id: [null, [Validators.required]],
-      voice: [''],
-      display_text_color: [''],
-      objective: [''],
-      instructions: [''],
-      constraints: [''],
-      context: [''],
-    });
-
-    this.editAgentForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(2)]],
       scenario_id: [null, [Validators.required]],
       agent_personality_id: [null, [Validators.required]],
@@ -167,45 +155,40 @@ export class AdminAgents implements OnInit {
     }
   }
 
-  startEdit(agent: Agent) {
-    this.editingAgent.set(agent);
-    this.editAgentForm.patchValue({
-      name: agent.name,
-      scenario_id: agent.scenario_id,
-      agent_personality_id: agent.agent_personality_id,
-      voice: agent.voice,
-      display_text_color: agent.display_text_color,
-      objective: agent.objective,
-      instructions: agent.instructions,
-      constraints: agent.constraints,
-      context: agent.context,
+  openEditDialog(agent: Agent) {
+    const dialogData: EditAgentDialogData = {
+      agent,
+      scenarios: this.scenarios(),
+      personalities: this.personalities(),
+    };
+    const dialogRef = this.dialog.open(EditAgentDialog, {
+      width: '700px',
+      maxHeight: '90vh',
+      data: dialogData,
+    });
+
+    dialogRef.afterClosed().subscribe((result: EditAgentDialogResult | undefined) => {
+      if (result) {
+        this.saveEdit(agent.id, result);
+      }
     });
   }
 
-  cancelEdit() {
-    this.editingAgent.set(null);
-    this.editAgentForm.reset();
-  }
-
-  saveEdit(agentId: string) {
-    if (this.editAgentForm.valid) {
-      const formValue = this.editAgentForm.value;
-      const subscription = this.adminService.updateAgent(agentId, formValue).subscribe({
-        next: (updatedAgent) => {
-          this.agents.update(agents => 
-            agents.map(a => a.id === agentId ? updatedAgent : a)
-          );
-          this.snackBar.open('Agent updated successfully', 'Close', { duration: 3000 });
-          this.cancelEdit();
-        },
-        error: (error) => {
-          console.error('Failed to update agent', error);
-          const errorMessage = error.error?.detail || 'Failed to update agent';
-          this.snackBar.open(errorMessage, 'Close', { duration: 5000 });
-        },
-      });
-      this.destroyRef.onDestroy(() => subscription.unsubscribe());
-    }
+  private saveEdit(agentId: string, data: EditAgentDialogResult) {
+    const subscription = this.adminService.updateAgent(agentId, data).subscribe({
+      next: (updatedAgent) => {
+        this.agents.update(agents => 
+          agents.map(a => a.id === agentId ? updatedAgent : a)
+        );
+        this.snackBar.open('Agent updated successfully', 'Close', { duration: 3000 });
+      },
+      error: (error) => {
+        console.error('Failed to update agent', error);
+        const errorMessage = error.error?.detail || 'Failed to update agent';
+        this.snackBar.open(errorMessage, 'Close', { duration: 5000 });
+      },
+    });
+    this.destroyRef.onDestroy(() => subscription.unsubscribe());
   }
 
   deleteAgent(agentId: string, name: string) {
@@ -240,4 +223,3 @@ export class AdminAgents implements OnInit {
     return new Date(dateString).toLocaleString();
   }
 }
-

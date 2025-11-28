@@ -1,0 +1,87 @@
+<h2 mat-dialog-title>
+  <mat-icon>smart_toy</mat-icon>
+  Edit Agent
+</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="editForm" class="dialog-form">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Name</mat-label>
+      <input matInput formControlName="name" placeholder="Agent Name">
+      @if (editForm.get('name')?.hasError('required')) {
+        <mat-error>Name is required</mat-error>
+      }
+      @if (editForm.get('name')?.hasError('minlength')) {
+        <mat-error>Name must be at least 2 characters</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Scenario</mat-label>
+      <mat-select formControlName="scenario_id">
+        @for (scenario of data.scenarios; track scenario.id) {
+          <mat-option [value]="scenario.id">{{ scenario.name }}</mat-option>
+        }
+      </mat-select>
+      @if (editForm.get('scenario_id')?.hasError('required')) {
+        <mat-error>Scenario is required</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Personality</mat-label>
+      <mat-select formControlName="agent_personality_id">
+        @for (personality of data.personalities; track personality.id) {
+          <mat-option [value]="personality.id">{{ personality.name }}</mat-option>
+        }
+      </mat-select>
+      @if (editForm.get('agent_personality_id')?.hasError('required')) {
+        <mat-error>Personality is required</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Voice</mat-label>
+      <input matInput formControlName="voice" placeholder="Voice identifier">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Display Text Color</mat-label>
+      <input matInput formControlName="display_text_color" placeholder="#000000">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Objective</mat-label>
+      <textarea matInput formControlName="objective" rows="3" placeholder="Agent's objective"></textarea>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Instructions</mat-label>
+      <textarea matInput formControlName="instructions" rows="3" placeholder="Instructions for the agent"></textarea>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Constraints</mat-label>
+      <textarea matInput formControlName="constraints" rows="3" placeholder="Agent constraints"></textarea>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Context</mat-label>
+      <textarea matInput formControlName="context" rows="3" placeholder="Agent context"></textarea>
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Cancel</button>
+  <button 
+    mat-raised-button 
+    color="primary" 
+    (click)="onSave()"
+    [disabled]="!editForm.valid"
+  >
+    <mat-icon>save</mat-icon>
+    Save Changes
+  </button>
+</mat-dialog-actions>
+

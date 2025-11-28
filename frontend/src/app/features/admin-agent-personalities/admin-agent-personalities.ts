@@ -8,12 +8,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatDialogModule } from '@angular/material/dialog';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LoadingSpinner } from '../../shared/loading-spinner/loading-spinner';
 import { AdminService } from '../../core/services/admin.service';
 import { AgentPersonality, AgentPersonalityCreate } from '../../core/models/agent.model';
+import { EditPersonalityDialog, EditPersonalityDialogData, EditPersonalityDialogResult } from '../../shared/dialogs/edit-personality-dialog/edit-personality-dialog';
 
 @Component({
   selector: 'app-admin-agent-personalities',
@@ -40,6 +41,7 @@ export class AdminAgentPersonalities implements OnInit {
   private destroyRef = inject(DestroyRef);
   private fb = inject(FormBuilder);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
 
   personalities = signal<AgentPersonality[]>([]);
   displayedColumns: string[] = ['id', 'name', 'personality_description', 'created_at', 'actions'];
@@ -47,16 +49,9 @@ export class AdminAgentPersonalities implements OnInit {
   showCreateForm = signal(false);
 
   createPersonalityForm: FormGroup;
-  editingPersonality = signal<AgentPersonality | null>(null);
-  editPersonalityForm: FormGroup;
 
   constructor() {
     this.createPersonalityForm = this.fb.group({
-      name: ['', [Validators.required, Validators.minLength(2)]],
-      personality_description: ['', [Validators.required, Validators.minLength(10)]],
-    });
-
-    this.editPersonalityForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(2)]],
       personality_description: ['', [Validators.required, Validators.minLength(10)]],
     });
@@ -109,41 +104,38 @@ export class AdminAgentPersonalities implements OnInit {
     }
   }
 
-  startEdit(personality: AgentPersonality) {
-    this.editingPersonality.set(personality);
-    this.editPersonalityForm.patchValue({
-      name: personality.name,
-      personality_description: personality.personality_description,
+  openEditDialog(personality: AgentPersonality) {
+    const dialogData: EditPersonalityDialogData = { personality };
+    const dialogRef = this.dialog.open(EditPersonalityDialog, {
+      width: '600px',
+      data: dialogData,
+    });
+
+    dialogRef.afterClosed().subscribe((result: EditPersonalityDialogResult | undefined) => {
+      if (result) {
+        this.saveEdit(personality.id, result);
+      }
     });
   }
 
-  cancelEdit() {
-    this.editingPersonality.set(null);
-    this.editPersonalityForm.reset();
-  }
-
-  saveEdit(personalityId: number) {
-    if (this.editPersonalityForm.valid) {
-      const formValue = this.editPersonalityForm.value;
-      const subscription = this.adminService.updateAgentPersonality(
-        personalityId,
-        formValue
-      ).subscribe({
-        next: (updatedPersonality) => {
-          this.personalities.update(personalities => 
-            personalities.map(p => p.id === personalityId ? updatedPersonality : p)
-          );
-          this.snackBar.open('Agent personality updated successfully', 'Close', { duration: 3000 });
-          this.cancelEdit();
-        },
-        error: (error) => {
-          console.error('Failed to update agent personality', error);
-          const errorMessage = error.error?.detail || 'Failed to update agent personality';
-          this.snackBar.open(errorMessage, 'Close', { duration: 5000 });
-        },
-      });
-      this.destroyRef.onDestroy(() => subscription.unsubscribe());
-    }
+  private saveEdit(personalityId: number, data: EditPersonalityDialogResult) {
+    const subscription = this.adminService.updateAgentPersonality(
+      personalityId,
+      data
+    ).subscribe({
+      next: (updatedPersonality) => {
+        this.personalities.update(personalities => 
+          personalities.map(p => p.id === personalityId ? updatedPersonality : p)
+        );
+        this.snackBar.open('Agent personality updated successfully', 'Close', { duration: 3000 });
+      },
+      error: (error) => {
+        console.error('Failed to update agent personality', error);
+        const errorMessage = error.error?.detail || 'Failed to update agent personality';
+        this.snackBar.open(errorMessage, 'Close', { duration: 5000 });
+      },
+    });
+    this.destroyRef.onDestroy(() => subscription.unsubscribe());
   }
 
   deletePersonality(personalityId: number, name: string) {
@@ -168,4 +160,3 @@ export class AdminAgentPersonalities implements OnInit {
     return new Date(dateString).toLocaleString();
   }
 }
-

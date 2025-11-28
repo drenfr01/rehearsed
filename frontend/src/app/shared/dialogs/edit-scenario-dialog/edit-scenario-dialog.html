@@ -1,0 +1,97 @@
+<h2 mat-dialog-title>
+  <mat-icon>theater_comedy</mat-icon>
+  Edit Scenario
+</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="editForm" class="dialog-form">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Name</mat-label>
+      <input matInput formControlName="name" placeholder="Scenario Name">
+      @if (editForm.get('name')?.hasError('required')) {
+        <mat-error>Name is required</mat-error>
+      }
+      @if (editForm.get('name')?.hasError('minlength')) {
+        <mat-error>Name must be at least 2 characters</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Description</mat-label>
+      <textarea 
+        matInput 
+        formControlName="description" 
+        rows="3"
+        placeholder="Brief description of the scenario"
+      ></textarea>
+      @if (editForm.get('description')?.hasError('required')) {
+        <mat-error>Description is required</mat-error>
+      }
+      @if (editForm.get('description')?.hasError('minlength')) {
+        <mat-error>Description must be at least 10 characters</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Overview</mat-label>
+      <textarea 
+        matInput 
+        formControlName="overview" 
+        rows="4"
+        placeholder="Detailed overview of the scenario"
+      ></textarea>
+      @if (editForm.get('overview')?.hasError('required')) {
+        <mat-error>Overview is required</mat-error>
+      }
+      @if (editForm.get('overview')?.hasError('minlength')) {
+        <mat-error>Overview must be at least 10 characters</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>System Instructions</mat-label>
+      <textarea 
+        matInput 
+        formControlName="system_instructions" 
+        rows="5"
+        placeholder="System-level instructions for the scenario"
+      ></textarea>
+      @if (editForm.get('system_instructions')?.hasError('required')) {
+        <mat-error>System instructions are required</mat-error>
+      }
+      @if (editForm.get('system_instructions')?.hasError('minlength')) {
+        <mat-error>System instructions must be at least 10 characters</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Initial Prompt</mat-label>
+      <textarea 
+        matInput 
+        formControlName="initial_prompt" 
+        rows="3"
+        placeholder="Initial prompt to start the scenario"
+      ></textarea>
+      @if (editForm.get('initial_prompt')?.hasError('required')) {
+        <mat-error>Initial prompt is required</mat-error>
+      }
+      @if (editForm.get('initial_prompt')?.hasError('minlength')) {
+        <mat-error>Initial prompt must be at least 5 characters</mat-error>
+      }
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Cancel</button>
+  <button 
+    mat-raised-button 
+    color="primary" 
+    (click)="onSave()"
+    [disabled]="!editForm.valid"
+  >
+    <mat-icon>save</mat-icon>
+    Save Changes
+  </button>
+</mat-dialog-actions>
+

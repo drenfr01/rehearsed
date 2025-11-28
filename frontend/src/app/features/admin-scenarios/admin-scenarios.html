@@ -160,32 +160,14 @@
             <!-- Name Column -->
             <ng-container matColumnDef="name">
               <th mat-header-cell *matHeaderCellDef>Name</th>
-              <td mat-cell *matCellDef="let scenario">
-                @if (editingScenario()?.id === scenario.id) {
-                  <mat-form-field appearance="outline" class="inline-edit">
-                    <input matInput [formControl]="$any(editScenarioForm.get('name'))">
-                  </mat-form-field>
-                } @else {
-                  {{ scenario.name }}
-                }
-              </td>
+              <td mat-cell *matCellDef="let scenario">{{ scenario.name }}</td>
             </ng-container>
 
             <!-- Description Column -->
             <ng-container matColumnDef="description">
               <th mat-header-cell *matHeaderCellDef>Description</th>
               <td mat-cell *matCellDef="let scenario" class="description-cell">
-                @if (editingScenario()?.id === scenario.id) {
-                  <mat-form-field appearance="outline" class="inline-edit-textarea">
-                    <textarea 
-                      matInput 
-                      [formControl]="$any(editScenarioForm.get('description'))"
-                      rows="2"
-                    ></textarea>
-                  </mat-form-field>
-                } @else {
-                  <div class="description-content">{{ scenario.description }}</div>
-                }
+                <div class="description-content">{{ scenario.description }}</div>
               </td>
             </ng-container>
 
@@ -199,40 +181,22 @@
             <ng-container matColumnDef="actions">
               <th mat-header-cell *matHeaderCellDef>Actions</th>
               <td mat-cell *matCellDef="let scenario">
-                @if (editingScenario()?.id === scenario.id) {
-                  <button 
-                    mat-icon-button 
-                    color="primary" 
-                    (click)="saveEdit(scenario.id)"
-                    matTooltip="Save changes"
-                  >
-                    <mat-icon>save</mat-icon>
-                  </button>
-                  <button 
-                    mat-icon-button 
-                    (click)="cancelEdit()"
-                    matTooltip="Cancel"
-                  >
-                    <mat-icon>close</mat-icon>
-                  </button>
-                } @else {
-                  <button 
-                    mat-icon-button 
-                    color="primary" 
-                    (click)="startEdit(scenario)"
-                    matTooltip="Edit scenario"
-                  >
-                    <mat-icon>edit</mat-icon>
-                  </button>
-                  <button 
-                    mat-icon-button 
-                    color="warn" 
-                    (click)="deleteScenario(scenario.id, scenario.name)"
-                    matTooltip="Delete scenario"
-                  >
-                    <mat-icon>delete</mat-icon>
-                  </button>
-                }
+                <button 
+                  mat-icon-button 
+                  color="primary" 
+                  (click)="openEditDialog(scenario)"
+                  matTooltip="Edit scenario"
+                >
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button 
+                  mat-icon-button 
+                  color="warn" 
+                  (click)="deleteScenario(scenario.id, scenario.name)"
+                  matTooltip="Delete scenario"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
               </td>
             </ng-container>
 
@@ -251,4 +215,3 @@
     </mat-card-content>
   </mat-card>
 </div>
-

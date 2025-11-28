@@ -17,6 +17,7 @@ from fastapi.security import (
     HTTPBearer,
 )
 
+from app.api.v1.chatbot import agent as langgraph_agent
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.logging import logger
@@ -803,7 +804,9 @@ async def create_agent(
             context=agent_data.context or "",
         )
 
-        logger.info("admin_created_agent", admin_id=admin_user.id, agent_id=agent.id, name=name)
+        # Invalidate the graph for this scenario so it gets rebuilt with the new agent
+        await langgraph_agent.invalidate_graph(agent_data.scenario_id)
+        logger.info("admin_created_agent", admin_id=admin_user.id, agent_id=agent.id, name=name, scenario_id=agent_data.scenario_id)
 
         return AgentResponse(
             id=agent.id,
@@ -872,6 +875,9 @@ async def update_agent(
         # as they are system prompts for LLMs, not user-facing HTML content.
         # HTML escaping would corrupt apostrophes, quotes, and other valid characters.
 
+        # Remember old scenario_id for graph invalidation
+        old_scenario_id = agent.scenario_id
+        
         updated_agent = await db_service.update_agent(
             agent_id=agent_id,
             name=name,
@@ -885,7 +891,15 @@ async def update_agent(
             agent_personality_id=agent_data.agent_personality_id,
         )
 
-        logger.info("admin_updated_agent", admin_id=admin_user.id, agent_id=agent_id)
+        # Invalidate the graph for affected scenarios
+        # Always invalidate the current scenario
+        await langgraph_agent.invalidate_graph(updated_agent.scenario_id)
+        
+        # If scenario changed, also invalidate the old scenario's graph
+        if agent_data.scenario_id is not None and agent_data.scenario_id != old_scenario_id:
+            await langgraph_agent.invalidate_graph(old_scenario_id)
+            
+        logger.info("admin_updated_agent", admin_id=admin_user.id, agent_id=agent_id, scenario_id=updated_agent.scenario_id)
 
         return AgentResponse(
             id=updated_agent.id,
@@ -928,11 +942,16 @@ async def delete_agent(request: Request, agent_id: str, admin_user: User = Depen
         if not agent:
             raise HTTPException(status_code=404, detail="Agent not found")
 
+        # Remember scenario_id before deletion for graph invalidation
+        scenario_id = agent.scenario_id
+        
         success = await db_service.delete_agent(agent_id)
         if not success:
             raise HTTPException(status_code=404, detail="Agent not found")
 
-        logger.info("admin_deleted_agent", admin_id=admin_user.id, agent_id=agent_id)
+        # Invalidate the graph for this scenario so it gets rebuilt without the deleted agent
+        await langgraph_agent.invalidate_graph(scenario_id)
+        logger.info("admin_deleted_agent", admin_id=admin_user.id, agent_id=agent_id, scenario_id=scenario_id)
 
         return DeleteAgentResponse(message="Agent deleted successfully")
     except HTTPException:

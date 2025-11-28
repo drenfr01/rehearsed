@@ -1,5 +1,7 @@
 """This file contains the graph builder for the application."""
 
+from typing import Callable, List, Optional
+
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import (
     HumanMessage,
@@ -19,6 +21,7 @@ from langgraph.types import (
 )
 from psycopg_pool import AsyncConnectionPool
 
+from app.models.agent import Agent
 from app.services.database import database_service
 from app.core.config import (
     Environment,
@@ -44,10 +47,28 @@ class LangGraphBuilder:
     def __init__(self, llm: BaseChatModel, connection_pool: AsyncConnectionPool):
         self.llm = llm
         self._connection_pool = connection_pool
+        self._agents: List[Agent] = []
 
-    async def build_graph(self) -> CompiledStateGraph:
-        """Build the LangGraph workflow."""
+    async def build_graph(self, scenario_id: int) -> CompiledStateGraph:
+        """Build the LangGraph workflow for a specific scenario.
+        
+        Args:
+            scenario_id: The ID of the scenario to build the graph for.
+            
+        Returns:
+            CompiledStateGraph: The compiled LangGraph workflow.
+        """
         try:
+            # Fetch agents for this scenario from the database
+            self._agents = await database_service.get_agents_by_scenario(scenario_id)
+            
+            if not self._agents:
+                logger.warning(
+                    "no_agents_found_for_scenario",
+                    scenario_id=scenario_id,
+                    environment=settings.ENVIRONMENT.value,
+                )
+            
             graph_builder = self._build_graph()
             if self._connection_pool:
                 checkpointer = AsyncPostgresSaver(self._connection_pool)
@@ -59,19 +80,21 @@ class LangGraphBuilder:
                     raise Exception("Connection pool initialization failed")
 
             graph = graph_builder.compile(
-                checkpointer=checkpointer, name=f"{settings.PROJECT_NAME} Agent ({settings.ENVIRONMENT.value})"
+                checkpointer=checkpointer, name=f"{settings.PROJECT_NAME} Agent - Scenario {scenario_id} ({settings.ENVIRONMENT.value})"
             )
 
             logger.info(
                 "graph_created",
                 graph_name=f"{settings.PROJECT_NAME} Agent",
+                scenario_id=scenario_id,
+                agent_count=len(self._agents),
                 environment=settings.ENVIRONMENT.value,
                 has_checkpointer=checkpointer is not None,
             )
             return graph
 
         except Exception as e:
-            logger.error("graph_creation_failed", error=str(e), environment=settings.ENVIRONMENT.value)
+            logger.error("graph_creation_failed", error=str(e), scenario_id=scenario_id, environment=settings.ENVIRONMENT.value)
             # In production, we don't want to crash the app
             if settings.ENVIRONMENT == Environment.PRODUCTION:
                 logger.warning("continuing_without_graph")
@@ -80,15 +103,22 @@ class LangGraphBuilder:
 
     def _build_graph(self) -> StateGraph:
         graph_builder = StateGraph(GraphState)
+        
         # Initial Nodes
         graph_builder.add_node("check_appropriate_response", self._check_appropriate_response)
         graph_builder.add_node("pick_answering_student", self._pick_answering_student)
         graph_builder.add_node("gather_new_human_response", self._gather_new_human_response)
 
-        # Students & Feedback
-        graph_builder.add_node("student_1_agent", self._student_1_agent)
-        graph_builder.add_node("student_2_agent", self._student_2_agent)
-        graph_builder.add_node("student_3_agent", self._student_3_agent)
+        # Dynamically create student agent nodes based on agents from the database
+        student_node_names = []
+        for idx, agent in enumerate(self._agents):
+            node_name = f"student_{idx + 1}_agent"
+            student_node_names.append(node_name)
+            # Create a closure to capture the agent for each node
+            node_handler = self._create_student_agent_handler(agent, idx + 1)
+            graph_builder.add_node(node_name, node_handler)
+
+        # Feedback nodes
         graph_builder.add_node("inline_feedback_agent", self._inline_feedback_agent)
         graph_builder.add_node("additional_user_input", self._additional_user_input)
         graph_builder.add_node("check_if_goals_achieved", self._check_if_goals_achieved)
@@ -105,14 +135,15 @@ class LangGraphBuilder:
             {True: "pick_answering_student", False: "gather_new_human_response"},
         )
 
-        graph_builder.add_edge("pick_answering_student", "student_1_agent")
-        graph_builder.add_edge("pick_answering_student", "student_2_agent")
-        graph_builder.add_edge("pick_answering_student", "student_3_agent")
+        # Add parallel edges from pick_answering_student to all student agents
+        for node_name in student_node_names:
+            graph_builder.add_edge("pick_answering_student", node_name)
         graph_builder.add_edge("pick_answering_student", "inline_feedback_agent")
 
-        graph_builder.add_edge(
-            ["student_1_agent", "student_2_agent", "student_3_agent", "inline_feedback_agent"], "additional_user_input"
-        )
+        # Add edges from all student agents + inline feedback to additional_user_input
+        all_parallel_nodes = student_node_names + ["inline_feedback_agent"]
+        graph_builder.add_edge(all_parallel_nodes, "additional_user_input")
+        
         graph_builder.add_edge("additional_user_input", "check_if_goals_achieved")
         graph_builder.add_conditional_edges(
             "check_if_goals_achieved",
@@ -122,6 +153,42 @@ class LangGraphBuilder:
         # TODO: add edge to add_messages node
         graph_builder.add_edge("generate_summary_feedback", END)
         return graph_builder
+    
+    def _create_student_agent_handler(self, agent: Agent, student_number: int) -> Callable:
+        """Create a handler function for a specific student agent.
+        
+        Args:
+            agent: The agent model from the database.
+            student_number: The 1-indexed student number.
+            
+        Returns:
+            A coroutine function that handles the student agent node.
+        """
+        async def handler(state: GraphState) -> GraphState:
+            """Handle student agent node execution."""
+            personality_description = (
+                agent.agent_personality.personality_description 
+                if agent.agent_personality 
+                else "Helpful and engaged"
+            )
+            system_instructions = STUDENT_SYSTEM_INSTRUCTIONS_TEMPLATE.format(
+                objective_and_persona=agent.objective,
+                instructions=agent.instructions,
+                constraints=agent.constraints,
+                context=agent.context,
+                personality=personality_description,
+            )
+            response = await self._call_general_llm(state, system_instructions)
+            return {
+                "student_responses": [
+                    StudentResponse(
+                        student_response=response, 
+                        student_details=agent, 
+                        student_personality=agent.agent_personality
+                    )
+                ]
+            }
+        return handler
 
     async def _check_appropriate_response(self, state: GraphState) -> GraphState:
         """This node is used to check if the human response is appropriate for a teacher."""
@@ -146,18 +213,44 @@ class LangGraphBuilder:
 
     async def _pick_answering_student(self, state: GraphState) -> GraphState:
         """This node is used to pick the answering student based on the user message."""
+        # Build dynamic student profiles from agents
+        student_profiles = self._build_student_profiles()
+        
         system_message = [
             SystemMessage(
-                content=f"Based on the user message {STUDENT_PROFILES}",
+                content=f"Based on the user message and these student profiles, pick which student (1-{len(self._agents)}) should respond:\n\n{student_profiles}",
             ),
         ]
 
         structured_llm = self.llm.with_structured_output(StudentChoiceResponse)
         response = structured_llm.invoke(system_message + state.messages)
-        return {"answering_student": response.student_number}
+        # Ensure the student number is within valid range
+        student_num = max(1, min(response.student_number, len(self._agents)))
+        return {"answering_student": student_num}
+    
+    def _build_student_profiles(self) -> str:
+        """Build a string description of all student profiles for the LLM."""
+        profiles = []
+        for idx, agent in enumerate(self._agents):
+            personality = (
+                agent.agent_personality.personality_description 
+                if agent.agent_personality 
+                else "Standard student personality"
+            )
+            profile = f"Student {idx + 1} ({agent.name}): {personality}"
+            profiles.append(profile)
+        return "\n".join(profiles)
 
-    async def _call_general_llm(self, state: GraphState, system_instructions: str) -> GraphState:
-        """Helper function to call the student / feedback agent."""
+    async def _call_general_llm(self, state: GraphState, system_instructions: str) -> str:
+        """Helper function to call the student / feedback agent.
+        
+        Args:
+            state: The current graph state.
+            system_instructions: The system instructions for the LLM.
+            
+        Returns:
+            str: The LLM response text.
+        """
         last_message = state.messages[-1]
         if not isinstance(last_message, HumanMessage):
             raise ValueError("last message should be the human message input")
@@ -170,58 +263,6 @@ class LangGraphBuilder:
         )
 
         return response.llm_response
-
-    async def _student_1_agent(self, state: GraphState) -> GraphState:
-        """This node is used to call the student 1 agent."""
-        # TODO: make this more dynamic  
-        agent = await database_service.get_agent("student_1_isaiah")
-        system_instructions = STUDENT_SYSTEM_INSTRUCTIONS_TEMPLATE.format(
-            objective_and_persona=agent.objective,
-            instructions=agent.instructions,
-            constraints=agent.constraints,
-            context=agent.context,
-            # personality=agent.agent_personality.personality_description if agent.agent_personality else "",
-            personality="Confident and assertive",
-        )
-        response = await self._call_general_llm(state, system_instructions)
-        return {"student_responses": [
-            StudentResponse(student_response=response, student_details=agent, student_personality=agent.agent_personality)
-            ]
-            }
-
-    async def _student_2_agent(self, state: GraphState) -> GraphState:
-        """This node is used to call the student 2 agent."""
-        agent = await database_service.get_agent("student_2_maura")
-        system_instructions = STUDENT_SYSTEM_INSTRUCTIONS_TEMPLATE.format(
-            objective_and_persona=agent.objective,
-            instructions=agent.instructions,
-            constraints=agent.constraints,
-            context=agent.context,
-            # personality=agent.agent_personality.personality_description if agent.agent_personality else "",
-            personality="Shy and quiet",
-        )
-        response = await self._call_general_llm(state, system_instructions)
-        return {"student_responses": [
-            StudentResponse(student_response=response, student_details=agent, student_personality=agent.agent_personality)
-            ]
-            }
-
-    async def _student_3_agent(self, state: GraphState) -> GraphState:
-        """This node is used to call the student 3 agent."""
-        agent = await database_service.get_agent("student_3_isabel")
-        system_instructions = STUDENT_SYSTEM_INSTRUCTIONS_TEMPLATE.format(
-            objective_and_persona=agent.objective,
-            instructions=agent.instructions,
-            constraints=agent.constraints,
-            context=agent.context,
-            # personality=agent.agent_personality.personality_description if agent.agent_personality else "",
-            personality="Curious and analytical",
-        )
-        response = await self._call_general_llm(state, system_instructions)
-        return {"student_responses": [
-            StudentResponse(student_response=response, student_details=agent, student_personality=agent.agent_personality)
-            ]
-            }
 
     async def _inline_feedback_agent(self, state: GraphState) -> GraphState:
         """This node is used to call the inline feedback agent."""

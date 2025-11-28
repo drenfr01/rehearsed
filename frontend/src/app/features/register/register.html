@@ -69,6 +69,14 @@
             </ul>
           </div>
 
+          <!-- Password match indicator -->
+          @if (form.value.confirmPassword) {
+            <div class="password-match-indicator" [class.match]="passwordsMatch" [class.no-match]="!passwordsMatch">
+              <mat-icon>{{ passwordsMatch ? 'check_circle' : 'cancel' }}</mat-icon>
+              <span>{{ passwordsMatch ? 'Passwords match' : 'Passwords do not match' }}</span>
+            </div>
+          }
+
           @if (error()) {
             <div class="error-message">
               {{ error() }}

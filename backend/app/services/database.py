@@ -26,6 +26,7 @@ from app.models.session import Session as ChatSession
 from app.models.user import User
 from app.models.scenario import Scenario
 from app.models.agent import Agent, AgentPersonality
+from app.models.feedback import Feedback, FeedbackType
 
 
 class DatabaseService:
@@ -764,6 +765,51 @@ class DatabaseService:
             session.commit()
             logger.info("agent_personality_deleted", personality_id=personality_id)
             return True
+
+    # ========== Feedback Methods ==========
+
+    async def get_feedback(self, feedback_id: int) -> Optional[Feedback]:
+        """Get a feedback by ID.
+
+        Args:
+            feedback_id: The ID of the feedback to retrieve
+
+        Returns:
+            Optional[Feedback]: The feedback if found, None otherwise
+        """
+        with Session(self.engine) as session:
+            statement = select(Feedback).where(Feedback.id == feedback_id)
+            feedback = session.exec(statement).first()
+            return feedback
+
+    async def get_feedback_by_type(self, feedback_type: FeedbackType | str) -> Optional[Feedback]:
+        """Get a feedback by type.
+
+        Args:
+            feedback_type: The type of feedback to retrieve (FeedbackType.INLINE or FeedbackType.SUMMARY)
+
+        Returns:
+            Optional[Feedback]: The feedback if found, None otherwise
+        """
+        # Convert string to enum if needed
+        if isinstance(feedback_type, str):
+            feedback_type = FeedbackType(feedback_type)
+        with Session(self.engine) as session:
+            statement = select(Feedback).where(Feedback.feedback_type == feedback_type)
+            feedback = session.exec(statement).first()
+            return feedback
+
+    async def get_all_feedback(self) -> List[Feedback]:
+        """Get all feedback in the system.
+
+        Returns:
+            List[Feedback]: List of all feedback
+        """
+        with Session(self.engine) as session:
+            statement = select(Feedback).order_by(Feedback.created_at)
+            feedbacks = session.exec(statement).all()
+            return feedbacks
+
 
 # Create a singleton instance
 database_service = DatabaseService()

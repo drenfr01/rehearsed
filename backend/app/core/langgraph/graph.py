@@ -30,10 +30,7 @@ from app.core.prompts.students import (
     STUDENT_PROFILES,
     STUDENT_SYSTEM_INSTRUCTIONS_TEMPLATE,
 )
-from app.core.prompts.feedback import (
-    INLINE_FEEDBACK_SYSTEM_INSTRUCTIONS,
-    SUMMARY_FEEDBACK_SYSTEM_INSTRUCTIONS,
-)
+from app.core.prompts.feedback import format_feedback_instructions
 from app.schemas.graph import (
     AppropriateResponse,
     GeneralResponse,
@@ -228,7 +225,15 @@ class LangGraphBuilder:
 
     async def _inline_feedback_agent(self, state: GraphState) -> GraphState:
         """This node is used to call the inline feedback agent."""
-        return {"inline_feedback": [await self._call_general_llm(state, INLINE_FEEDBACK_SYSTEM_INSTRUCTIONS)]}
+        feedback = await database_service.get_feedback_by_type("inline")
+        system_instructions = format_feedback_instructions(
+            objective=feedback.objective,
+            instructions=feedback.instructions,
+            constraints=feedback.constraints,
+            context=feedback.context,
+            output_format=feedback.output_format,
+        )
+        return {"inline_feedback": [await self._call_general_llm(state, system_instructions)]}
 
     async def _gather_new_human_response(self, state: GraphState) -> GraphState:
         """This node is used to gather a new human response after the student agents have responded."""
@@ -261,10 +266,17 @@ class LangGraphBuilder:
 
     async def _generate_summary_feedback(self, state: GraphState) -> GraphState:
         """This node is used to generate a summary feedback for the entire conversation"""
-        # TODO: replace with real prompt
+        feedback = await database_service.get_feedback_by_type("summary")
+        system_instructions = format_feedback_instructions(
+            objective=feedback.objective,
+            instructions=feedback.instructions,
+            constraints=feedback.constraints,
+            context=feedback.context,
+            output_format=feedback.output_format,
+        )
 
         prompt = [
-            SystemMessage(content=OVERALL_FEEDBACK_SYSTEM_INSTRUCTIONS),
+            SystemMessage(content=system_instructions),
             *state.messages,
         ]
         response = self.llm.with_structured_output(GeneralResponse).invoke(prompt)

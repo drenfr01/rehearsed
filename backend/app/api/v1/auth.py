@@ -25,6 +25,7 @@ from app.core.logging import logger
 from app.models.session import Session
 from app.models.user import User
 from app.schemas.auth import (
+    RegistrationResponse,
     SessionResponse,
     TokenResponse,
     UserCreate,
@@ -145,6 +146,59 @@ async def get_current_session(
         )
 
 
+@router.post("/register", response_model=RegistrationResponse)
+@limiter.limit(settings.RATE_LIMIT_ENDPOINTS["register"][0])
+async def register(request: Request, user_data: UserCreate):
+    """Register a new user account (requires admin approval).
+
+    Creates an unapproved user account that must be approved by an admin
+    before the user can log in.
+
+    Args:
+        request: The FastAPI request object for rate limiting.
+        user_data: User registration data containing email and password.
+
+    Returns:
+        RegistrationResponse: Success message and registered email.
+
+    Raises:
+        HTTPException: If email is already registered or validation fails.
+    """
+    try:
+        # Sanitize email
+        sanitized_email = sanitize_email(user_data.email)
+
+        # Check if user exists
+        if await db_service.get_user_by_email(sanitized_email):
+            raise HTTPException(status_code=400, detail="Email already registered")
+
+        # Extract and validate password
+        password = user_data.password.get_secret_value()
+        validate_password_strength(password)
+
+        # Create unapproved user
+        user = await db_service.create_user(
+            email=sanitized_email,
+            password=User.hash_password(password),
+            is_approved=False,
+        )
+
+        logger.info("user_registered_pending_approval", email=sanitized_email, user_id=user.id)
+
+        return RegistrationResponse(
+            message="Registration successful. Your account is pending admin approval.",
+            email=sanitized_email,
+        )
+    except HTTPException:
+        raise
+    except ValueError as ve:
+        logger.error("registration_validation_failed", error=str(ve), exc_info=True)
+        raise HTTPException(status_code=422, detail=str(ve))
+    except Exception as e:
+        logger.error("registration_failed", error=str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="Registration failed")
+
+
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["login"][0])
 async def login(
@@ -162,7 +216,7 @@ async def login(
         TokenResponse: Access token information
 
     Raises:
-        HTTPException: If credentials are invalid
+        HTTPException: If credentials are invalid or account not approved
     """
     try:
         # Sanitize inputs
@@ -185,8 +239,17 @@ async def login(
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
+        # Check if user account is approved
+        if not user.is_approved:
+            raise HTTPException(
+                status_code=403,
+                detail="Your account is pending admin approval",
+            )
+
         token = create_access_token(str(user.id))
         return TokenResponse(access_token=token.access_token, token_type="bearer", expires_at=token.expires_at, is_admin=user.is_admin)
+    except HTTPException:
+        raise
     except ValueError as ve:
         logger.error("login_validation_failed", error=str(ve), exc_info=True)
         raise HTTPException(status_code=422, detail=str(ve))

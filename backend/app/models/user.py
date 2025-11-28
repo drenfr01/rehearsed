@@ -26,6 +26,8 @@ class User(BaseModel, table=True):
         hashed_password: Bcrypt hashed password
         created_at: When the user was created
         sessions: Relationship to user's chat sessions
+        is_admin: Whether the user has admin privileges
+        is_approved: Whether the user's account has been approved by an admin
     """
 
     id: int = Field(default=None, primary_key=True)
@@ -33,6 +35,7 @@ class User(BaseModel, table=True):
     hashed_password: str
     sessions: List["Session"] = Relationship(back_populates="user")
     is_admin: bool = Field(default=False)
+    is_approved: bool = Field(default=False)
 
     def verify_password(self, password: str) -> bool:
         """Verify if the provided password matches the hash."""

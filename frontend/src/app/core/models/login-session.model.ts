@@ -12,3 +12,8 @@ export interface SessionResponse {
     name: string;
     token: LoginResponse;
 }
+
+export interface RegistrationResponse {
+    message: string;
+    email: string;
+}

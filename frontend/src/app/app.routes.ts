@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/services/auth-guard';
 import { Login } from './features/login/login.component';
+import { Register } from './features/register/register.component';
 import { ScenarioSelection } from './features/scenario-selection/scenario-selection';
 import { ScenarioOverview } from './features/scenario-overview/scenario-overview';
 import { Classroom } from './features/classroom/classroom';
@@ -15,6 +16,10 @@ export const routes: Routes = [
     {
         path: '',
         component: Login,
+    },
+    {
+        path: 'register',
+        component: Register,
     },
     {
         path: 'app',

@@ -174,6 +174,7 @@ async def list_users(request: Request, admin_user: User = Depends(get_current_ad
                 id=user.id,
                 email=user.email,
                 is_admin=user.is_admin,
+                is_approved=user.is_approved,
                 created_at=user.created_at,
             )
             for user in users
@@ -181,6 +182,35 @@ async def list_users(request: Request, admin_user: User = Depends(get_current_ad
     except Exception as e:
         logger.error("list_users_failed", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to retrieve users")
+
+
+@router.get("/users/pending", response_model=List[UserResponse])
+@limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_pending_users"][0])
+async def list_pending_users(request: Request, admin_user: User = Depends(get_current_admin_user)):
+    """List all users pending approval.
+
+    Args:
+        request: The FastAPI request object for rate limiting.
+        admin_user: The authenticated admin user.
+
+    Returns:
+        List of pending user information (without passwords).
+    """
+    try:
+        users = await db_service.get_pending_users()
+        return [
+            UserResponse(
+                id=user.id,
+                email=user.email,
+                is_admin=user.is_admin,
+                is_approved=user.is_approved,
+                created_at=user.created_at,
+            )
+            for user in users
+        ]
+    except Exception as e:
+        logger.error("list_pending_users_failed", error=str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to retrieve pending users")
 
 
 @router.get("/users/{user_id}", response_model=UserResponse)
@@ -205,6 +235,7 @@ async def get_user(request: Request, user_id: int, admin_user: User = Depends(ge
             id=user.id,
             email=user.email,
             is_admin=user.is_admin,
+            is_approved=user.is_approved,
             created_at=user.created_at,
         )
     except HTTPException:
@@ -220,6 +251,8 @@ async def create_user(
     request: Request, user_data: UserCreate, admin_user: User = Depends(get_current_admin_user)
 ) -> UserResponse:
     """Create a new user (admin only).
+
+    Users created by an admin are automatically approved.
 
     Args:
         request: The FastAPI request object for rate limiting.
@@ -241,8 +274,12 @@ async def create_user(
         if await db_service.get_user_by_email(sanitized_email):
             raise HTTPException(status_code=400, detail="Email already registered")
 
-        # Create user
-        user = await db_service.create_user(email=sanitized_email, password=User.hash_password(password))
+        # Create user - admin-created users are automatically approved
+        user = await db_service.create_user(
+            email=sanitized_email,
+            password=User.hash_password(password),
+            is_approved=True,
+        )
 
         logger.info("admin_created_user", admin_id=admin_user.id, new_user_id=user.id, email=sanitized_email)
 
@@ -250,6 +287,7 @@ async def create_user(
             id=user.id,
             email=user.email,
             is_admin=user.is_admin,
+            is_approved=user.is_approved,
             created_at=user.created_at,
             token=create_access_token(str(user.id)),
         )
@@ -311,6 +349,7 @@ async def update_user(
             id=user.id,
             email=user.email,
             is_admin=user.is_admin,
+            is_approved=user.is_approved,
             created_at=user.created_at,
         )
     except HTTPException:
@@ -321,6 +360,81 @@ async def update_user(
     except Exception as e:
         logger.error("update_user_failed", user_id=user_id, error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to update user")
+
+
+@router.post("/users/{user_id}/approve", response_model=UserResponse)
+@limiter.limit(settings.RATE_LIMIT_ENDPOINTS["approve_user"][0])
+async def approve_user(request: Request, user_id: int, admin_user: User = Depends(get_current_admin_user)):
+    """Approve a pending user account (admin only).
+
+    Args:
+        request: The FastAPI request object for rate limiting.
+        user_id: The ID of the user to approve.
+        admin_user: The authenticated admin user.
+
+    Returns:
+        Approved user information.
+    """
+    try:
+        user = await db_service.get_user(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        if user.is_approved:
+            raise HTTPException(status_code=400, detail="User is already approved")
+
+        user = await db_service.approve_user(user_id)
+
+        logger.info("admin_approved_user", admin_id=admin_user.id, approved_user_id=user_id, email=user.email)
+
+        return UserResponse(
+            id=user.id,
+            email=user.email,
+            is_admin=user.is_admin,
+            is_approved=user.is_approved,
+            created_at=user.created_at,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("approve_user_failed", user_id=user_id, error=str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to approve user")
+
+
+@router.post("/users/{user_id}/reject", response_model=DeleteUserResponse)
+@limiter.limit(settings.RATE_LIMIT_ENDPOINTS["reject_user"][0])
+async def reject_user(request: Request, user_id: int, admin_user: User = Depends(get_current_admin_user)):
+    """Reject and delete a pending user account (admin only).
+
+    Args:
+        request: The FastAPI request object for rate limiting.
+        user_id: The ID of the user to reject.
+        admin_user: The authenticated admin user.
+
+    Returns:
+        Success message.
+    """
+    try:
+        user = await db_service.get_user(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        if user.is_approved:
+            raise HTTPException(status_code=400, detail="Cannot reject an already approved user. Use delete instead.")
+
+        # Delete the pending user
+        success = await db_service.delete_user(user_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        logger.info("admin_rejected_user", admin_id=admin_user.id, rejected_user_id=user_id, email=user.email)
+
+        return DeleteUserResponse(message="User rejected and deleted")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("reject_user_failed", user_id=user_id, error=str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to reject user")
 
 
 @router.delete("/users/{user_id}" , response_model=DeleteUserResponse)

@@ -93,6 +93,69 @@
   color: #4caf50;
 }
 
+/* Pending users section */
+.pending-card {
+  margin-bottom: 20px;
+  border-left: 4px solid #ff9800;
+  background: linear-gradient(to right, rgba(255, 152, 0, 0.05), transparent);
+}
+
+.pending-card mat-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pending-icon {
+  color: #ff9800;
+}
+
+.pending-table {
+  width: 100%;
+}
+
+.pending-table th {
+  font-weight: 600;
+  background-color: #fff3e0;
+  padding: 16px;
+}
+
+.pending-table td {
+  padding: 12px 16px;
+}
+
+.approve-button {
+  margin-right: 8px;
+}
+
+.approve-button mat-icon,
+.reject-button mat-icon {
+  margin-right: 4px;
+}
+
+/* Status badges */
+.status-approved {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-pending {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  background-color: #fff3e0;
+  color: #ef6c00;
+}
+
 .loading-container {
   display: flex;
   flex-direction: column;

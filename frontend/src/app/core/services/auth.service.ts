@@ -1,8 +1,7 @@
 import { HttpClient } from '@angular/common/http';
-import { LoginResponse } from '../models/login-session.model';
+import { LoginResponse, RegistrationResponse, SessionResponse } from '../models/login-session.model';
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, tap } from 'rxjs';
-import { SessionResponse } from '../models/login-session.model';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { ChatGraphService } from './chat-graph.service';
@@ -88,6 +87,19 @@ export class AuthService {
         this.storeSessionToken(response.token.access_token);
         this.chatGraph.resetGraphMessages();
       })
+    );
+  }
+
+  /**
+   * @description Register a new user account (requires admin approval)
+   * @param email - The email address for the new account
+   * @param password - The password for the new account
+   * @returns An observable of the registration response
+   */
+  register(email: string, password: string): Observable<RegistrationResponse> {
+    return this.httpClient.post<RegistrationResponse>(
+      `${environment.baseUrl}/api/v1/auth/register`,
+      { email, password }
     );
   }
 }

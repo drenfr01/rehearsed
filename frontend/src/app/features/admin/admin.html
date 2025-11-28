@@ -30,6 +30,79 @@
     </mat-card-content>
   </mat-card>
 
+  <!-- Pending Users Section -->
+  @if (pendingUsers().length > 0) {
+    <mat-card class="pending-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon class="pending-icon">pending_actions</mat-icon>
+          Pending Approvals
+        </mat-card-title>
+        <mat-card-subtitle>Users waiting for account approval</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        @if (isPendingLoading()) {
+          <div class="loading-container">
+            <app-loading-spinner></app-loading-spinner>
+            <p>Loading pending users...</p>
+          </div>
+        } @else {
+          <div class="table-container">
+            <table mat-table [dataSource]="pendingUsers()" class="pending-table">
+              <!-- ID Column -->
+              <ng-container matColumnDef="id">
+                <th mat-header-cell *matHeaderCellDef>ID</th>
+                <td mat-cell *matCellDef="let user">{{ user.id }}</td>
+              </ng-container>
+
+              <!-- Email Column -->
+              <ng-container matColumnDef="email">
+                <th mat-header-cell *matHeaderCellDef>Email</th>
+                <td mat-cell *matCellDef="let user">{{ user.email }}</td>
+              </ng-container>
+
+              <!-- Created At Column -->
+              <ng-container matColumnDef="created_at">
+                <th mat-header-cell *matHeaderCellDef>Requested At</th>
+                <td mat-cell *matCellDef="let user">{{ formatDate(user.created_at) }}</td>
+              </ng-container>
+
+              <!-- Actions Column -->
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef>Actions</th>
+                <td mat-cell *matCellDef="let user">
+                  <button 
+                    mat-raised-button 
+                    color="primary" 
+                    (click)="approveUser(user.id, user.email)"
+                    matTooltip="Approve user"
+                    class="approve-button"
+                  >
+                    <mat-icon>check_circle</mat-icon>
+                    Approve
+                  </button>
+                  <button 
+                    mat-raised-button 
+                    color="warn" 
+                    (click)="rejectUser(user.id, user.email)"
+                    matTooltip="Reject and delete user"
+                    class="reject-button"
+                  >
+                    <mat-icon>cancel</mat-icon>
+                    Reject
+                  </button>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="pendingDisplayedColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: pendingDisplayedColumns;"></tr>
+            </table>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+
   <mat-card class="header-card">
     <mat-card-header>
       <mat-card-title>User Management</mat-card-title>
@@ -121,6 +194,16 @@
                 <mat-icon [class.admin-icon]="user.is_admin" [class.user-icon]="!user.is_admin">
                   {{ user.is_admin ? 'admin_panel_settings' : 'person' }}
                 </mat-icon>
+              </td>
+            </ng-container>
+
+            <!-- Approved Status Column -->
+            <ng-container matColumnDef="is_approved">
+              <th mat-header-cell *matHeaderCellDef>Status</th>
+              <td mat-cell *matCellDef="let user">
+                <span [class.status-approved]="user.is_approved" [class.status-pending]="!user.is_approved">
+                  {{ user.is_approved ? 'Approved' : 'Pending' }}
+                </span>
               </td>
             </ng-container>
 

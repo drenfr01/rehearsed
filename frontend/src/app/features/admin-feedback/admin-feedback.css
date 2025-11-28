@@ -1,0 +1,153 @@
+.admin-container {
+  padding: 20px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.header-card {
+  margin-bottom: 20px;
+}
+
+.admin-nav {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.admin-nav a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-nav a.active {
+  background-color: #1976d2;
+  color: white;
+}
+
+.create-button {
+  margin-top: 10px;
+}
+
+.create-form-card {
+  margin-top: 20px;
+  background-color: #f5f5f5;
+}
+
+.create-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.create-form h3 {
+  margin: 0 0 16px 0;
+  color: #1976d2;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-start;
+}
+
+.table-card {
+  margin-top: 20px;
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+.feedback-table {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.feedback-table th {
+  font-weight: 600;
+  background-color: #f5f5f5;
+  padding: 16px;
+}
+
+.feedback-table td {
+  padding: 12px 16px;
+}
+
+.feedback-type-chip {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.feedback-type-chip.inline {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+.feedback-type-chip.summary {
+  background-color: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  gap: 20px;
+}
+
+.no-data {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #999;
+}
+
+.no-data mat-icon {
+  font-size: 64px;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 16px;
+}
+
+.no-data p {
+  font-size: 18px;
+  margin: 0;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .admin-container {
+    padding: 10px;
+  }
+
+  .feedback-table {
+    font-size: 14px;
+  }
+
+  .feedback-table th,
+  .feedback-table td {
+    padding: 8px;
+  }
+}
+
+/* Tooltip styling for long text */
+::ng-deep .multiline-tooltip {
+  white-space: pre-wrap;
+  max-width: 400px;
+}
+

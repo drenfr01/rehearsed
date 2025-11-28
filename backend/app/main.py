@@ -30,6 +30,7 @@ from app.core.middleware import MetricsMiddleware
 from app.seed_data.scenario_seed_data import seed_scenario_data
 from app.seed_data.agent_personality_seed_data import seed_agent_personality_data
 from app.seed_data.agent_seed_data import seed_agent_data
+from app.seed_data.feedback_seed_data import seed_feedback_data
 from app.services.database import database_service
 
 # Load environment variables
@@ -119,10 +120,11 @@ app.add_middleware(
 # Include API router
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
-# Populate seed data (order matters: scenarios first, then personalities, then agents)
+# Populate seed data (order matters: scenarios first, then personalities, then agents, then feedback)
 seed_scenario_data()
 seed_agent_personality_data()
 seed_agent_data()
+seed_feedback_data()
 
 
 @app.get("/")

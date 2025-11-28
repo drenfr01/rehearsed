@@ -42,6 +42,12 @@ from app.schemas.scenario import (
     ScenarioAdminResponse,
     DeleteScenarioResponse,
 )
+from app.schemas.feedback import (
+    FeedbackCreate,
+    FeedbackUpdate,
+    FeedbackResponse,
+    DeleteFeedbackResponse,
+)
 from app.services.database import DatabaseService
 from app.utils.auth import (
     create_access_token,
@@ -650,15 +656,15 @@ async def create_agent(
         Created agent information.
     """
     try:
-        # Sanitize inputs
+        # Sanitize identifier inputs only
         agent_id = sanitize_string(agent_data.id)
         name = sanitize_string(agent_data.name)
         voice = sanitize_string(agent_data.voice) if agent_data.voice else ""
         display_text_color = sanitize_string(agent_data.display_text_color) if agent_data.display_text_color else ""
-        objective = sanitize_string(agent_data.objective) if agent_data.objective else ""
-        instructions = sanitize_string(agent_data.instructions) if agent_data.instructions else ""
-        constraints = sanitize_string(agent_data.constraints) if agent_data.constraints else ""
-        context = sanitize_string(agent_data.context) if agent_data.context else ""
+        
+        # Note: Not sanitizing prompt content fields (objective, instructions, etc.)
+        # as they are system prompts for LLMs, not user-facing HTML content.
+        # HTML escaping would corrupt apostrophes, quotes, and other valid characters.
 
         # Verify scenario and personality exist
         scenario = await db_service.get_scenario(agent_data.scenario_id)
@@ -677,10 +683,10 @@ async def create_agent(
             agent_personality_id=agent_data.agent_personality_id,
             voice=voice,
             display_text_color=display_text_color,
-            objective=objective,
-            instructions=instructions,
-            constraints=constraints,
-            context=context,
+            objective=agent_data.objective or "",
+            instructions=agent_data.instructions or "",
+            constraints=agent_data.constraints or "",
+            context=agent_data.context or "",
         )
 
         logger.info("admin_created_agent", admin_id=admin_user.id, agent_id=agent.id, name=name)
@@ -743,24 +749,24 @@ async def update_agent(
             if not personality:
                 raise HTTPException(status_code=404, detail="Agent personality not found")
 
-        # Update fields with sanitized values
+        # Sanitize identifier fields only
         name = sanitize_string(agent_data.name) if agent_data.name else None
         voice = sanitize_string(agent_data.voice) if agent_data.voice else None
         display_text_color = sanitize_string(agent_data.display_text_color) if agent_data.display_text_color else None
-        objective = sanitize_string(agent_data.objective) if agent_data.objective else None
-        instructions = sanitize_string(agent_data.instructions) if agent_data.instructions else None
-        constraints = sanitize_string(agent_data.constraints) if agent_data.constraints else None
-        context = sanitize_string(agent_data.context) if agent_data.context else None
+        
+        # Note: Not sanitizing prompt content fields (objective, instructions, etc.)
+        # as they are system prompts for LLMs, not user-facing HTML content.
+        # HTML escaping would corrupt apostrophes, quotes, and other valid characters.
 
         updated_agent = await db_service.update_agent(
             agent_id=agent_id,
             name=name,
             voice=voice,
             display_text_color=display_text_color,
-            objective=objective,
-            instructions=instructions,
-            constraints=constraints,
-            context=context,
+            objective=agent_data.objective,
+            instructions=agent_data.instructions,
+            constraints=agent_data.constraints,
+            context=agent_data.context,
             scenario_id=agent_data.scenario_id,
             agent_personality_id=agent_data.agent_personality_id,
         )
@@ -905,20 +911,19 @@ async def create_scenario(
         Created scenario information.
     """
     try:
-        # Sanitize inputs
+        # Sanitize identifier fields only
         name = sanitize_string(scenario_data.name)
-        description = sanitize_string(scenario_data.description)
-        overview = sanitize_string(scenario_data.overview)
-        system_instructions = sanitize_string(scenario_data.system_instructions)
-        initial_prompt = sanitize_string(scenario_data.initial_prompt)
+        
+        # Note: Not sanitizing content fields (description, overview, system_instructions, initial_prompt)
+        # as they may contain LLM prompts. HTML escaping would corrupt apostrophes, quotes, and other valid characters.
 
         # Create scenario
         scenario = await db_service.create_scenario(
             name=name,
-            description=description,
-            overview=overview,
-            system_instructions=system_instructions,
-            initial_prompt=initial_prompt,
+            description=scenario_data.description,
+            overview=scenario_data.overview,
+            system_instructions=scenario_data.system_instructions,
+            initial_prompt=scenario_data.initial_prompt,
         )
 
         logger.info("admin_created_scenario", admin_id=admin_user.id, scenario_id=scenario.id, name=name)
@@ -966,20 +971,19 @@ async def update_scenario(
         if not scenario:
             raise HTTPException(status_code=404, detail="Scenario not found")
 
-        # Update fields with sanitized values
+        # Sanitize identifier fields only
         name = sanitize_string(scenario_data.name) if scenario_data.name else None
-        description = sanitize_string(scenario_data.description) if scenario_data.description else None
-        overview = sanitize_string(scenario_data.overview) if scenario_data.overview else None
-        system_instructions = sanitize_string(scenario_data.system_instructions) if scenario_data.system_instructions else None
-        initial_prompt = sanitize_string(scenario_data.initial_prompt) if scenario_data.initial_prompt else None
+        
+        # Note: Not sanitizing content fields (description, overview, system_instructions, initial_prompt)
+        # as they may contain LLM prompts. HTML escaping would corrupt apostrophes, quotes, and other valid characters.
 
         updated_scenario = await db_service.update_scenario(
             scenario_id=scenario_id,
             name=name,
-            description=description,
-            overview=overview,
-            system_instructions=system_instructions,
-            initial_prompt=initial_prompt,
+            description=scenario_data.description,
+            overview=scenario_data.overview,
+            system_instructions=scenario_data.system_instructions,
+            initial_prompt=scenario_data.initial_prompt,
         )
 
         logger.info("admin_updated_scenario", admin_id=admin_user.id, scenario_id=scenario_id)
@@ -1033,4 +1037,217 @@ async def delete_scenario(request: Request, scenario_id: int, admin_user: User =
     except Exception as e:
         logger.error("delete_scenario_failed", scenario_id=scenario_id, error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to delete scenario")
+
+
+# ========== Feedback Endpoints ==========
+
+@router.get("/feedback", response_model=List[FeedbackResponse])
+@limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_all_feedback"][0])
+async def list_feedback(request: Request, admin_user: User = Depends(get_current_admin_user)):
+    """List all feedback in the system.
+
+    Args:
+        request: The FastAPI request object for rate limiting.
+        admin_user: The authenticated admin user.
+
+    Returns:
+        List of feedback.
+    """
+    try:
+        feedbacks = await db_service.get_all_feedback()
+        return [
+            FeedbackResponse(
+                id=f.id,
+                feedback_type=f.feedback_type,
+                objective=f.objective,
+                instructions=f.instructions,
+                constraints=f.constraints,
+                context=f.context,
+                output_format=f.output_format,
+                created_at=f.created_at,
+            )
+            for f in feedbacks
+        ]
+    except Exception as e:
+        logger.error("list_feedback_failed", error=str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to retrieve feedback")
+
+
+@router.get("/feedback/{feedback_id}", response_model=FeedbackResponse)
+@limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_feedback_by_id"][0])
+async def get_feedback(request: Request, feedback_id: int, admin_user: User = Depends(get_current_admin_user)):
+    """Get a specific feedback by ID.
+
+    Args:
+        request: The FastAPI request object for rate limiting.
+        feedback_id: The ID of the feedback to retrieve.
+        admin_user: The authenticated admin user.
+
+    Returns:
+        Feedback information.
+    """
+    try:
+        feedback = await db_service.get_feedback(feedback_id)
+        if not feedback:
+            raise HTTPException(status_code=404, detail="Feedback not found")
+
+        return FeedbackResponse(
+            id=feedback.id,
+            feedback_type=feedback.feedback_type,
+            objective=feedback.objective,
+            instructions=feedback.instructions,
+            constraints=feedback.constraints,
+            context=feedback.context,
+            output_format=feedback.output_format,
+            created_at=feedback.created_at,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("get_feedback_failed", feedback_id=feedback_id, error=str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to retrieve feedback")
+
+
+@router.post("/feedback", response_model=FeedbackResponse)
+@limiter.limit(settings.RATE_LIMIT_ENDPOINTS["create_feedback"][0])
+async def create_feedback(
+    request: Request, feedback_data: FeedbackCreate, admin_user: User = Depends(get_current_admin_user)
+):
+    """Create a new feedback (admin only).
+
+    Args:
+        request: The FastAPI request object for rate limiting.
+        feedback_data: Feedback creation data.
+        admin_user: The authenticated admin user.
+
+    Returns:
+        Created feedback information.
+    """
+    try:
+        # Note: Not sanitizing prompt content fields (objective, instructions, etc.)
+        # as they are system prompts for LLMs, not user-facing HTML content.
+        # HTML escaping would corrupt apostrophes, quotes, and other valid characters.
+
+        # Create feedback
+        feedback = await db_service.create_feedback(
+            feedback_type=feedback_data.feedback_type,
+            objective=feedback_data.objective,
+            instructions=feedback_data.instructions,
+            constraints=feedback_data.constraints,
+            context=feedback_data.context,
+            output_format=feedback_data.output_format or "",
+        )
+
+        logger.info("admin_created_feedback", admin_id=admin_user.id, feedback_id=feedback.id)
+
+        return FeedbackResponse(
+            id=feedback.id,
+            feedback_type=feedback.feedback_type,
+            objective=feedback.objective,
+            instructions=feedback.instructions,
+            constraints=feedback.constraints,
+            context=feedback.context,
+            output_format=feedback.output_format,
+            created_at=feedback.created_at,
+        )
+    except HTTPException:
+        raise
+    except ValueError as ve:
+        logger.error("feedback_creation_validation_failed", error=str(ve), exc_info=True)
+        raise HTTPException(status_code=422, detail=str(ve))
+    except Exception as e:
+        logger.error("create_feedback_failed", error=str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to create feedback")
+
+
+@router.put("/feedback/{feedback_id}", response_model=FeedbackResponse)
+@limiter.limit(settings.RATE_LIMIT_ENDPOINTS["update_feedback"][0])
+async def update_feedback(
+    request: Request,
+    feedback_id: int,
+    feedback_data: FeedbackUpdate,
+    admin_user: User = Depends(get_current_admin_user),
+):
+    """Update a feedback (admin only).
+
+    Args:
+        request: The FastAPI request object for rate limiting.
+        feedback_id: The ID of the feedback to update.
+        feedback_data: Updated feedback data.
+        admin_user: The authenticated admin user.
+
+    Returns:
+        Updated feedback information.
+    """
+    try:
+        feedback = await db_service.get_feedback(feedback_id)
+        if not feedback:
+            raise HTTPException(status_code=404, detail="Feedback not found")
+
+        # Note: Not sanitizing prompt content fields (objective, instructions, etc.)
+        # as they are system prompts for LLMs, not user-facing HTML content.
+        # HTML escaping would corrupt apostrophes, quotes, and other valid characters.
+
+        updated_feedback = await db_service.update_feedback(
+            feedback_id=feedback_id,
+            feedback_type=feedback_data.feedback_type,
+            objective=feedback_data.objective,
+            instructions=feedback_data.instructions,
+            constraints=feedback_data.constraints,
+            context=feedback_data.context,
+            output_format=feedback_data.output_format,
+        )
+
+        logger.info("admin_updated_feedback", admin_id=admin_user.id, feedback_id=feedback_id)
+
+        return FeedbackResponse(
+            id=updated_feedback.id,
+            feedback_type=updated_feedback.feedback_type,
+            objective=updated_feedback.objective,
+            instructions=updated_feedback.instructions,
+            constraints=updated_feedback.constraints,
+            context=updated_feedback.context,
+            output_format=updated_feedback.output_format,
+            created_at=updated_feedback.created_at,
+        )
+    except HTTPException:
+        raise
+    except ValueError as ve:
+        logger.error("feedback_update_validation_failed", error=str(ve), exc_info=True)
+        raise HTTPException(status_code=422, detail=str(ve))
+    except Exception as e:
+        logger.error("update_feedback_failed", feedback_id=feedback_id, error=str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to update feedback")
+
+
+@router.delete("/feedback/{feedback_id}", response_model=DeleteFeedbackResponse)
+@limiter.limit(settings.RATE_LIMIT_ENDPOINTS["delete_feedback"][0])
+async def delete_feedback(request: Request, feedback_id: int, admin_user: User = Depends(get_current_admin_user)):
+    """Delete a feedback (admin only).
+
+    Args:
+        request: The FastAPI request object for rate limiting.
+        feedback_id: The ID of the feedback to delete.
+        admin_user: The authenticated admin user.
+
+    Returns:
+        Success message.
+    """
+    try:
+        feedback = await db_service.get_feedback(feedback_id)
+        if not feedback:
+            raise HTTPException(status_code=404, detail="Feedback not found")
+
+        success = await db_service.delete_feedback(feedback_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Feedback not found")
+
+        logger.info("admin_deleted_feedback", admin_id=admin_user.id, feedback_id=feedback_id)
+
+        return DeleteFeedbackResponse(message="Feedback deleted successfully")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("delete_feedback_failed", feedback_id=feedback_id, error=str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to delete feedback")
 

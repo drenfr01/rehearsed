@@ -2,7 +2,7 @@
   <mat-card class="header-card">
     <mat-card-header>
       <mat-card-title>Admin Dashboard</mat-card-title>
-      <mat-card-subtitle>Manage system users, scenarios, agents, and personalities</mat-card-subtitle>
+      <mat-card-subtitle>Manage system users, scenarios, agents, personalities, and feedback</mat-card-subtitle>
     </mat-card-header>
     <mat-card-content>
       <div class="admin-nav">
@@ -21,6 +21,10 @@
         <a mat-raised-button routerLink="/app/admin/agent-personalities" routerLinkActive="active">
           <mat-icon>psychology</mat-icon>
           Personalities
+        </a>
+        <a mat-raised-button routerLink="/app/admin/feedback">
+          <mat-icon>feedback</mat-icon>
+          Feedback
         </a>
       </div>
     </mat-card-content>

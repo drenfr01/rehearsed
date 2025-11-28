@@ -38,3 +38,23 @@ def seed_feedback_data():
             session.add(feedback)
         session.commit()
 
+
+def reseed_feedback_data():
+    """Delete existing feedback data and re-seed from YAML.
+    
+    Use this to refresh feedback data after fixing sanitization issues
+    or updating the YAML file.
+    """
+    with Session(database_service.engine) as session:
+        # Delete all existing feedback
+        existing = session.exec(select(Feedback)).all()
+        for feedback in existing:
+            session.delete(feedback)
+        session.commit()
+        
+        # Re-insert from YAML
+        for feedback in load_feedback_data():
+            session.add(feedback)
+        session.commit()
+        print(f"Re-seeded {len(load_feedback_data())} feedback records")
+

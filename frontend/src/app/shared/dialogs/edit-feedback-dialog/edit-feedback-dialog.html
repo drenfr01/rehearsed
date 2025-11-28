@@ -1,0 +1,71 @@
+<h2 mat-dialog-title>
+  <mat-icon>feedback</mat-icon>
+  Edit Feedback
+</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="editForm" class="dialog-form">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Feedback Type</mat-label>
+      <mat-select formControlName="feedback_type">
+        @for (type of feedbackTypes; track type) {
+          <mat-option [value]="type">{{ getFeedbackTypeLabel(type) }}</mat-option>
+        }
+      </mat-select>
+      @if (editForm.get('feedback_type')?.hasError('required')) {
+        <mat-error>Feedback type is required</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Objective</mat-label>
+      <textarea matInput formControlName="objective" rows="4" placeholder="The objective of the feedback"></textarea>
+      @if (editForm.get('objective')?.hasError('required')) {
+        <mat-error>Objective is required</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Instructions</mat-label>
+      <textarea matInput formControlName="instructions" rows="4" placeholder="Instructions for the feedback"></textarea>
+      @if (editForm.get('instructions')?.hasError('required')) {
+        <mat-error>Instructions are required</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Constraints</mat-label>
+      <textarea matInput formControlName="constraints" rows="4" placeholder="Constraints for the feedback"></textarea>
+      @if (editForm.get('constraints')?.hasError('required')) {
+        <mat-error>Constraints are required</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Context</mat-label>
+      <textarea matInput formControlName="context" rows="4" placeholder="Context for the feedback"></textarea>
+      @if (editForm.get('context')?.hasError('required')) {
+        <mat-error>Context is required</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Output Format (Optional)</mat-label>
+      <textarea matInput formControlName="output_format" rows="4" placeholder="Output format for the feedback (optional, mainly used for summary feedback)"></textarea>
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Cancel</button>
+  <button 
+    mat-raised-button 
+    color="primary" 
+    (click)="onSave()"
+    [disabled]="!editForm.valid"
+  >
+    <mat-icon>save</mat-icon>
+    Save Changes
+  </button>
+</mat-dialog-actions>
+

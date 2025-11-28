@@ -9,6 +9,7 @@ import { Admin } from './features/admin/admin';
 import { AdminAgentPersonalities } from './features/admin-agent-personalities/admin-agent-personalities';
 import { AdminAgents } from './features/admin-agents/admin-agents';
 import { AdminScenarios } from './features/admin-scenarios/admin-scenarios';
+import { AdminFeedback } from './features/admin-feedback/admin-feedback';
 
 export const routes: Routes = [
     {
@@ -50,6 +51,10 @@ export const routes: Routes = [
             {
                 path: 'admin/scenarios',
                 component: AdminScenarios,
+            },
+            {
+                path: 'admin/feedback',
+                component: AdminFeedback,
             }
         ]
     }

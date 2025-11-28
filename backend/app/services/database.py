@@ -810,6 +810,119 @@ class DatabaseService:
             feedbacks = session.exec(statement).all()
             return feedbacks
 
+    async def create_feedback(
+        self,
+        feedback_type: FeedbackType | str,
+        objective: str,
+        instructions: str,
+        constraints: str,
+        context: str,
+        output_format: str = "",
+    ) -> Feedback:
+        """Create a new feedback.
+
+        Args:
+            feedback_type: Type of feedback ("inline" or "summary")
+            objective: The objective of the feedback
+            instructions: The instructions for the feedback
+            constraints: The constraints for the feedback
+            context: The context for the feedback
+            output_format: The output format for the feedback
+
+        Returns:
+            Feedback: The created feedback
+        """
+        # Convert string to enum if needed
+        if isinstance(feedback_type, str):
+            feedback_type = FeedbackType(feedback_type)
+
+        with Session(self.engine) as session:
+            feedback = Feedback(
+                feedback_type=feedback_type,
+                objective=objective,
+                instructions=instructions,
+                constraints=constraints,
+                context=context,
+                output_format=output_format,
+            )
+            session.add(feedback)
+            session.commit()
+            session.refresh(feedback)
+            logger.info("feedback_created", feedback_id=feedback.id, feedback_type=feedback_type.value)
+            return feedback
+
+    async def update_feedback(
+        self,
+        feedback_id: int,
+        feedback_type: Optional[FeedbackType | str] = None,
+        objective: Optional[str] = None,
+        instructions: Optional[str] = None,
+        constraints: Optional[str] = None,
+        context: Optional[str] = None,
+        output_format: Optional[str] = None,
+    ) -> Feedback:
+        """Update a feedback's attributes.
+
+        Args:
+            feedback_id: The ID of the feedback to update
+            feedback_type: Optional new feedback type
+            objective: Optional new objective
+            instructions: Optional new instructions
+            constraints: Optional new constraints
+            context: Optional new context
+            output_format: Optional new output format
+
+        Returns:
+            Feedback: The updated feedback
+
+        Raises:
+            HTTPException: If feedback is not found
+        """
+        with Session(self.engine) as session:
+            feedback = session.get(Feedback, feedback_id)
+            if not feedback:
+                raise HTTPException(status_code=404, detail="Feedback not found")
+
+            if feedback_type is not None:
+                if isinstance(feedback_type, str):
+                    feedback_type = FeedbackType(feedback_type)
+                feedback.feedback_type = feedback_type
+            if objective is not None:
+                feedback.objective = objective
+            if instructions is not None:
+                feedback.instructions = instructions
+            if constraints is not None:
+                feedback.constraints = constraints
+            if context is not None:
+                feedback.context = context
+            if output_format is not None:
+                feedback.output_format = output_format
+
+            session.add(feedback)
+            session.commit()
+            session.refresh(feedback)
+            logger.info("feedback_updated", feedback_id=feedback_id)
+            return feedback
+
+    async def delete_feedback(self, feedback_id: int) -> bool:
+        """Delete a feedback by ID.
+
+        Args:
+            feedback_id: The ID of the feedback to delete
+
+        Returns:
+            bool: True if deletion was successful, False if feedback not found
+        """
+        with Session(self.engine) as session:
+            feedback = session.get(Feedback, feedback_id)
+            if not feedback:
+                return False
+
+            session.delete(feedback)
+            session.commit()
+            logger.info("feedback_deleted", feedback_id=feedback_id)
+            return True
+
 
 # Create a singleton instance
 database_service = DatabaseService()

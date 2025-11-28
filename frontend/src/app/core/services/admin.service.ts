@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import { User, UserCreate } from '../models/user.model';
 import { Agent, AgentCreate, AgentPersonality, AgentPersonalityCreate } from '../models/agent.model';
 import { Scenario, ScenarioCreate } from '../models/scenario.model';
+import { Feedback, FeedbackCreate, FeedbackUpdate } from '../models/feedback.model';
 
 @Injectable({
   providedIn: 'root',
@@ -166,6 +167,43 @@ export class AdminService {
    */
   deleteScenario(scenarioId: number): Observable<{ message: string }> {
     return this.httpClient.delete<{ message: string }>(`${this.baseUrl}/scenarios/${scenarioId}`);
+  }
+
+  // ========== Feedback Methods ==========
+
+  /**
+   * Get all feedback
+   */
+  getAllFeedback(): Observable<Feedback[]> {
+    return this.httpClient.get<Feedback[]>(`${this.baseUrl}/feedback`);
+  }
+
+  /**
+   * Get a specific feedback by ID
+   */
+  getFeedback(feedbackId: number): Observable<Feedback> {
+    return this.httpClient.get<Feedback>(`${this.baseUrl}/feedback/${feedbackId}`);
+  }
+
+  /**
+   * Create a new feedback
+   */
+  createFeedback(feedbackData: FeedbackCreate): Observable<Feedback> {
+    return this.httpClient.post<Feedback>(`${this.baseUrl}/feedback`, feedbackData);
+  }
+
+  /**
+   * Update a feedback
+   */
+  updateFeedback(feedbackId: number, feedbackData: FeedbackUpdate): Observable<Feedback> {
+    return this.httpClient.put<Feedback>(`${this.baseUrl}/feedback/${feedbackId}`, feedbackData);
+  }
+
+  /**
+   * Delete a feedback
+   */
+  deleteFeedback(feedbackId: number): Observable<{ message: string }> {
+    return this.httpClient.delete<{ message: string }>(`${this.baseUrl}/feedback/${feedbackId}`);
   }
 }
 

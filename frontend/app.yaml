@@ -36,4 +36,4 @@ handlers:
   - url: /.*
     static_files: dist/browser/index.html
     upload: dist/browser/.*
-    secure: alwaysindex.html
+    secure: always

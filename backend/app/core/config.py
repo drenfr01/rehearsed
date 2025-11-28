@@ -209,6 +209,10 @@ class Settings:
             "chat_stream": ["20 per minute"],
             "messages": ["50 per minute"],
             "login": ["20 per minute"],
+            "register": ["5 per minute"],
+            "get_pending_users": ["10 per minute"],
+            "approve_user": ["10 per minute"],
+            "reject_user": ["10 per minute"],
             "root": ["10 per minute"],
             "health": ["20 per minute"],
         }

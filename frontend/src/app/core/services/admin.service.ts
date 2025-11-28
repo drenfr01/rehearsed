@@ -58,6 +58,27 @@ export class AdminService {
     return this.httpClient.delete<{ message: string }>(`${this.baseUrl}/users/${userId}`);
   }
 
+  /**
+   * Get all users pending approval
+   */
+  getPendingUsers(): Observable<User[]> {
+    return this.httpClient.get<User[]>(`${this.baseUrl}/users/pending`);
+  }
+
+  /**
+   * Approve a pending user
+   */
+  approveUser(userId: number): Observable<User> {
+    return this.httpClient.post<User>(`${this.baseUrl}/users/${userId}/approve`, {});
+  }
+
+  /**
+   * Reject a pending user (deletes the user)
+   */
+  rejectUser(userId: number): Observable<{ message: string }> {
+    return this.httpClient.post<{ message: string }>(`${this.baseUrl}/users/${userId}/reject`, {});
+  }
+
   // ========== AgentPersonality Methods ==========
 
   /**

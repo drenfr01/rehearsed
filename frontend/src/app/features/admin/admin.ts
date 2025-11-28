@@ -46,8 +46,11 @@ export class Admin implements OnInit {
   private dialog = inject(MatDialog);
 
   users = signal<User[]>([]);
-  displayedColumns: string[] = ['id', 'email', 'is_admin', 'created_at', 'actions'];
+  pendingUsers = signal<User[]>([]);
+  displayedColumns: string[] = ['id', 'email', 'is_admin', 'is_approved', 'created_at', 'actions'];
+  pendingDisplayedColumns: string[] = ['id', 'email', 'created_at', 'actions'];
   isLoading = signal(false);
+  isPendingLoading = signal(false);
   showCreateForm = signal(false);
 
   createUserForm: FormGroup;
@@ -61,6 +64,7 @@ export class Admin implements OnInit {
 
   ngOnInit() {
     this.loadUsers();
+    this.loadPendingUsers();
   }
 
   loadUsers() {
@@ -77,6 +81,55 @@ export class Admin implements OnInit {
       },
     });
     this.destroyRef.onDestroy(() => subscription.unsubscribe());
+  }
+
+  loadPendingUsers() {
+    this.isPendingLoading.set(true);
+    const subscription = this.adminService.getPendingUsers().subscribe({
+      next: (users) => {
+        this.pendingUsers.set(users);
+        this.isPendingLoading.set(false);
+      },
+      error: (error) => {
+        console.error('Failed to load pending users', error);
+        this.snackBar.open('Failed to load pending users', 'Close', { duration: 3000 });
+        this.isPendingLoading.set(false);
+      },
+    });
+    this.destroyRef.onDestroy(() => subscription.unsubscribe());
+  }
+
+  approveUser(userId: number, email: string) {
+    const subscription = this.adminService.approveUser(userId).subscribe({
+      next: (user) => {
+        this.pendingUsers.update(users => users.filter(u => u.id !== userId));
+        this.users.update(users => [...users, user]);
+        this.snackBar.open(`User ${email} approved successfully`, 'Close', { duration: 3000 });
+      },
+      error: (error) => {
+        console.error('Failed to approve user', error);
+        const errorMessage = error.error?.detail || 'Failed to approve user';
+        this.snackBar.open(errorMessage, 'Close', { duration: 5000 });
+      },
+    });
+    this.destroyRef.onDestroy(() => subscription.unsubscribe());
+  }
+
+  rejectUser(userId: number, email: string) {
+    if (confirm(`Are you sure you want to reject and delete the pending user ${email}?`)) {
+      const subscription = this.adminService.rejectUser(userId).subscribe({
+        next: () => {
+          this.pendingUsers.update(users => users.filter(u => u.id !== userId));
+          this.snackBar.open(`User ${email} rejected and deleted`, 'Close', { duration: 3000 });
+        },
+        error: (error) => {
+          console.error('Failed to reject user', error);
+          const errorMessage = error.error?.detail || 'Failed to reject user';
+          this.snackBar.open(errorMessage, 'Close', { duration: 5000 });
+        },
+      });
+      this.destroyRef.onDestroy(() => subscription.unsubscribe());
+    }
   }
 
   toggleCreateForm() {

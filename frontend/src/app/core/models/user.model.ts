@@ -2,6 +2,7 @@ export interface User {
   id: number;
   email: string;
   is_admin: boolean;
+  is_approved: boolean;
   created_at: string;
 }
 

@@ -96,6 +96,7 @@ class UserResponse(BaseModel):
         email: User's email address
         token: Authentication token
         is_admin: Whether the user is an admin
+        is_approved: Whether the user's account has been approved
         created_at: When the user was created
     """
 
@@ -103,7 +104,20 @@ class UserResponse(BaseModel):
     email: str = Field(..., description="User's email address")
     token: Token | None = Field(default=None, description="Authentication token")
     is_admin: bool = Field(default=False, description="Whether the user is an admin")
+    is_approved: bool = Field(default=False, description="Whether the user's account has been approved")
     created_at: datetime = Field(..., description="When the user was created")
+
+
+class RegistrationResponse(BaseModel):
+    """Response model for user registration.
+
+    Attributes:
+        message: Success message
+        email: The registered email address
+    """
+
+    message: str = Field(..., description="Success message")
+    email: str = Field(..., description="The registered email address")
 
 class DeleteUserResponse(BaseModel):
     """Response model for user deletion.

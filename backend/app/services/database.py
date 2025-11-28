@@ -84,22 +84,23 @@ class DatabaseService:
             if settings.ENVIRONMENT != Environment.PRODUCTION:
                 raise
 
-    async def create_user(self, email: str, password: str) -> User:
+    async def create_user(self, email: str, password: str, is_approved: bool = False) -> User:
         """Create a new user.
 
         Args:
             email: User's email address
             password: Hashed password
+            is_approved: Whether the user is approved (default False for self-registration)
 
         Returns:
             User: The created user
         """
         with Session(self.engine) as session:
-            user = User(email=email, hashed_password=password)
+            user = User(email=email, hashed_password=password, is_approved=is_approved)
             session.add(user)
             session.commit()
             session.refresh(user)
-            logger.info("user_created", email=email)
+            logger.info("user_created", email=email, is_approved=is_approved)
             return user
 
     async def get_user(self, user_id: int) -> Optional[User]:
@@ -147,6 +148,41 @@ class DatabaseService:
             session.commit()
             logger.info("user_deleted", email=email)
             return True
+
+    async def get_pending_users(self) -> List[User]:
+        """Get all users pending approval.
+
+        Returns:
+            List[User]: List of unapproved users
+        """
+        with Session(self.engine) as session:
+            statement = select(User).where(User.is_approved == False).order_by(User.created_at)
+            users = list(session.exec(statement).all())
+            return users
+
+    async def approve_user(self, user_id: int) -> User:
+        """Approve a user account.
+
+        Args:
+            user_id: The ID of the user to approve
+
+        Returns:
+            User: The approved user
+
+        Raises:
+            HTTPException: If user is not found
+        """
+        with Session(self.engine) as session:
+            user = session.get(User, user_id)
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+
+            user.is_approved = True
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+            logger.info("user_approved", user_id=user_id, email=user.email)
+            return user
 
     async def create_session(self, session_id: str, user_id: int, name: str = "") -> ChatSession:
         """Create a new chat session.

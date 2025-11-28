@@ -8,12 +8,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatDialogModule } from '@angular/material/dialog';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LoadingSpinner } from '../../shared/loading-spinner/loading-spinner';
 import { AdminService } from '../../core/services/admin.service';
 import { Scenario, ScenarioCreate } from '../../core/models/scenario.model';
+import { EditScenarioDialog, EditScenarioDialogData, EditScenarioDialogResult } from '../../shared/dialogs/edit-scenario-dialog/edit-scenario-dialog';
 
 @Component({
   selector: 'app-admin-scenarios',
@@ -40,6 +41,7 @@ export class AdminScenarios implements OnInit {
   private destroyRef = inject(DestroyRef);
   private fb = inject(FormBuilder);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
 
   scenarios = signal<Scenario[]>([]);
   displayedColumns: string[] = ['id', 'name', 'description', 'created_at', 'actions'];
@@ -47,19 +49,9 @@ export class AdminScenarios implements OnInit {
   showCreateForm = signal(false);
 
   createScenarioForm: FormGroup;
-  editingScenario = signal<Scenario | null>(null);
-  editScenarioForm: FormGroup;
 
   constructor() {
     this.createScenarioForm = this.fb.group({
-      name: ['', [Validators.required, Validators.minLength(2)]],
-      description: ['', [Validators.required, Validators.minLength(10)]],
-      overview: ['', [Validators.required, Validators.minLength(10)]],
-      system_instructions: ['', [Validators.required, Validators.minLength(10)]],
-      initial_prompt: ['', [Validators.required, Validators.minLength(5)]],
-    });
-
-    this.editScenarioForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(2)]],
       description: ['', [Validators.required, Validators.minLength(10)]],
       overview: ['', [Validators.required, Validators.minLength(10)]],
@@ -115,41 +107,36 @@ export class AdminScenarios implements OnInit {
     }
   }
 
-  startEdit(scenario: Scenario) {
-    this.editingScenario.set(scenario);
-    this.editScenarioForm.patchValue({
-      name: scenario.name,
-      description: scenario.description,
-      overview: scenario.overview,
-      system_instructions: scenario.system_instructions,
-      initial_prompt: scenario.initial_prompt,
+  openEditDialog(scenario: Scenario) {
+    const dialogData: EditScenarioDialogData = { scenario };
+    const dialogRef = this.dialog.open(EditScenarioDialog, {
+      width: '700px',
+      maxHeight: '90vh',
+      data: dialogData,
+    });
+
+    dialogRef.afterClosed().subscribe((result: EditScenarioDialogResult | undefined) => {
+      if (result) {
+        this.saveEdit(scenario.id, result);
+      }
     });
   }
 
-  cancelEdit() {
-    this.editingScenario.set(null);
-    this.editScenarioForm.reset();
-  }
-
-  saveEdit(scenarioId: number) {
-    if (this.editScenarioForm.valid) {
-      const formValue = this.editScenarioForm.value;
-      const subscription = this.adminService.updateScenario(scenarioId, formValue).subscribe({
-        next: (updatedScenario) => {
-          this.scenarios.update(scenarios => 
-            scenarios.map(s => s.id === scenarioId ? updatedScenario : s)
-          );
-          this.snackBar.open('Scenario updated successfully', 'Close', { duration: 3000 });
-          this.cancelEdit();
-        },
-        error: (error) => {
-          console.error('Failed to update scenario', error);
-          const errorMessage = error.error?.detail || 'Failed to update scenario';
-          this.snackBar.open(errorMessage, 'Close', { duration: 5000 });
-        },
-      });
-      this.destroyRef.onDestroy(() => subscription.unsubscribe());
-    }
+  private saveEdit(scenarioId: number, data: EditScenarioDialogResult) {
+    const subscription = this.adminService.updateScenario(scenarioId, data).subscribe({
+      next: (updatedScenario) => {
+        this.scenarios.update(scenarios => 
+          scenarios.map(s => s.id === scenarioId ? updatedScenario : s)
+        );
+        this.snackBar.open('Scenario updated successfully', 'Close', { duration: 3000 });
+      },
+      error: (error) => {
+        console.error('Failed to update scenario', error);
+        const errorMessage = error.error?.detail || 'Failed to update scenario';
+        this.snackBar.open(errorMessage, 'Close', { duration: 5000 });
+      },
+    });
+    this.destroyRef.onDestroy(() => subscription.unsubscribe());
   }
 
   deleteScenario(scenarioId: number, name: string) {
@@ -174,4 +161,3 @@ export class AdminScenarios implements OnInit {
     return new Date(dateString).toLocaleString();
   }
 }
-

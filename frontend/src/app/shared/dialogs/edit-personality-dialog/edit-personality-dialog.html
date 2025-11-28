@@ -1,0 +1,49 @@
+<h2 mat-dialog-title>
+  <mat-icon>psychology</mat-icon>
+  Edit Agent Personality
+</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="editForm" class="dialog-form">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Name</mat-label>
+      <input matInput formControlName="name" placeholder="e.g., Professional, Friendly, Empathetic">
+      @if (editForm.get('name')?.hasError('required')) {
+        <mat-error>Name is required</mat-error>
+      }
+      @if (editForm.get('name')?.hasError('minlength')) {
+        <mat-error>Name must be at least 2 characters</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Personality Description</mat-label>
+      <textarea 
+        matInput 
+        formControlName="personality_description" 
+        rows="6"
+        placeholder="Describe the personality traits, communication style, and behavioral characteristics"
+      ></textarea>
+      @if (editForm.get('personality_description')?.hasError('required')) {
+        <mat-error>Description is required</mat-error>
+      }
+      @if (editForm.get('personality_description')?.hasError('minlength')) {
+        <mat-error>Description must be at least 10 characters</mat-error>
+      }
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Cancel</button>
+  <button 
+    mat-raised-button 
+    color="primary" 
+    (click)="onSave()"
+    [disabled]="!editForm.valid"
+  >
+    <mat-icon>save</mat-icon>
+    Save Changes
+  </button>
+</mat-dialog-actions>
+

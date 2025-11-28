@@ -15,6 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { LoadingSpinner } from '../../shared/loading-spinner/loading-spinner';
 import { AdminService } from '../../core/services/admin.service';
 import { User, UserCreate } from '../../core/models/user.model';
+import { EditUserDialog, EditUserDialogData, EditUserDialogResult } from '../../shared/dialogs/edit-user-dialog/edit-user-dialog';
 
 @Component({
   selector: 'app-admin',
@@ -50,18 +51,11 @@ export class Admin implements OnInit {
   showCreateForm = signal(false);
 
   createUserForm: FormGroup;
-  editingUser = signal<User | null>(null);
-  editUserForm: FormGroup;
 
   constructor() {
     this.createUserForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(8)]],
-    });
-
-    this.editUserForm = this.fb.group({
-      email: ['', [Validators.required, Validators.email]],
-      is_admin: [false],
     });
   }
 
@@ -112,42 +106,39 @@ export class Admin implements OnInit {
     }
   }
 
-  startEdit(user: User) {
-    this.editingUser.set(user);
-    this.editUserForm.patchValue({
-      email: user.email,
-      is_admin: user.is_admin,
+  openEditDialog(user: User) {
+    const dialogData: EditUserDialogData = { user };
+    const dialogRef = this.dialog.open(EditUserDialog, {
+      width: '500px',
+      data: dialogData,
+    });
+
+    dialogRef.afterClosed().subscribe((result: EditUserDialogResult | undefined) => {
+      if (result) {
+        this.saveEdit(user.id, result);
+      }
     });
   }
 
-  cancelEdit() {
-    this.editingUser.set(null);
-    this.editUserForm.reset();
-  }
-
-  saveEdit(userId: number) {
-    if (this.editUserForm.valid) {
-      const formValue = this.editUserForm.value;
-      const subscription = this.adminService.updateUser(
-        userId,
-        formValue.email,
-        formValue.is_admin
-      ).subscribe({
-        next: (updatedUser) => {
-          this.users.update(users => 
-            users.map(u => u.id === userId ? updatedUser : u)
-          );
-          this.snackBar.open('User updated successfully', 'Close', { duration: 3000 });
-          this.cancelEdit();
-        },
-        error: (error) => {
-          console.error('Failed to update user', error);
-          const errorMessage = error.error?.detail || 'Failed to update user';
-          this.snackBar.open(errorMessage, 'Close', { duration: 5000 });
-        },
-      });
-      this.destroyRef.onDestroy(() => subscription.unsubscribe());
-    }
+  private saveEdit(userId: number, data: EditUserDialogResult) {
+    const subscription = this.adminService.updateUser(
+      userId,
+      data.email,
+      data.is_admin
+    ).subscribe({
+      next: (updatedUser) => {
+        this.users.update(users => 
+          users.map(u => u.id === userId ? updatedUser : u)
+        );
+        this.snackBar.open('User updated successfully', 'Close', { duration: 3000 });
+      },
+      error: (error) => {
+        console.error('Failed to update user', error);
+        const errorMessage = error.error?.detail || 'Failed to update user';
+        this.snackBar.open(errorMessage, 'Close', { duration: 5000 });
+      },
+    });
+    this.destroyRef.onDestroy(() => subscription.unsubscribe());
   }
 
   deleteUser(userId: number, email: string) {
@@ -172,4 +163,3 @@ export class Admin implements OnInit {
     return new Date(dateString).toLocaleString();
   }
 }
-

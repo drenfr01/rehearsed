@@ -8,7 +8,6 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { CommonModule } from '@angular/common';
-import { LoadingSpinner } from '../../shared/loading-spinner/loading-spinner';
 import { ScenarioService } from '../../core/services/scenario.service';
 
 @Component({

@@ -1,0 +1,4 @@
+# This file specifies files that are *not* uploaded to Google Cloud
+.gcloudignore
+.git
+node_modules/

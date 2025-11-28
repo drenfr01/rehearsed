@@ -43,10 +43,16 @@ class DatabaseService:
             max_overflow = settings.POSTGRES_MAX_OVERFLOW
 
             # Create engine with appropriate pool configuration
-            connection_url = (
-                f"postgresql://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}"
-                f"@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}"
-            )
+            if settings.ENVIRONMENT == Environment.PRODUCTION:
+                connection_url = (
+                    f"postgresql+psycopg2://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}"
+                    f"@/rehearsed?host=/cloudsql/{settings.POSTGRES_HOST}"
+                )
+            else:
+                connection_url = (
+                    f"postgresql://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}"
+                    f"@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}"
+                )
 
             self.engine = create_engine(
                 connection_url,

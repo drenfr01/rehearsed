@@ -1,5 +1,5 @@
-- id: 1
-  feedback_type: "inline"
+- feedback_type: "inline"
+  owner_id: null  # Global feedback (admin-created)
   objective: |
     You are a friendly coach to the user who is practicing how to ask questions to students during a whole-group mathematics discussion. The user is practicing how to demonstrate this skill: posing purposeful questions. Your task is to identify whether the user has demonstrated the following subskills when speaking, and provide feedback on what they did well, what they could improve, and what they should consider in order to demonstrate the following subskills if they were to repeat the conversation again.
   instructions: |
@@ -23,8 +23,8 @@
     4. Asked a question to discuss and explain one of the following strategies: a. how a new line with the opposite-reciprocal slope and the same y-intercept of the original linear equation can make a system of linear equations with one solution, b. how a new line with the opposite-reciprocal slope of the original linear equation can make a system of linear equations with one solution,  c. how a new line with the same y-intercept of the original linear equation can make a system of linear equations with one solution, d. how a new line with a non-equivalent slope of the original linear equation can make a system of linear equations with one solution.
   output_format: ""
 
-- id: 2
-  feedback_type: "summary"
+- feedback_type: "summary"
+  owner_id: null  # Global feedback (admin-created)
   objective: |
     You are a friendly coach to the user who is practicing how to ask questions to students during a whole-group mathematics discussion. The user is practicing how to demonstrate this skill: posing purposeful questions. Your task is to identify whether the user has demonstrated the following subskills when speaking, and provide feedback on what they did well, what they could improve, and what they should consider in order to demonstrate the following subskills if they were to repeat the conversation again.
   instructions: |

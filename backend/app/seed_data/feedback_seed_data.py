@@ -15,13 +15,13 @@ def load_feedback_data() -> list[Feedback]:
     feedbacks = []
     for feedback_data in feedback_data_yaml:
         feedback = Feedback(
-            id=feedback_data["id"],
             feedback_type=FeedbackType(feedback_data["feedback_type"]),
             objective=feedback_data["objective"],
             instructions=feedback_data["instructions"],
             constraints=feedback_data["constraints"],
             context=feedback_data["context"],
             output_format=feedback_data.get("output_format", ""),
+            owner_id=feedback_data.get("owner_id"),  # None for global feedback
         )
         feedbacks.append(feedback)
     
@@ -31,8 +31,12 @@ def load_feedback_data() -> list[Feedback]:
 def seed_feedback_data():
     """Seed the feedback data into the database."""
     with Session(database_service.engine) as session:
-        data_exists = session.exec(select(Feedback)).all()
-        if data_exists:
+        # Only check for global feedback (owner_id is None)
+        # User-created feedback should not prevent seeding global ones
+        global_feedback_exists = session.exec(
+            select(Feedback).where(Feedback.owner_id == None)
+        ).first()
+        if global_feedback_exists:
             return
         for feedback in load_feedback_data():
             session.add(feedback)

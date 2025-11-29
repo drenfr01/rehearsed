@@ -4,26 +4,48 @@ import os
 from yaml import safe_load
 from sqlmodel import Session, select
 from app.services.database import database_service
-from app.models.agent import Agent
+from app.models.agent import Agent, AgentPersonality
+from app.models.scenario import Scenario
 
-def load_agent_data() -> list[Agent]:
-    """Load the agent data from the file."""
+def load_agent_data(session: Session) -> list[Agent]:
+    """Load the agent data from the file.
+    
+    Args:
+        session: Database session to look up scenario and personality IDs by name
+    """
     with open(os.path.join(os.path.dirname(__file__), "agent_data.yaml"), "r") as f:
         agent_data_yaml = safe_load(f)
     
+    # Build caches of names to IDs
+    scenarios = session.exec(select(Scenario)).all()
+    scenario_name_to_id = {s.name: s.id for s in scenarios}
+    
+    personalities = session.exec(select(AgentPersonality)).all()
+    personality_name_to_id = {p.name: p.id for p in personalities}
+    
     agents = []
     for agent_data in agent_data_yaml:
+        scenario_name = agent_data["scenario_name"]
+        scenario_id = scenario_name_to_id.get(scenario_name)
+        if scenario_id is None:
+            raise ValueError(f"Scenario '{scenario_name}' not found. Make sure scenarios are seeded first.")
+        
+        personality_name = agent_data["agent_personality_name"]
+        personality_id = personality_name_to_id.get(personality_name)
+        if personality_id is None:
+            raise ValueError(f"AgentPersonality '{personality_name}' not found. Make sure personalities are seeded first.")
+        
         agent = Agent(
             id=agent_data["id"],
             name=agent_data["name"],
-            scenario_id=agent_data["scenario_id"],
+            scenario_id=scenario_id,
             voice=agent_data["voice"],
             display_text_color=agent_data["display_text_color"],
             objective=agent_data["objective"],
             instructions=agent_data["instructions"],
             constraints=agent_data["constraints"],
             context=agent_data["context"],
-            agent_personality_id=agent_data["agent_personality_id"],
+            agent_personality_id=personality_id,
         )
         agents.append(agent)
     
@@ -32,9 +54,13 @@ def load_agent_data() -> list[Agent]:
 def seed_agent_data():
     """Seed the agent data into the database."""
     with Session(database_service.engine) as session:
-        data_exists = session.exec(select(Agent)).all()
-        if data_exists:
+        # Only check for global agents (owner_id is None)
+        # User-created agents should not prevent seeding global ones
+        global_agents_exist = session.exec(
+            select(Agent).where(Agent.owner_id == None)
+        ).first()
+        if global_agents_exist:
             return
-        for agent in load_agent_data():
+        for agent in load_agent_data(session):
             session.add(agent)
         session.commit()

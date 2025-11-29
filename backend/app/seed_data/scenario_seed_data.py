@@ -7,12 +7,12 @@ from yaml import safe_load
 
 scenarios = [
     Scenario(
-        id=1,
         name="Scenario 1",
         description="Scenario 1 description",
         overview="Scenario 1 overview",
         system_instructions="Scenario 1 system instructions",
-        initial_prompt="Scenario 1 initial prompt"
+        initial_prompt="Scenario 1 initial prompt",
+        owner_id=None  # Global scenario (admin-created)
     )
 ]
 
@@ -22,14 +22,14 @@ def load_scenario_data() -> list[Scenario]:
         scenario_data_yaml = safe_load(f)
     
     scenarios = []
-    for scenario_id, scenario_data in enumerate(scenario_data_yaml, start=1):
+    for scenario_data in scenario_data_yaml:
         scenario = Scenario(
-            id=scenario_id,
             name=scenario_data["name"],
             description=scenario_data["description"],
             overview=scenario_data["overview"],
             system_instructions=scenario_data["system_instructions"],
             initial_prompt=scenario_data["initial_prompt"],
+            owner_id=scenario_data.get("owner_id"),  # None for global scenarios
         )
         scenarios.append(scenario)
     
@@ -38,8 +38,12 @@ def load_scenario_data() -> list[Scenario]:
 def seed_scenario_data():
     """Seed the scenario data into the database."""
     with Session(database_service.engine) as session:
-        data_exists = session.exec(select(Scenario)).all()
-        if data_exists:
+        # Only check for global scenarios (owner_id is None)
+        # User-created scenarios should not prevent seeding global ones
+        global_scenarios_exist = session.exec(
+            select(Scenario).where(Scenario.owner_id == None)
+        ).first()
+        if global_scenarios_exist:
             return
         for scenario in load_scenario_data():
             session.add(scenario)

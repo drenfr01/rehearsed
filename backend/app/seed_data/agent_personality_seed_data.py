@@ -6,17 +6,21 @@ from app.models.agent import AgentPersonality
 
 agent_personalities = [
     AgentPersonality(
-        id=1,
         name="Default Student Personality",
         personality_description="A typical 8th-grade student personality",
+        owner_id=None  # Global personality (admin-created)
     )
 ]
 
 def seed_agent_personality_data():
     """Seed the agent personality data into the database."""
     with Session(database_service.engine) as session:
-        data_exists = session.exec(select(AgentPersonality)).all()
-        if data_exists:
+        # Only check for global personalities (owner_id is None)
+        # User-created personalities should not prevent seeding global ones
+        global_personalities_exist = session.exec(
+            select(AgentPersonality).where(AgentPersonality.owner_id == None)
+        ).first()
+        if global_personalities_exist:
             return
         for personality in agent_personalities:
             session.add(personality)

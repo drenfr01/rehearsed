@@ -329,8 +329,12 @@ class LangGraphBuilder:
             SystemMessage(content=system_instructions),
             *state.messages,
         ]
-        response = self.llm.with_structured_output(GeneralResponse).invoke(prompt)
-        return {"summary_feedback": response.llm_response}
+        response = self.llm.with_structured_output(GeneralResponse, method="json_schema", include_raw=True).invoke(prompt)
+        if response["parsed"] is None:
+            logger.error("summary_feedback_generation_failed", error=response["raw"], exc_info=True)
+            return {"summary_feedback": "Could not generate summary feedback"}
+
+        return {"summary_feedback": response["parsed"].llm_response}
 
     async def _route_appropriate_response(self, state: GraphState) -> GraphState:
         """This node is used to route the conversation based on if the human response is appropriate.

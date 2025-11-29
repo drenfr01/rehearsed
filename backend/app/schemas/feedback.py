@@ -60,6 +60,8 @@ class FeedbackResponse(BaseModel):
         context: The context for the feedback
         output_format: The output format for the feedback
         created_at: When the feedback was created
+        owner_id: Owner user ID (None means global)
+        is_global: Whether this is global feedback
     """
     id: int = Field(..., description="Feedback ID")
     feedback_type: FeedbackType = Field(..., description="Type of feedback")
@@ -69,6 +71,8 @@ class FeedbackResponse(BaseModel):
     context: str = Field(..., description="The context for the feedback")
     output_format: str = Field(..., description="The output format for the feedback")
     created_at: datetime = Field(..., description="When the feedback was created")
+    owner_id: Optional[int] = Field(None, description="Owner user ID (None means global)")
+    is_global: bool = Field(default=True, description="Whether this is global feedback")
 
 
 class DeleteFeedbackResponse(BaseModel):

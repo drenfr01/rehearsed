@@ -1,11 +1,10 @@
-"""Chatbot API endpoints for handling chat interactions.
+"""Scenario API endpoints for handling scenario selection and management.
 
-This module provides endpoints for chat interactions, including regular chat,
-streaming chat, message history management, and chat history clearing.
+This module provides endpoints for scenario interactions, including getting
+all scenarios available to a user (global + user-local).
 """
 
-import json
-from typing import List
+from typing import List, Optional
 
 from fastapi import (
     APIRouter,
@@ -13,38 +12,90 @@ from fastapi import (
     HTTPException,
     Request,
 )
-from fastapi.responses import StreamingResponse
+from fastapi.security import (
+    HTTPAuthorizationCredentials,
+    HTTPBearer,
+)
 
-from app.api.v1.auth import get_current_session
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.logging import logger
-from app.core.metrics import llm_stream_duration_seconds
-from app.models.session import Session
+from app.models.user import User
 from app.services.database import DatabaseService
 from app.schemas.scenario import (
     ScenarioRequest,
     ScenarioResponse,
     AddScenarioRequest,
     AddScenarioResponse,
+    ScenarioWithOwnerResponse,
 )
 from app.models.scenario import Scenario
+from app.utils.auth import verify_token
+from app.utils.sanitization import sanitize_string
+from app.services.database import database_service
 
 router = APIRouter()
-database_service = DatabaseService()
+security = HTTPBearer(auto_error=False)  # auto_error=False allows unauthenticated requests
 
-@router.get("/get-all", response_model=List[Scenario])
+
+async def get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+) -> Optional[User]:
+    """Get the current user from the token if provided, otherwise return None.
+
+    Args:
+        credentials: The optional HTTP authorization credentials.
+
+    Returns:
+        Optional[User]: The authenticated user if token is valid, None otherwise.
+    """
+    if credentials is None:
+        return None
+    
+    try:
+        token = sanitize_string(credentials.credentials)
+        token_subject = verify_token(token)
+        
+        if token_subject is None:
+            return None
+
+        token_subject = sanitize_string(token_subject)
+
+        # Try to get it as a session first
+        session = await database_service.get_session(token_subject)
+        
+        if session:
+            user = await database_service.get_user(session.user_id)
+            return user
+        else:
+            # Token might be a user token
+            try:
+                user_id = int(token_subject)
+                user = await database_service.get_user(user_id)
+                return user
+            except ValueError:
+                return None
+    except Exception:
+        return None
+
+
+@router.get("/get-all", response_model=List[ScenarioWithOwnerResponse])
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_all_scenarios"][0])
 async def get_all_scenarios(
     request: Request,
-) -> List[Scenario]:
-    """Returna list of all scenarios.
+    user: Optional[User] = Depends(get_optional_user),
+) -> List[ScenarioWithOwnerResponse]:
+    """Return a list of all scenarios available to the user.
+    
+    If user is authenticated, returns global scenarios + user's local scenarios.
+    If user is not authenticated, returns only global scenarios.
 
     Args:
         request: The FastAPI request object for rate limiting.
+        user: The optional authenticated user.
 
     Returns:
-        List[Scenario]: A list of all scenarios.
+        List[ScenarioWithOwnerResponse]: A list of scenarios with ownership info.
 
     Raises:
         HTTPException: If there's an error processing the request.
@@ -52,9 +103,30 @@ async def get_all_scenarios(
     try:
         logger.info(
             "get_all_scenarios_request_received",
+            user_id=user.id if user else None,
         )
 
-        return await database_service.get_all_scenarios()
+        if user:
+            # Return global + user's local scenarios
+            scenarios = await database_service.get_scenarios_for_user(user.id)
+        else:
+            # Return only global scenarios
+            scenarios = await database_service.get_all_scenarios()
+        
+        return [
+            ScenarioWithOwnerResponse(
+                id=s.id,
+                name=s.name,
+                description=s.description,
+                overview=s.overview,
+                system_instructions=s.system_instructions,
+                initial_prompt=s.initial_prompt,
+                created_at=s.created_at,
+                owner_id=s.owner_id,
+                is_global=s.owner_id is None,
+            )
+            for s in scenarios
+        ]
         
     except Exception as e:
         logger.error("get_all_scenarios_request_failed", error=str(e), exc_info=True)

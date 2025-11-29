@@ -49,7 +49,7 @@ from app.schemas.feedback import (
     FeedbackResponse,
     DeleteFeedbackResponse,
 )
-from app.services.database import DatabaseService
+from app.services.database import database_service
 from app.utils.auth import (
     create_access_token,
     verify_token,
@@ -62,7 +62,6 @@ from app.utils.sanitization import (
 
 router = APIRouter()
 security = HTTPBearer()
-db_service = DatabaseService()
 
 
 async def get_current_admin_user(
@@ -102,11 +101,11 @@ async def get_current_admin_user(
         token_subject = sanitize_string(token_subject)
 
         # Try to get it as a session first (most common case after login)
-        session = await db_service.get_session(token_subject)
+        session = await database_service.get_session(token_subject)
         
         if session:
             # Token is a session token - get user from session
-            user = await db_service.get_user(session.user_id)
+            user = await database_service.get_user(session.user_id)
             if user is None:
                 logger.error("user_not_found_from_session", session_id=token_subject, user_id=session.user_id)
                 raise HTTPException(
@@ -119,7 +118,7 @@ async def get_current_admin_user(
             # Try to parse it as a user_id
             try:
                 user_id = int(token_subject)
-                user = await db_service.get_user(user_id)
+                user = await database_service.get_user(user_id)
                 if user is None:
                     logger.error("user_not_found", user_id=user_id)
                     raise HTTPException(
@@ -169,7 +168,7 @@ async def list_users(request: Request, admin_user: User = Depends(get_current_ad
         List of user information (without passwords).
     """
     try:
-        users = await db_service.get_all_users()
+        users = await database_service.get_all_users()
         return [
             UserResponse(
                 id=user.id,
@@ -198,7 +197,7 @@ async def list_pending_users(request: Request, admin_user: User = Depends(get_cu
         List of pending user information (without passwords).
     """
     try:
-        users = await db_service.get_pending_users()
+        users = await database_service.get_pending_users()
         return [
             UserResponse(
                 id=user.id,
@@ -228,7 +227,7 @@ async def get_user(request: Request, user_id: int, admin_user: User = Depends(ge
         User information (without password).
     """
     try:
-        user = await db_service.get_user(user_id)
+        user = await database_service.get_user(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -272,11 +271,11 @@ async def create_user(
         validate_password_strength(password)
 
         # Check if user exists
-        if await db_service.get_user_by_email(sanitized_email):
+        if await database_service.get_user_by_email(sanitized_email):
             raise HTTPException(status_code=400, detail="Email already registered")
 
         # Create user - admin-created users are automatically approved
-        user = await db_service.create_user(
+        user = await database_service.create_user(
             email=sanitized_email,
             password=User.hash_password(password),
             is_approved=True,
@@ -320,7 +319,7 @@ async def update_user(
         Updated user information.
     """
     try:
-        user = await db_service.get_user(user_id)
+        user = await database_service.get_user(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -333,14 +332,14 @@ async def update_user(
         if email is not None and email != user.email:
             sanitized_email = sanitize_email(email)
             # Check if new email is already taken
-            existing_user = await db_service.get_user_by_email(sanitized_email)
+            existing_user = await database_service.get_user_by_email(sanitized_email)
             if existing_user and existing_user.id != user_id:
                 raise HTTPException(status_code=400, detail="Email already in use")
-            user = await db_service.update_user_email(user_id, sanitized_email)
+            user = await database_service.update_user_email(user_id, sanitized_email)
             updated = True
 
         if is_admin is not None and is_admin != user.is_admin:
-            user = await db_service.update_user_admin_status(user_id, is_admin)
+            user = await database_service.update_user_admin_status(user_id, is_admin)
             updated = True
 
         if updated:
@@ -377,14 +376,14 @@ async def approve_user(request: Request, user_id: int, admin_user: User = Depend
         Approved user information.
     """
     try:
-        user = await db_service.get_user(user_id)
+        user = await database_service.get_user(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
         if user.is_approved:
             raise HTTPException(status_code=400, detail="User is already approved")
 
-        user = await db_service.approve_user(user_id)
+        user = await database_service.approve_user(user_id)
 
         logger.info("admin_approved_user", admin_id=admin_user.id, approved_user_id=user_id, email=user.email)
 
@@ -416,7 +415,7 @@ async def reject_user(request: Request, user_id: int, admin_user: User = Depends
         Success message.
     """
     try:
-        user = await db_service.get_user(user_id)
+        user = await database_service.get_user(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -424,7 +423,7 @@ async def reject_user(request: Request, user_id: int, admin_user: User = Depends
             raise HTTPException(status_code=400, detail="Cannot reject an already approved user. Use delete instead.")
 
         # Delete the pending user
-        success = await db_service.delete_user(user_id)
+        success = await database_service.delete_user(user_id)
         if not success:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -459,21 +458,21 @@ async def delete_user(request: Request, user_id: int, admin_user: User = Depends
         if user_id == admin_user.id:
             raise HTTPException(status_code=400, detail="Cannot delete your own account")
 
-        user = await db_service.get_user(user_id)
+        user = await database_service.get_user(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
         # First, delete all sessions associated with this user
-        user_sessions = await db_service.get_user_sessions(user_id)
+        user_sessions = await database_service.get_user_sessions(user_id)
         sessions_deleted = 0
         for session in user_sessions:
-            await db_service.delete_session(session.id)
+            await database_service.delete_session(session.id)
             sessions_deleted += 1
 
         logger.info("admin_deleted_user_sessions", admin_id=admin_user.id, user_id=user_id, sessions_deleted=sessions_deleted)
 
         # Then delete the user
-        success = await db_service.delete_user(user_id)
+        success = await database_service.delete_user(user_id)
         if not success:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -502,7 +501,7 @@ async def list_agent_personalities(request: Request, admin_user: User = Depends(
         List of agent personalities.
     """
     try:
-        personalities = await db_service.get_all_agent_personalities()
+        personalities = await database_service.get_all_agent_personalities()
         return [
             AgentPersonalityResponse(
                 id=p.id,
@@ -533,7 +532,7 @@ async def get_agent_personality(
         Agent personality information.
     """
     try:
-        personality = await db_service.get_agent_personality(personality_id)
+        personality = await database_service.get_agent_personality(personality_id)
         if not personality:
             raise HTTPException(status_code=404, detail="Agent personality not found")
 
@@ -571,7 +570,7 @@ async def create_agent_personality(
         description = sanitize_string(personality_data.personality_description)
 
         # Create personality
-        personality = await db_service.create_agent_personality(
+        personality = await database_service.create_agent_personality(
             name=name,
             personality_description=description,
         )
@@ -614,7 +613,7 @@ async def update_agent_personality(
         Updated agent personality information.
     """
     try:
-        personality = await db_service.get_agent_personality(personality_id)
+        personality = await database_service.get_agent_personality(personality_id)
         if not personality:
             raise HTTPException(status_code=404, detail="Agent personality not found")
 
@@ -622,7 +621,7 @@ async def update_agent_personality(
         name = sanitize_string(personality_data.name) if personality_data.name else None
         description = sanitize_string(personality_data.personality_description) if personality_data.personality_description else None
 
-        updated_personality = await db_service.update_agent_personality(
+        updated_personality = await database_service.update_agent_personality(
             personality_id=personality_id,
             name=name,
             personality_description=description,
@@ -662,11 +661,11 @@ async def delete_agent_personality(
         Success message.
     """
     try:
-        personality = await db_service.get_agent_personality(personality_id)
+        personality = await database_service.get_agent_personality(personality_id)
         if not personality:
             raise HTTPException(status_code=404, detail="Agent personality not found")
 
-        success = await db_service.delete_agent_personality(personality_id)
+        success = await database_service.delete_agent_personality(personality_id)
         if not success:
             raise HTTPException(status_code=404, detail="Agent personality not found")
 
@@ -695,7 +694,7 @@ async def list_agents(request: Request, admin_user: User = Depends(get_current_a
         List of agents.
     """
     try:
-        agents = await db_service.get_all_agents()
+        agents = await database_service.get_all_agents()
         return [
             AgentResponse(
                 id=a.id,
@@ -731,7 +730,7 @@ async def get_agent(request: Request, agent_id: str, admin_user: User = Depends(
         Agent information.
     """
     try:
-        agent = await db_service.get_agent(agent_id)
+        agent = await database_service.get_agent(agent_id)
         if not agent:
             raise HTTPException(status_code=404, detail="Agent not found")
 
@@ -782,16 +781,16 @@ async def create_agent(
         # HTML escaping would corrupt apostrophes, quotes, and other valid characters.
 
         # Verify scenario and personality exist
-        scenario = await db_service.get_scenario(agent_data.scenario_id)
+        scenario = await database_service.get_scenario(agent_data.scenario_id)
         if not scenario:
             raise HTTPException(status_code=404, detail="Scenario not found")
 
-        personality = await db_service.get_agent_personality(agent_data.agent_personality_id)
+        personality = await database_service.get_agent_personality(agent_data.agent_personality_id)
         if not personality:
             raise HTTPException(status_code=404, detail="Agent personality not found")
 
         # Create agent
-        agent = await db_service.create_agent(
+        agent = await database_service.create_agent(
             agent_id=agent_id,
             name=name,
             scenario_id=agent_data.scenario_id,
@@ -851,18 +850,18 @@ async def update_agent(
         Updated agent information.
     """
     try:
-        agent = await db_service.get_agent(agent_id)
+        agent = await database_service.get_agent(agent_id)
         if not agent:
             raise HTTPException(status_code=404, detail="Agent not found")
 
         # Verify scenario and personality exist if provided
         if agent_data.scenario_id is not None:
-            scenario = await db_service.get_scenario(agent_data.scenario_id)
+            scenario = await database_service.get_scenario(agent_data.scenario_id)
             if not scenario:
                 raise HTTPException(status_code=404, detail="Scenario not found")
 
         if agent_data.agent_personality_id is not None:
-            personality = await db_service.get_agent_personality(agent_data.agent_personality_id)
+            personality = await database_service.get_agent_personality(agent_data.agent_personality_id)
             if not personality:
                 raise HTTPException(status_code=404, detail="Agent personality not found")
 
@@ -878,7 +877,7 @@ async def update_agent(
         # Remember old scenario_id for graph invalidation
         old_scenario_id = agent.scenario_id
         
-        updated_agent = await db_service.update_agent(
+        updated_agent = await database_service.update_agent(
             agent_id=agent_id,
             name=name,
             voice=voice,
@@ -938,14 +937,14 @@ async def delete_agent(request: Request, agent_id: str, admin_user: User = Depen
         Success message.
     """
     try:
-        agent = await db_service.get_agent(agent_id)
+        agent = await database_service.get_agent(agent_id)
         if not agent:
             raise HTTPException(status_code=404, detail="Agent not found")
 
         # Remember scenario_id before deletion for graph invalidation
         scenario_id = agent.scenario_id
         
-        success = await db_service.delete_agent(agent_id)
+        success = await database_service.delete_agent(agent_id)
         if not success:
             raise HTTPException(status_code=404, detail="Agent not found")
 
@@ -976,7 +975,7 @@ async def list_scenarios(request: Request, admin_user: User = Depends(get_curren
         List of scenarios.
     """
     try:
-        scenarios = await db_service.get_all_scenarios()
+        scenarios = await database_service.get_all_scenarios()
         return [
             ScenarioAdminResponse(
                 id=s.id,
@@ -1008,7 +1007,7 @@ async def get_scenario(request: Request, scenario_id: int, admin_user: User = De
         Scenario information.
     """
     try:
-        scenario = await db_service.get_scenario(scenario_id)
+        scenario = await database_service.get_scenario(scenario_id)
         if not scenario:
             raise HTTPException(status_code=404, detail="Scenario not found")
 
@@ -1051,7 +1050,7 @@ async def create_scenario(
         # as they may contain LLM prompts. HTML escaping would corrupt apostrophes, quotes, and other valid characters.
 
         # Create scenario
-        scenario = await db_service.create_scenario(
+        scenario = await database_service.create_scenario(
             name=name,
             description=scenario_data.description,
             overview=scenario_data.overview,
@@ -1100,7 +1099,7 @@ async def update_scenario(
         Updated scenario information.
     """
     try:
-        scenario = await db_service.get_scenario(scenario_id)
+        scenario = await database_service.get_scenario(scenario_id)
         if not scenario:
             raise HTTPException(status_code=404, detail="Scenario not found")
 
@@ -1110,7 +1109,7 @@ async def update_scenario(
         # Note: Not sanitizing content fields (description, overview, system_instructions, initial_prompt)
         # as they may contain LLM prompts. HTML escaping would corrupt apostrophes, quotes, and other valid characters.
 
-        updated_scenario = await db_service.update_scenario(
+        updated_scenario = await database_service.update_scenario(
             scenario_id=scenario_id,
             name=name,
             description=scenario_data.description,
@@ -1154,11 +1153,11 @@ async def delete_scenario(request: Request, scenario_id: int, admin_user: User =
         Success message.
     """
     try:
-        scenario = await db_service.get_scenario(scenario_id)
+        scenario = await database_service.get_scenario(scenario_id)
         if not scenario:
             raise HTTPException(status_code=404, detail="Scenario not found")
 
-        success = await db_service.delete_scenario(scenario_id)
+        success = await database_service.delete_scenario(scenario_id)
         if not success:
             raise HTTPException(status_code=404, detail="Scenario not found")
 
@@ -1187,7 +1186,7 @@ async def list_feedback(request: Request, admin_user: User = Depends(get_current
         List of feedback.
     """
     try:
-        feedbacks = await db_service.get_all_feedback()
+        feedbacks = await database_service.get_all_feedback()
         return [
             FeedbackResponse(
                 id=f.id,
@@ -1220,7 +1219,7 @@ async def get_feedback(request: Request, feedback_id: int, admin_user: User = De
         Feedback information.
     """
     try:
-        feedback = await db_service.get_feedback(feedback_id)
+        feedback = await database_service.get_feedback(feedback_id)
         if not feedback:
             raise HTTPException(status_code=404, detail="Feedback not found")
 
@@ -1262,7 +1261,7 @@ async def create_feedback(
         # HTML escaping would corrupt apostrophes, quotes, and other valid characters.
 
         # Create feedback
-        feedback = await db_service.create_feedback(
+        feedback = await database_service.create_feedback(
             feedback_type=feedback_data.feedback_type,
             objective=feedback_data.objective,
             instructions=feedback_data.instructions,
@@ -1313,7 +1312,7 @@ async def update_feedback(
         Updated feedback information.
     """
     try:
-        feedback = await db_service.get_feedback(feedback_id)
+        feedback = await database_service.get_feedback(feedback_id)
         if not feedback:
             raise HTTPException(status_code=404, detail="Feedback not found")
 
@@ -1321,7 +1320,7 @@ async def update_feedback(
         # as they are system prompts for LLMs, not user-facing HTML content.
         # HTML escaping would corrupt apostrophes, quotes, and other valid characters.
 
-        updated_feedback = await db_service.update_feedback(
+        updated_feedback = await database_service.update_feedback(
             feedback_id=feedback_id,
             feedback_type=feedback_data.feedback_type,
             objective=feedback_data.objective,
@@ -1367,11 +1366,11 @@ async def delete_feedback(request: Request, feedback_id: int, admin_user: User =
         Success message.
     """
     try:
-        feedback = await db_service.get_feedback(feedback_id)
+        feedback = await database_service.get_feedback(feedback_id)
         if not feedback:
             raise HTTPException(status_code=404, detail="Feedback not found")
 
-        success = await db_service.delete_feedback(feedback_id)
+        success = await database_service.delete_feedback(feedback_id)
         if not success:
             raise HTTPException(status_code=404, detail="Feedback not found")
 

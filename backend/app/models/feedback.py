@@ -1,7 +1,12 @@
 from enum import Enum
+from typing import (
+    TYPE_CHECKING,
+    Optional,
+)
 
 from sqlmodel import (
     Field,
+    Relationship,
 )
 
 from datetime import (
@@ -10,6 +15,9 @@ from datetime import (
 )
 from app.models.base import BaseModel
 
+if TYPE_CHECKING:
+    from app.models.user import User
+
 
 class FeedbackType(str, Enum):
     INLINE = "inline"
@@ -17,7 +25,7 @@ class FeedbackType(str, Enum):
 
 
 class Feedback(BaseModel, table=True):
-    id: int = Field(..., primary_key=True, unique=True)
+    id: int = Field(default=None, primary_key=True, unique=True)
 
     feedback_type: FeedbackType = Field(..., description="Whether the feedback is inline or summary feedback")
 
@@ -29,3 +37,7 @@ class Feedback(BaseModel, table=True):
     output_format: str = Field(default="", description="The output format for the feedback")
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC), description="The timestamp of when the feedback was created")
+    
+    # Owner ID: NULL means global (admin-created), user_id means user-local
+    owner_id: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
+    owner: Optional["User"] = Relationship()

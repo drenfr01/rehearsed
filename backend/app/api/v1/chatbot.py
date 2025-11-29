@@ -27,6 +27,8 @@ from app.schemas.chat import (
     ChatResponse,
     StreamResponse,
 )
+# TODO: potentially inject this in lifespan
+from app.services.database import database_service
 
 router = APIRouter()
 agent = LangGraphAgent()
@@ -60,9 +62,19 @@ async def chat(
         )
 
         if chat_request.is_resumption:
-            result: ChatResponse = await agent.get_resumption_response(chat_request.resumption_text, session.id, user_id=session.user_id)
+            result: ChatResponse = await agent.get_resumption_response(
+                chat_request.resumption_text, 
+                session.id, 
+                user_id=session.user_id, 
+                scenario_id=database_service.get_current_scenario().id
+                )
         else:
-            result: ChatResponse = await agent.get_response(chat_request.messages, session.id, user_id=session.user_id)
+            result: ChatResponse = await agent.get_response(
+                chat_request.messages, 
+                session.id, 
+                user_id=session.user_id, 
+                scenario_id=database_service.get_current_scenario().id
+                )
         
 
         logger.info("chat_request_processed", session_id=session.id)
@@ -113,7 +125,7 @@ async def chat_stream(
                 full_response = ""
                 with llm_stream_duration_seconds.labels(model=agent.llm.model_name).time():
                     async for chunk in agent.get_stream_response(
-                        chat_request.messages, session.id, user_id=session.user_id
+                        chat_request.messages, session.id, user_id=session.user_id, scenario_id=chat_request.scenario_id
                     ):
                         full_response += chunk
                         response = StreamResponse(content=chunk, done=False)

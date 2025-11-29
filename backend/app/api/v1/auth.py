@@ -31,7 +31,7 @@ from app.schemas.auth import (
     UserCreate,
     UserResponse,
 )
-from app.services.database import DatabaseService
+from app.services.database import database_service
 from app.utils.auth import (
     create_access_token,
     verify_token,
@@ -44,7 +44,6 @@ from app.utils.sanitization import (
 
 router = APIRouter()
 security = HTTPBearer()
-db_service = DatabaseService()
 
 
 async def get_current_user(
@@ -77,7 +76,7 @@ async def get_current_user(
 
         # Verify user exists in database
         user_id_int = int(user_id)
-        user = await db_service.get_user(user_id_int)
+        user = await database_service.get_user(user_id_int)
         if user is None:
             logger.error("user_not_found", user_id=user_id_int)
             raise HTTPException(
@@ -127,7 +126,7 @@ async def get_current_session(
         session_id = sanitize_string(session_id)
 
         # Verify session exists in database
-        session = await db_service.get_session(session_id)
+        session = await database_service.get_session(session_id)
         if session is None:
             logger.error("session_not_found", session_id=session_id)
             raise HTTPException(
@@ -169,7 +168,7 @@ async def register(request: Request, user_data: UserCreate):
         sanitized_email = sanitize_email(user_data.email)
 
         # Check if user exists
-        if await db_service.get_user_by_email(sanitized_email):
+        if await database_service.get_user_by_email(sanitized_email):
             raise HTTPException(status_code=400, detail="Email already registered")
 
         # Extract and validate password
@@ -177,7 +176,7 @@ async def register(request: Request, user_data: UserCreate):
         validate_password_strength(password)
 
         # Create unapproved user
-        user = await db_service.create_user(
+        user = await database_service.create_user(
             email=sanitized_email,
             password=User.hash_password(password),
             is_approved=False,
@@ -231,7 +230,7 @@ async def login(
                 detail="Unsupported grant type. Must be 'password'",
             )
 
-        user = await db_service.get_user_by_email(username)
+        user = await database_service.get_user_by_email(username)
         if not user or not user.verify_password(password):
             raise HTTPException(
                 status_code=401,
@@ -270,7 +269,7 @@ async def create_session(user: User = Depends(get_current_user)):
         session_id = str(uuid.uuid4())
 
         # Create session in database
-        session = await db_service.create_session(session_id, user.id)
+        session = await database_service.create_session(session_id, user.id)
 
         # Create access token for the session
         token = create_access_token(session_id)
@@ -314,7 +313,7 @@ async def update_session_name(
             raise HTTPException(status_code=403, detail="Cannot modify other sessions")
 
         # Update the session name
-        session = await db_service.update_session_name(sanitized_session_id, sanitized_name)
+        session = await database_service.update_session_name(sanitized_session_id, sanitized_name)
 
         # Create a new token (not strictly necessary but maintains consistency)
         token = create_access_token(sanitized_session_id)
@@ -346,7 +345,7 @@ async def delete_session(session_id: str, current_session: Session = Depends(get
             raise HTTPException(status_code=403, detail="Cannot delete other sessions")
 
         # Delete the session
-        await db_service.delete_session(sanitized_session_id)
+        await database_service.delete_session(sanitized_session_id)
 
         logger.info("session_deleted", session_id=session_id, user_id=current_session.user_id)
     except ValueError as ve:
@@ -365,7 +364,7 @@ async def get_user_sessions(user: User = Depends(get_current_user)):
         List[SessionResponse]: List of session IDs
     """
     try:
-        sessions = await db_service.get_user_sessions(user.id)
+        sessions = await database_service.get_user_sessions(user.id)
         return [
             SessionResponse(
                 session_id=sanitize_string(session.id),

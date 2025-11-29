@@ -1,0 +1,170 @@
+<div class="user-content-container">
+  <mat-card class="header-card">
+    <mat-card-header>
+      <mat-card-title>My Content</mat-card-title>
+      <mat-card-subtitle>Manage your custom scenarios, agents, personalities, and feedback</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="content-nav">
+        <a mat-raised-button routerLink="/app/my-content">
+          <mat-icon>home</mat-icon>
+          Dashboard
+        </a>
+        <a mat-raised-button routerLink="/app/my-content/scenarios">
+          <mat-icon>theater_comedy</mat-icon>
+          My Scenarios
+        </a>
+        <a mat-raised-button routerLink="/app/my-content/agents">
+          <mat-icon>smart_toy</mat-icon>
+          My Agents
+        </a>
+        <a mat-raised-button routerLink="/app/my-content/personalities">
+          <mat-icon>psychology</mat-icon>
+          My Personalities
+        </a>
+        <a mat-raised-button routerLink="/app/my-content/feedback" routerLinkActive="active">
+          <mat-icon>feedback</mat-icon>
+          My Feedback
+        </a>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="header-card">
+    <mat-card-header>
+      <mat-card-title>My Feedback</mat-card-title>
+      <mat-card-subtitle>Manage your custom feedback configurations</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <button 
+        mat-raised-button 
+        color="primary" 
+        (click)="toggleCreateForm()"
+        class="create-button"
+      >
+        <mat-icon>{{ showCreateForm() ? 'close' : 'add' }}</mat-icon>
+        {{ showCreateForm() ? 'Cancel' : 'Create New Feedback' }}
+      </button>
+
+      @if (showCreateForm()) {
+        <mat-card class="create-form-card">
+          <mat-card-content>
+            <form [formGroup]="createFeedbackForm" (ngSubmit)="createFeedback()" class="create-form">
+              <h3>Create New Feedback</h3>
+              
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Feedback Type</mat-label>
+                <mat-select formControlName="feedback_type">
+                  @for (type of feedbackTypes; track type) {
+                    <mat-option [value]="type">{{ getFeedbackTypeLabel(type) }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Objective</mat-label>
+                <textarea matInput formControlName="objective" rows="2"></textarea>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Instructions</mat-label>
+                <textarea matInput formControlName="instructions" rows="3"></textarea>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Constraints</mat-label>
+                <textarea matInput formControlName="constraints" rows="2"></textarea>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Context</mat-label>
+                <textarea matInput formControlName="context" rows="2"></textarea>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Output Format (Optional)</mat-label>
+                <textarea matInput formControlName="output_format" rows="2"></textarea>
+              </mat-form-field>
+
+              <div class="form-actions">
+                <button 
+                  mat-raised-button 
+                  color="primary" 
+                  type="submit"
+                  [disabled]="!createFeedbackForm.valid"
+                >
+                  <mat-icon>feedback</mat-icon>
+                  Create Feedback
+                </button>
+              </div>
+            </form>
+          </mat-card-content>
+        </mat-card>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="table-card">
+    <mat-card-content>
+      @if (isLoading()) {
+        <div class="loading-container">
+          <app-loading-spinner></app-loading-spinner>
+          <p>Loading feedback...</p>
+        </div>
+      } @else {
+        <div class="table-container">
+          <table mat-table [dataSource]="feedbacks()" class="data-table">
+            <ng-container matColumnDef="id">
+              <th mat-header-cell *matHeaderCellDef>ID</th>
+              <td mat-cell *matCellDef="let f">{{ f.id }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="feedback_type">
+              <th mat-header-cell *matHeaderCellDef>Type</th>
+              <td mat-cell *matCellDef="let f">
+                <mat-chip [class.inline-chip]="f.feedback_type === 'inline'" [class.summary-chip]="f.feedback_type === 'summary'">
+                  {{ getFeedbackTypeLabel(f.feedback_type) }}
+                </mat-chip>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="objective">
+              <th mat-header-cell *matHeaderCellDef>Objective</th>
+              <td mat-cell *matCellDef="let f" class="description-cell">
+                {{ truncateText(f.objective) }}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="created_at">
+              <th mat-header-cell *matHeaderCellDef>Created At</th>
+              <td mat-cell *matCellDef="let f">{{ formatDate(f.created_at) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef>Actions</th>
+              <td mat-cell *matCellDef="let f">
+                <button mat-icon-button color="primary" (click)="openEditDialog(f)" matTooltip="Edit">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button color="warn" (click)="deleteFeedback(f.id, f.feedback_type)" matTooltip="Delete">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+          </table>
+
+          @if (feedbacks().length === 0) {
+            <div class="no-data">
+              <mat-icon>feedback</mat-icon>
+              <p>No feedback yet</p>
+            </div>
+          }
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>
+

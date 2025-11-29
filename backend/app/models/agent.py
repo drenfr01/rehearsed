@@ -1,6 +1,8 @@
 
-from typing import ( TYPE_CHECKING,
+from typing import (
+    TYPE_CHECKING,
     List,
+    Optional,
 )
 
 from sqlmodel import (
@@ -17,9 +19,14 @@ if TYPE_CHECKING:
 class AgentPersonality(BaseModel, table=True):
     __tablename__ = "agent_personality"
     
-    id: int = Field(..., primary_key=True, unique=True)
+    id: int = Field(default=None, primary_key=True, unique=True)
     name: str = Field(...)
     personality_description: str = Field(...)
+    
+    # Owner ID: NULL means global (admin-created), user_id means user-local
+    owner_id: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
+    owner: Optional["User"] = Relationship()
+    
     agents: List["Agent"] = Relationship(back_populates="agent_personality")
 
 class Agent(BaseModel, table=True):
@@ -52,3 +59,7 @@ class Agent(BaseModel, table=True):
 
     agent_personality_id: int = Field(foreign_key="agent_personality.id")
     agent_personality: "AgentPersonality" = Relationship(back_populates="agents")
+    
+    # Owner ID: NULL means global (admin-created), user_id means user-local
+    owner_id: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
+    owner: Optional["User"] = Relationship()

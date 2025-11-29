@@ -38,11 +38,15 @@ class AgentPersonalityResponse(BaseModel):
         name: Name of the personality
         personality_description: Description of the personality traits
         created_at: When the personality was created
+        owner_id: Owner user ID (None means global)
+        is_global: Whether this is a global personality
     """
     id: int = Field(..., description="Personality ID")
     name: str = Field(..., description="Name of the personality")
     personality_description: str = Field(..., description="Description of the personality traits")
     created_at: datetime = Field(..., description="When the personality was created")
+    owner_id: Optional[int] = Field(None, description="Owner user ID (None means global)")
+    is_global: bool = Field(default=True, description="Whether this is a global personality")
 
 
 class DeleteAgentPersonalityResponse(BaseModel):
@@ -123,6 +127,8 @@ class AgentResponse(BaseModel):
         constraints: Agent's constraints
         context: Agent's context
         created_at: When the agent was created
+        owner_id: Owner user ID (None means global)
+        is_global: Whether this is a global agent
     """
     id: str = Field(..., description="Agent ID")
     name: str = Field(..., description="Name of the agent")
@@ -135,6 +141,8 @@ class AgentResponse(BaseModel):
     constraints: str = Field(..., description="Agent's constraints")
     context: str = Field(..., description="Agent's context")
     created_at: datetime = Field(..., description="When the agent was created")
+    owner_id: Optional[int] = Field(None, description="Owner user ID (None means global)")
+    is_global: bool = Field(default=True, description="Whether this is a global agent")
 
 
 class DeleteAgentResponse(BaseModel):

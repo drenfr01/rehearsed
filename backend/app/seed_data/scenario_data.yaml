@@ -1,4 +1,5 @@
 - name: "Systems of Linear Equations"
+  owner_id: null  # Global scenario (admin-created)
   description: "Practice facilitating a full group discussion about systems of linear equations based on three students' work!"
   overview: |
     You are an 8th grade mathematics teacher in the middle of a Systems of Linear Equations unit.
@@ -36,11 +37,13 @@
     If the teacher’s response starts to place value judgements on the students’ thinking, positions some thinking as not as valuable as others, or doesn’t either probe to understand a single student’s ideas better nor set up ways to link student’s ideas together, give feedback on how to fix it, and ask them to try again (without you adding anything else as a next step). Once the teacher has responded in a way that is primarily aligned with the “do demonstrate” list, repeat the process as listed above.
     In all feedback and prompts shown to the teacher, please do not specifically reference which criterion you are referring to.
 - name: "Negative Numbers"
+  owner_id: null  # Global scenario (admin-created)
   description: "This scenario is about negative numbers"
   overview: "Negative numbers blah blah"
   initial_prompt: "This scenario is about systems of linear equations."
   system_instructions: "This scenario is about systems of linear equations"
 - name: "Fractals"
+  owner_id: null  # Global scenario (admin-created)
   description: "This scenario is about fractals"
   overview: "Fractals woohoo!"
   initial_prompt: "This scenario is about fractals"

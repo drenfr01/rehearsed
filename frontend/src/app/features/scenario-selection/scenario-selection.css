@@ -261,6 +261,63 @@ mat-card-content {
   padding: 1rem 2rem 2rem;
 }
 
+/* Scenario type icons in dropdown */
+.global-icon {
+  color: #1976d2;
+  margin-right: 8px;
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.local-icon {
+  color: #43a047;
+  margin-right: 8px;
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+/* Scenario type badge */
+.scenario-type-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.scenario-type-badge.global {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+.scenario-type-badge.local {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.scenario-type-badge mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+/* Copy section */
+.copy-section {
+  padding-top: 0.5rem;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.copy-section button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .scenario-selection-card {
@@ -292,6 +349,10 @@ mat-card-content {
 
   .scenario-id-field {
     flex: 1;
+  }
+
+  .scenario-type-badge {
+    margin-top: 0.5rem;
   }
 }
 

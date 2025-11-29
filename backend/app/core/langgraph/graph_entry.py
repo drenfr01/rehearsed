@@ -228,31 +228,29 @@ class LangGraphAgent:
         else:
             return "continue"
 
-    async def create_graph(self, scenario_id: Optional[int] = None) -> Optional[CompiledStateGraph]:
+    async def create_graph(self, scenario_id: int) -> Optional[CompiledStateGraph]:
         """Create and configure the LangGraph workflow for a specific scenario.
 
         Args:
             scenario_id: The ID of the scenario to create the graph for.
-                         If None, uses the current scenario or defaults to 1.
 
         Returns:
             Optional[CompiledStateGraph]: The configured LangGraph instance or None if init fails
         """
         # Use provided scenario_id, or fall back to current, or default to 1
-        effective_scenario_id = scenario_id or self._current_scenario_id or 1
         
         # Check if we already have a graph for this scenario
-        if effective_scenario_id in self._graphs:
-            return self._graphs[effective_scenario_id]
+        if scenario_id in self._graphs:
+            return self._graphs[scenario_id]
         
         # Build a new graph for this scenario
         connection_pool = await self._get_connection_pool()
         langgraph_builder = LangGraphBuilder(self.llm, connection_pool)
-        graph = await langgraph_builder.build_graph(effective_scenario_id)
+        graph = await langgraph_builder.build_graph(scenario_id)
         
         # Cache the graph
-        self._graphs[effective_scenario_id] = graph
-        self._current_scenario_id = effective_scenario_id
+        self._graphs[scenario_id] = graph
+        self._current_scenario_id = scenario_id
         
         return graph
     
@@ -319,8 +317,8 @@ class LangGraphAgent:
         self,
         resumption_text: str,
         session_id: str,
-        user_id: Optional[str] = None,
-        scenario_id: Optional[int] = None,
+        user_id: str,
+        scenario_id: int,
     ) -> ChatResponse:
         """Get a resumption response from the LLM.
         
@@ -363,16 +361,16 @@ class LangGraphAgent:
         self,
         messages: list[Message],
         session_id: str,
-        user_id: Optional[str] = None,
-        scenario_id: Optional[int] = None,
+        user_id: str,
+        scenario_id: int,
     ) -> ChatResponse:
         """Get a response from the LLM.
 
         Args:
             messages (list[Message]): The messages to send to the LLM.
             session_id (str): The session ID for Langfuse tracking.
-            user_id (Optional[str]): The user ID for Langfuse tracking.
-            scenario_id (Optional[int]): The scenario ID to use for the graph.
+            user_id (str): The user ID for Langfuse tracking.
+            scenario_id (int): The scenario ID to use for the graph.
 
         Returns:
             ChatResponse: The response from the LLM.

@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 class AgentPersonality(BaseModel, table=True):
     __tablename__ = "agent_personality"
     
-    id: int = Field(..., primary_key=True, unique=True)
+    id: int = Field(default=None, primary_key=True, unique=True)
     name: str = Field(...)
     personality_description: str = Field(...)
     

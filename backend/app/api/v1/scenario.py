@@ -32,9 +32,9 @@ from app.schemas.scenario import (
 from app.models.scenario import Scenario
 from app.utils.auth import verify_token
 from app.utils.sanitization import sanitize_string
+from app.services.database import database_service
 
 router = APIRouter()
-database_service = DatabaseService()
 security = HTTPBearer(auto_error=False)  # auto_error=False allows unauthenticated requests
 
 

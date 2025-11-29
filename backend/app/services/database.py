@@ -304,7 +304,7 @@ class DatabaseService:
         Returns:
             The scenario data for the current scenario
         """
-        return self.scenario
+        return self.current_scenario
 
     def set_scenario(self, scenario_id: int) -> None:
         """

@@ -25,7 +25,7 @@ class FeedbackType(str, Enum):
 
 
 class Feedback(BaseModel, table=True):
-    id: int = Field(..., primary_key=True, unique=True)
+    id: int = Field(default=None, primary_key=True, unique=True)
 
     feedback_type: FeedbackType = Field(..., description="Whether the feedback is inline or summary feedback")
 

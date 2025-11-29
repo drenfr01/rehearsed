@@ -135,14 +135,13 @@ class LangGraphBuilder:
             {True: "pick_answering_student", False: "gather_new_human_response"},
         )
 
-        # Add parallel edges from pick_answering_student to all student agents
+        # Note: pick_answering_student uses Command to dynamically route to 
+        # the selected student + inline_feedback_agent in parallel
+        
+        # Add edges from each student agent to additional_user_input (for join after dynamic routing)
         for node_name in student_node_names:
-            graph_builder.add_edge("pick_answering_student", node_name)
-        graph_builder.add_edge("pick_answering_student", "inline_feedback_agent")
-
-        # Add edges from all student agents + inline feedback to additional_user_input
-        all_parallel_nodes = student_node_names + ["inline_feedback_agent"]
-        graph_builder.add_edge(all_parallel_nodes, "additional_user_input")
+            graph_builder.add_edge(node_name, "additional_user_input")
+        graph_builder.add_edge("inline_feedback_agent", "additional_user_input")
         
         graph_builder.add_edge("additional_user_input", "check_if_goals_achieved")
         graph_builder.add_conditional_edges(
@@ -192,27 +191,30 @@ class LangGraphBuilder:
 
     async def _check_appropriate_response(self, state: GraphState) -> GraphState:
         """This node is used to check if the human response is appropriate for a teacher."""
-        last_message = state.messages[-1]
+        # last_message = state.messages[-1]
 
-        if not isinstance(last_message, HumanMessage):
-            raise ValueError("last message should be the human message input")
+        # if not isinstance(last_message, HumanMessage):
+        #     raise ValueError("last message should be the human message input")
 
-        # print("Last message: ", last_message)
-        messages = [
-            SystemMessage(content=APPROPRIATE_RESPONSE_INSTRUCTIONS),
-            HumanMessage(content=last_message.content),
-        ]
+        # # print("Last message: ", last_message)
+        # messages = [
+        #     SystemMessage(content=APPROPRIATE_RESPONSE_INSTRUCTIONS),
+        #     HumanMessage(content=last_message.content),
+        # ]
 
-        structured_llm = self.llm.with_structured_output(AppropriateResponse)
-        response = structured_llm.invoke(messages)
-        # print("Appopriateness Response: ", response)
+        # structured_llm = self.llm.with_structured_output(AppropriateResponse)
+        # response = structured_llm.invoke(messages)
         return {
-            "appropriate_response": response.appropriate_response,
-            "appropriate_explanation": response.appropriate_explanation,
+            "appropriate_response": True,
+            "appropriate_explanation": "",
         }
 
-    async def _pick_answering_student(self, state: GraphState) -> GraphState:
-        """This node is used to pick the answering student based on the user message."""
+    async def _pick_answering_student(self, state: GraphState) -> Command:
+        """This node is used to pick the answering student based on the user message.
+        
+        Returns a Command that dynamically routes to only the selected student agent
+        plus the inline feedback agent in parallel.
+        """
         # Build dynamic student profiles from agents
         student_profiles = self._build_student_profiles()
         
@@ -226,7 +228,13 @@ class LangGraphBuilder:
         response = structured_llm.invoke(system_message + state.messages)
         # Ensure the student number is within valid range
         student_num = max(1, min(response.student_number, len(self._agents)))
-        return {"answering_student": student_num}
+        
+        # Dynamically route to only the selected student + inline feedback
+        student_node = f"student_{student_num}_agent"
+        return Command(
+            update={"answering_student": student_num},
+            goto=[student_node, "inline_feedback_agent"]
+        )
     
     def _build_student_profiles(self) -> str:
         """Build a string description of all student profiles for the LLM."""
@@ -277,12 +285,13 @@ class LangGraphBuilder:
         return {"inline_feedback": [await self._call_general_llm(state, system_instructions)]}
 
     async def _gather_new_human_response(self, state: GraphState) -> GraphState:
-        """This node is used to gather a new human response after the student agents have responded."""
+        """This node is used to gather a new human response if the human response is not appropriate."""
         return {"summary": "New Human Response"}
 
     async def _additional_user_input(self, state: GraphState) -> GraphState:
         """This node is used to gather additional user input after the student agents have responded."""
-        student_message = state.student_responses[state.answering_student - 1].student_response
+        # Only one student responds now, so take the first (and only) response
+        student_message = state.student_responses[0].student_response
         result = interrupt(
             # TODO: figure out how to restore correct student response
             {

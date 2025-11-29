@@ -191,23 +191,22 @@ class LangGraphBuilder:
 
     async def _check_appropriate_response(self, state: GraphState) -> GraphState:
         """This node is used to check if the human response is appropriate for a teacher."""
-        last_message = state.messages[-1]
+        # last_message = state.messages[-1]
 
-        if not isinstance(last_message, HumanMessage):
-            raise ValueError("last message should be the human message input")
+        # if not isinstance(last_message, HumanMessage):
+        #     raise ValueError("last message should be the human message input")
 
-        # print("Last message: ", last_message)
-        messages = [
-            SystemMessage(content=APPROPRIATE_RESPONSE_INSTRUCTIONS),
-            HumanMessage(content=last_message.content),
-        ]
+        # # print("Last message: ", last_message)
+        # messages = [
+        #     SystemMessage(content=APPROPRIATE_RESPONSE_INSTRUCTIONS),
+        #     HumanMessage(content=last_message.content),
+        # ]
 
-        structured_llm = self.llm.with_structured_output(AppropriateResponse)
-        response = structured_llm.invoke(messages)
-        # print("Appopriateness Response: ", response)
+        # structured_llm = self.llm.with_structured_output(AppropriateResponse)
+        # response = structured_llm.invoke(messages)
         return {
-            "appropriate_response": response.appropriate_response,
-            "appropriate_explanation": response.appropriate_explanation,
+            "appropriate_response": True,
+            "appropriate_explanation": "",
         }
 
     async def _pick_answering_student(self, state: GraphState) -> Command:

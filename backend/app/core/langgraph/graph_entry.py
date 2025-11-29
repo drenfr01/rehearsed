@@ -65,7 +65,6 @@ class LangGraphAgent:
         # Store graphs per scenario_id for dynamic agent support
         self._graphs: Dict[int, CompiledStateGraph] = {}
         # Keep _graph for backwards compatibility (default scenario)
-        self._graph: Optional[CompiledStateGraph] = None
         self._current_scenario_id: Optional[int] = None
 
         logger.info("llm_initialized", model=settings.LLM_MODEL, environment=settings.ENVIRONMENT.value)
@@ -253,7 +252,6 @@ class LangGraphAgent:
         
         # Cache the graph
         self._graphs[effective_scenario_id] = graph
-        self._graph = graph  # Keep backwards compatibility
         self._current_scenario_id = effective_scenario_id
         
         return graph
@@ -283,9 +281,6 @@ class LangGraphAgent:
         # Cache the new graph
         self._graphs[scenario_id] = graph
         
-        # Update current graph if this is the active scenario
-        if scenario_id == self._current_scenario_id:
-            self._graph = graph
         
         logger.info("graph_rebuilt", scenario_id=scenario_id)
         return graph
@@ -302,9 +297,6 @@ class LangGraphAgent:
             del self._graphs[scenario_id]
             logger.info("graph_cache_invalidated", scenario_id=scenario_id)
             
-            # Clear current graph if it was for this scenario
-            if scenario_id == self._current_scenario_id:
-                self._graph = None
 
     def _hydrate_chat_response(self, response: GraphState) -> ChatResponse:
         response_interrupt = response.get('__interrupt__')

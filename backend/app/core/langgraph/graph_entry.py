@@ -46,6 +46,7 @@ class LangGraphAgent:
 
     This class handles the creation and management of the LangGraph workflow,
     including LLM interactions, database connections, and response processing.
+    Graphs are created per-scenario to support dynamic student agents.
     """
 
     def __init__(self):
@@ -61,7 +62,10 @@ class LangGraphAgent:
         print("LLM: ", self.llm)
         self.tools_by_name = {tool.name: tool for tool in tools}
         self._connection_pool: Optional[AsyncConnectionPool] = None
-        self._graph: Optional[CompiledStateGraph] = None
+        # Store graphs per scenario_id for dynamic agent support
+        self._graphs: Dict[int, CompiledStateGraph] = {}
+        # Keep _graph for backwards compatibility (default scenario)
+        self._current_scenario_id: Optional[int] = None
 
         logger.info("llm_initialized", model=settings.LLM_MODEL, environment=settings.ENVIRONMENT.value)
 
@@ -224,17 +228,75 @@ class LangGraphAgent:
         else:
             return "continue"
 
-    async def create_graph(self) -> Optional[CompiledStateGraph]:
-        """Create and configure the LangGraph workflow.
+    async def create_graph(self, scenario_id: Optional[int] = None) -> Optional[CompiledStateGraph]:
+        """Create and configure the LangGraph workflow for a specific scenario.
+
+        Args:
+            scenario_id: The ID of the scenario to create the graph for.
+                         If None, uses the current scenario or defaults to 1.
 
         Returns:
             Optional[CompiledStateGraph]: The configured LangGraph instance or None if init fails
         """
-        if self._graph is None:
-            connection_pool = await self._get_connection_pool()
-            langgraph_builder = LangGraphBuilder(self.llm, connection_pool)
-            self._graph = await langgraph_builder.build_graph()
-        return self._graph
+        # Use provided scenario_id, or fall back to current, or default to 1
+        effective_scenario_id = scenario_id or self._current_scenario_id or 1
+        
+        # Check if we already have a graph for this scenario
+        if effective_scenario_id in self._graphs:
+            return self._graphs[effective_scenario_id]
+        
+        # Build a new graph for this scenario
+        connection_pool = await self._get_connection_pool()
+        langgraph_builder = LangGraphBuilder(self.llm, connection_pool)
+        graph = await langgraph_builder.build_graph(effective_scenario_id)
+        
+        # Cache the graph
+        self._graphs[effective_scenario_id] = graph
+        self._current_scenario_id = effective_scenario_id
+        
+        return graph
+    
+    async def rebuild_graph(self, scenario_id: int) -> Optional[CompiledStateGraph]:
+        """Rebuild the graph for a specific scenario.
+        
+        This should be called when agents are added, updated, or deleted
+        to ensure the graph reflects the current state of agents.
+
+        Args:
+            scenario_id: The ID of the scenario to rebuild the graph for.
+
+        Returns:
+            Optional[CompiledStateGraph]: The rebuilt LangGraph instance or None if build fails
+        """
+        # Remove the cached graph for this scenario
+        if scenario_id in self._graphs:
+            del self._graphs[scenario_id]
+            logger.info("graph_cache_invalidated", scenario_id=scenario_id)
+        
+        # Rebuild the graph
+        connection_pool = await self._get_connection_pool()
+        langgraph_builder = LangGraphBuilder(self.llm, connection_pool)
+        graph = await langgraph_builder.build_graph(scenario_id)
+        
+        # Cache the new graph
+        self._graphs[scenario_id] = graph
+        
+        
+        logger.info("graph_rebuilt", scenario_id=scenario_id)
+        return graph
+    
+    async def invalidate_graph(self, scenario_id: int) -> None:
+        """Invalidate the cached graph for a specific scenario.
+        
+        The graph will be rebuilt on next use.
+
+        Args:
+            scenario_id: The ID of the scenario whose graph should be invalidated.
+        """
+        if scenario_id in self._graphs:
+            del self._graphs[scenario_id]
+            logger.info("graph_cache_invalidated", scenario_id=scenario_id)
+            
 
     def _hydrate_chat_response(self, response: GraphState) -> ChatResponse:
         response_interrupt = response.get('__interrupt__')
@@ -258,20 +320,36 @@ class LangGraphAgent:
         resumption_text: str,
         session_id: str,
         user_id: Optional[str] = None,
+        scenario_id: Optional[int] = None,
     ) -> ChatResponse:
-        """Get a resumption response from the LLM."""
+        """Get a resumption response from the LLM.
+        
+        Args:
+            resumption_text: The text to resume with.
+            session_id: The session ID for Langfuse tracking.
+            user_id: The user ID for Langfuse tracking.
+            scenario_id: The scenario ID to use for the graph.
+            
+        Returns:
+            ChatResponse: The response from the LLM.
+        """
+        graph = await self.create_graph(scenario_id)
+        if graph is None:
+            raise Exception("Failed to create graph")
+            
         config = {
             "configurable": {"thread_id": session_id},
             "callbacks": [CallbackHandler()],
             "metadata": {
                 "user_id": user_id,
                 "session_id": session_id,
+                "scenario_id": scenario_id,
                 "environment": settings.ENVIRONMENT.value,
                 "debug": False,
             },
         }
         try:
-            response: GraphState = await self._graph.ainvoke(
+            response: GraphState = await graph.ainvoke(
                 Command(
                     resume={"response": resumption_text}
                 ), config
@@ -286,6 +364,7 @@ class LangGraphAgent:
         messages: list[Message],
         session_id: str,
         user_id: Optional[str] = None,
+        scenario_id: Optional[int] = None,
     ) -> ChatResponse:
         """Get a response from the LLM.
 
@@ -293,24 +372,28 @@ class LangGraphAgent:
             messages (list[Message]): The messages to send to the LLM.
             session_id (str): The session ID for Langfuse tracking.
             user_id (Optional[str]): The user ID for Langfuse tracking.
+            scenario_id (Optional[int]): The scenario ID to use for the graph.
 
         Returns:
-            list[dict]: The response from the LLM.
+            ChatResponse: The response from the LLM.
         """
-        if self._graph is None:
-            self._graph = await self.create_graph()
+        graph = await self.create_graph(scenario_id)
+        if graph is None:
+            raise Exception("Failed to create graph")
+            
         config = {
             "configurable": {"thread_id": session_id},
             "callbacks": [CallbackHandler()],
             "metadata": {
                 "user_id": user_id,
                 "session_id": session_id,
+                "scenario_id": scenario_id,
                 "environment": settings.ENVIRONMENT.value,
                 "debug": False,
             },
         }
         try:
-            response: GraphState = await self._graph.ainvoke(
+            response: GraphState = await graph.ainvoke(
                 {"messages": dump_messages(messages), "session_id": session_id}, config
             )
             return self._hydrate_chat_response(response)
@@ -319,7 +402,11 @@ class LangGraphAgent:
             raise e
 
     async def get_stream_response(
-        self, messages: list[Message], session_id: str, user_id: Optional[str] = None
+        self, 
+        messages: list[Message], 
+        session_id: str, 
+        user_id: Optional[str] = None,
+        scenario_id: Optional[int] = None,
     ) -> AsyncGenerator[str, None]:
         """Get a stream response from the LLM.
 
@@ -327,6 +414,7 @@ class LangGraphAgent:
             messages (list[Message]): The messages to send to the LLM.
             session_id (str): The session ID for the conversation.
             user_id (Optional[str]): The user ID for the conversation.
+            scenario_id (Optional[int]): The scenario ID to use for the graph.
 
         Yields:
             str: Tokens of the LLM response.
@@ -339,11 +427,12 @@ class LangGraphAgent:
                 )
             ],
         }
-        if self._graph is None:
-            self._graph = await self.create_graph()
+        graph = await self.create_graph(scenario_id)
+        if graph is None:
+            raise Exception("Failed to create graph")
 
         try:
-            async for token, _ in self._graph.astream(
+            async for token, _ in graph.astream(
                 {"messages": dump_messages(messages), "session_id": session_id}, config, stream_mode="messages"
             ):
                 try:
@@ -356,19 +445,21 @@ class LangGraphAgent:
             logger.error("Error in stream processing", error=str(stream_error), session_id=session_id)
             raise stream_error
 
-    async def get_chat_history(self, session_id: str) -> list[Message]:
+    async def get_chat_history(self, session_id: str, scenario_id: Optional[int] = None) -> list[Message]:
         """Get the chat history for a given thread ID.
 
         Args:
             session_id (str): The session ID for the conversation.
+            scenario_id (Optional[int]): The scenario ID to use for the graph.
 
         Returns:
             list[Message]: The chat history.
         """
-        if self._graph is None:
-            self._graph = await self.create_graph()
+        graph = await self.create_graph(scenario_id)
+        if graph is None:
+            return []
 
-        state: StateSnapshot = await sync_to_async(self._graph.get_state)(
+        state: StateSnapshot = await sync_to_async(graph.get_state)(
             config={"configurable": {"thread_id": session_id}}
         )
         return self.__process_messages(state.values["messages"]) if state.values else []

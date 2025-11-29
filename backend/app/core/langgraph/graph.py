@@ -286,7 +286,7 @@ class LangGraphBuilder:
         return {"inline_feedback": [await self._call_general_llm(state, system_instructions)]}
 
     async def _gather_new_human_response(self, state: GraphState) -> GraphState:
-        """This node is used to gather a new human response after the student agents have responded."""
+        """This node is used to gather a new human response if the human response is not appropriate."""
         return {"summary": "New Human Response"}
 
     async def _additional_user_input(self, state: GraphState) -> GraphState:

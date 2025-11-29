@@ -1,0 +1,135 @@
+.user-content-container {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header-card {
+  margin-bottom: 20px;
+}
+
+.content-nav {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.content-nav a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.content-nav a.active {
+  background-color: #1976d2;
+  color: white;
+}
+
+.info-card {
+  margin-bottom: 24px;
+  border-left: 4px solid #2196f3;
+  background: linear-gradient(to right, rgba(33, 150, 243, 0.05), transparent);
+}
+
+.info-content {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.info-icon {
+  font-size: 32px;
+  width: 32px;
+  height: 32px;
+  color: #2196f3;
+  flex-shrink: 0;
+}
+
+.info-text h3 {
+  margin: 0 0 8px 0;
+  color: #1976d2;
+}
+
+.info-text p {
+  margin: 0 0 8px 0;
+  color: #666;
+  line-height: 1.5;
+}
+
+.info-text p:last-child {
+  margin-bottom: 0;
+}
+
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.action-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.action-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.action-icon {
+  font-size: 32px !important;
+  width: 48px !important;
+  height: 48px !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: white;
+}
+
+.scenarios-icon {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.agents-icon {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.personalities-icon {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.feedback-icon {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.action-card mat-card-actions {
+  padding: 16px;
+}
+
+.action-card mat-card-actions a {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .user-content-container {
+    padding: 10px;
+  }
+
+  .content-nav {
+    flex-direction: column;
+  }
+
+  .content-nav a {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .info-content {
+    flex-direction: column;
+  }
+}
+

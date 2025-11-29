@@ -6,6 +6,8 @@ export interface Scenario {
     system_instructions: string;
     initial_prompt: string;
     created_at?: string;
+    owner_id?: number | null;
+    is_global?: boolean;
 }
 
 export interface ScenarioCreate {
@@ -14,4 +16,12 @@ export interface ScenarioCreate {
     overview: string;
     system_instructions: string;
     initial_prompt: string;
+}
+
+export interface ScenarioUpdate {
+    name?: string;
+    description?: string;
+    overview?: string;
+    system_instructions?: string;
+    initial_prompt?: string;
 }

@@ -12,6 +12,18 @@
             {{ route.label }}
           </a>
         }
+        <span class="nav-divider">|</span>
+        @for (route of userContentRoutes; track route.path) {
+          <a 
+            mat-button
+            [routerLink]="route.path" 
+            routerLinkActive="active-link"
+            class="nav-link user-content-link"
+          >
+            <mat-icon>{{ route.icon }}</mat-icon>
+            {{ route.label }}
+          </a>
+        }
         @if (isAdmin()) {
           <span class="nav-divider">|</span>
           @for (route of adminRoutes; track route.path) {

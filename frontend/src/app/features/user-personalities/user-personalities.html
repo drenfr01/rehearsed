@@ -1,0 +1,147 @@
+<div class="user-content-container">
+  <mat-card class="header-card">
+    <mat-card-header>
+      <mat-card-title>My Content</mat-card-title>
+      <mat-card-subtitle>Manage your custom scenarios, agents, personalities, and feedback</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="content-nav">
+        <a mat-raised-button routerLink="/app/my-content">
+          <mat-icon>home</mat-icon>
+          Dashboard
+        </a>
+        <a mat-raised-button routerLink="/app/my-content/scenarios">
+          <mat-icon>theater_comedy</mat-icon>
+          My Scenarios
+        </a>
+        <a mat-raised-button routerLink="/app/my-content/agents">
+          <mat-icon>smart_toy</mat-icon>
+          My Agents
+        </a>
+        <a mat-raised-button routerLink="/app/my-content/personalities" routerLinkActive="active">
+          <mat-icon>psychology</mat-icon>
+          My Personalities
+        </a>
+        <a mat-raised-button routerLink="/app/my-content/feedback">
+          <mat-icon>feedback</mat-icon>
+          My Feedback
+        </a>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="header-card">
+    <mat-card-header>
+      <mat-card-title>My Personalities</mat-card-title>
+      <mat-card-subtitle>Manage your custom agent personalities</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <button 
+        mat-raised-button 
+        color="primary" 
+        (click)="toggleCreateForm()"
+        class="create-button"
+      >
+        <mat-icon>{{ showCreateForm() ? 'close' : 'add' }}</mat-icon>
+        {{ showCreateForm() ? 'Cancel' : 'Create New Personality' }}
+      </button>
+
+      @if (showCreateForm()) {
+        <mat-card class="create-form-card">
+          <mat-card-content>
+            <form [formGroup]="createPersonalityForm" (ngSubmit)="createPersonality()" class="create-form">
+              <h3>Create New Personality</h3>
+              
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Name</mat-label>
+                <input matInput formControlName="name" placeholder="Personality Name">
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Personality Description</mat-label>
+                <textarea 
+                  matInput 
+                  formControlName="personality_description" 
+                  rows="4"
+                  placeholder="Describe the personality traits..."
+                ></textarea>
+              </mat-form-field>
+
+              <div class="form-actions">
+                <button 
+                  mat-raised-button 
+                  color="primary" 
+                  type="submit"
+                  [disabled]="!createPersonalityForm.valid"
+                >
+                  <mat-icon>psychology</mat-icon>
+                  Create Personality
+                </button>
+              </div>
+            </form>
+          </mat-card-content>
+        </mat-card>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="table-card">
+    <mat-card-content>
+      @if (isLoading()) {
+        <div class="loading-container">
+          <app-loading-spinner></app-loading-spinner>
+          <p>Loading personalities...</p>
+        </div>
+      } @else {
+        <div class="table-container">
+          <table mat-table [dataSource]="personalities()" class="data-table">
+            <ng-container matColumnDef="id">
+              <th mat-header-cell *matHeaderCellDef>ID</th>
+              <td mat-cell *matCellDef="let p">{{ p.id }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="name">
+              <th mat-header-cell *matHeaderCellDef>Name</th>
+              <td mat-cell *matCellDef="let p">{{ p.name }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="personality_description">
+              <th mat-header-cell *matHeaderCellDef>Description</th>
+              <td mat-cell *matCellDef="let p" class="description-cell">
+                <div class="description-content">{{ p.personality_description }}</div>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="created_at">
+              <th mat-header-cell *matHeaderCellDef>Created At</th>
+              <td mat-cell *matCellDef="let p">{{ formatDate(p.created_at) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef>Actions</th>
+              <td mat-cell *matCellDef="let p">
+                <button mat-icon-button color="primary" (click)="openEditDialog(p)" matTooltip="Edit">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button color="warn" (click)="deletePersonality(p.id, p.name)" matTooltip="Delete">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+          </table>
+
+          @if (personalities().length === 0) {
+            <div class="no-data">
+              <mat-icon>psychology</mat-icon>
+              <p>No personalities yet</p>
+            </div>
+          }
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>
+

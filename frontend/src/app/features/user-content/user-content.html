@@ -1,0 +1,106 @@
+<div class="user-content-container">
+  <mat-card class="header-card">
+    <mat-card-header>
+      <mat-card-title>My Content</mat-card-title>
+      <mat-card-subtitle>Manage your custom scenarios, agents, personalities, and feedback</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="content-nav">
+        <a mat-raised-button routerLink="/app/my-content/scenarios" routerLinkActive="active">
+          <mat-icon>theater_comedy</mat-icon>
+          My Scenarios
+        </a>
+        <a mat-raised-button routerLink="/app/my-content/agents" routerLinkActive="active">
+          <mat-icon>smart_toy</mat-icon>
+          My Agents
+        </a>
+        <a mat-raised-button routerLink="/app/my-content/personalities" routerLinkActive="active">
+          <mat-icon>psychology</mat-icon>
+          My Personalities
+        </a>
+        <a mat-raised-button routerLink="/app/my-content/feedback" routerLinkActive="active">
+          <mat-icon>feedback</mat-icon>
+          My Feedback
+        </a>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="info-card">
+    <mat-card-content>
+      <div class="info-content">
+        <mat-icon class="info-icon">info</mat-icon>
+        <div class="info-text">
+          <h3>About My Content</h3>
+          <p>
+            Create and manage your own custom scenarios, agents, and feedback configurations. 
+            Your content is private and only visible to you.
+          </p>
+          <p>
+            You can also copy global content (created by administrators) to your personal collection 
+            and customize it to suit your needs.
+          </p>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <div class="quick-actions">
+    <mat-card class="action-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar class="action-icon scenarios-icon">theater_comedy</mat-icon>
+        <mat-card-title>Scenarios</mat-card-title>
+        <mat-card-subtitle>Create custom training scenarios</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-actions>
+        <a mat-button routerLink="/app/my-content/scenarios" color="primary">
+          Manage Scenarios
+          <mat-icon>arrow_forward</mat-icon>
+        </a>
+      </mat-card-actions>
+    </mat-card>
+
+    <mat-card class="action-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar class="action-icon agents-icon">smart_toy</mat-icon>
+        <mat-card-title>Agents</mat-card-title>
+        <mat-card-subtitle>Configure AI agent behaviors</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-actions>
+        <a mat-button routerLink="/app/my-content/agents" color="primary">
+          Manage Agents
+          <mat-icon>arrow_forward</mat-icon>
+        </a>
+      </mat-card-actions>
+    </mat-card>
+
+    <mat-card class="action-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar class="action-icon personalities-icon">psychology</mat-icon>
+        <mat-card-title>Personalities</mat-card-title>
+        <mat-card-subtitle>Define agent personality traits</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-actions>
+        <a mat-button routerLink="/app/my-content/personalities" color="primary">
+          Manage Personalities
+          <mat-icon>arrow_forward</mat-icon>
+        </a>
+      </mat-card-actions>
+    </mat-card>
+
+    <mat-card class="action-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar class="action-icon feedback-icon">feedback</mat-icon>
+        <mat-card-title>Feedback</mat-card-title>
+        <mat-card-subtitle>Customize feedback configurations</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-actions>
+        <a mat-button routerLink="/app/my-content/feedback" color="primary">
+          Manage Feedback
+          <mat-icon>arrow_forward</mat-icon>
+        </a>
+      </mat-card-actions>
+    </mat-card>
+  </div>
+</div>
+

@@ -1,0 +1,194 @@
+<div class="user-content-container">
+  <mat-card class="header-card">
+    <mat-card-header>
+      <mat-card-title>My Content</mat-card-title>
+      <mat-card-subtitle>Manage your custom scenarios, agents, personalities, and feedback</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="content-nav">
+        <a mat-raised-button routerLink="/app/my-content">
+          <mat-icon>home</mat-icon>
+          Dashboard
+        </a>
+        <a mat-raised-button routerLink="/app/my-content/scenarios">
+          <mat-icon>theater_comedy</mat-icon>
+          My Scenarios
+        </a>
+        <a mat-raised-button routerLink="/app/my-content/agents" routerLinkActive="active">
+          <mat-icon>smart_toy</mat-icon>
+          My Agents
+        </a>
+        <a mat-raised-button routerLink="/app/my-content/personalities">
+          <mat-icon>psychology</mat-icon>
+          My Personalities
+        </a>
+        <a mat-raised-button routerLink="/app/my-content/feedback">
+          <mat-icon>feedback</mat-icon>
+          My Feedback
+        </a>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="header-card">
+    <mat-card-header>
+      <mat-card-title>My Agents</mat-card-title>
+      <mat-card-subtitle>Manage your custom AI agents</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <button 
+        mat-raised-button 
+        color="primary" 
+        (click)="toggleCreateForm()"
+        class="create-button"
+      >
+        <mat-icon>{{ showCreateForm() ? 'close' : 'add' }}</mat-icon>
+        {{ showCreateForm() ? 'Cancel' : 'Create New Agent' }}
+      </button>
+
+      @if (showCreateForm()) {
+        <mat-card class="create-form-card">
+          <mat-card-content>
+            <form [formGroup]="createAgentForm" (ngSubmit)="createAgent()" class="create-form">
+              <h3>Create New Agent</h3>
+              
+              <div class="form-row">
+                <mat-form-field appearance="outline" class="half-width">
+                  <mat-label>Agent ID</mat-label>
+                  <input matInput formControlName="id" placeholder="unique-agent-id">
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="half-width">
+                  <mat-label>Name</mat-label>
+                  <input matInput formControlName="name" placeholder="Agent Name">
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="outline" class="half-width">
+                  <mat-label>Scenario</mat-label>
+                  <mat-select formControlName="scenario_id">
+                    @for (scenario of scenarios(); track scenario.id) {
+                      <mat-option [value]="scenario.id">{{ scenario.name }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="half-width">
+                  <mat-label>Personality</mat-label>
+                  <mat-select formControlName="agent_personality_id">
+                    @for (personality of personalities(); track personality.id) {
+                      <mat-option [value]="personality.id">{{ personality.name }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="outline" class="half-width">
+                  <mat-label>Voice</mat-label>
+                  <input matInput formControlName="voice" placeholder="Voice identifier">
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="half-width">
+                  <mat-label>Display Color</mat-label>
+                  <input matInput formControlName="display_text_color" placeholder="#000000">
+                </mat-form-field>
+              </div>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Objective</mat-label>
+                <textarea matInput formControlName="objective" rows="2"></textarea>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Instructions</mat-label>
+                <textarea matInput formControlName="instructions" rows="3"></textarea>
+              </mat-form-field>
+
+              <div class="form-actions">
+                <button 
+                  mat-raised-button 
+                  color="primary" 
+                  type="submit"
+                  [disabled]="!createAgentForm.valid"
+                >
+                  <mat-icon>smart_toy</mat-icon>
+                  Create Agent
+                </button>
+              </div>
+            </form>
+          </mat-card-content>
+        </mat-card>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="table-card">
+    <mat-card-content>
+      @if (isLoading()) {
+        <div class="loading-container">
+          <app-loading-spinner></app-loading-spinner>
+          <p>Loading agents...</p>
+        </div>
+      } @else {
+        <div class="table-container">
+          <table mat-table [dataSource]="agents()" class="data-table">
+            <ng-container matColumnDef="id">
+              <th mat-header-cell *matHeaderCellDef>ID</th>
+              <td mat-cell *matCellDef="let agent">{{ agent.id }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="name">
+              <th mat-header-cell *matHeaderCellDef>Name</th>
+              <td mat-cell *matCellDef="let agent">{{ agent.name }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="scenario">
+              <th mat-header-cell *matHeaderCellDef>Scenario</th>
+              <td mat-cell *matCellDef="let agent">{{ getScenarioName(agent.scenario_id) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="personality">
+              <th mat-header-cell *matHeaderCellDef>Personality</th>
+              <td mat-cell *matCellDef="let agent">{{ getPersonalityName(agent.agent_personality_id) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="voice">
+              <th mat-header-cell *matHeaderCellDef>Voice</th>
+              <td mat-cell *matCellDef="let agent">{{ agent.voice || '-' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="created_at">
+              <th mat-header-cell *matHeaderCellDef>Created At</th>
+              <td mat-cell *matCellDef="let agent">{{ formatDate(agent.created_at) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef>Actions</th>
+              <td mat-cell *matCellDef="let agent">
+                <button mat-icon-button color="primary" (click)="openEditDialog(agent)" matTooltip="Edit">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button color="warn" (click)="deleteAgent(agent.id, agent.name)" matTooltip="Delete">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+          </table>
+
+          @if (agents().length === 0) {
+            <div class="no-data">
+              <mat-icon>smart_toy</mat-icon>
+              <p>No agents yet</p>
+            </div>
+          }
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>
+

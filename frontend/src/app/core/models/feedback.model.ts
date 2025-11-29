@@ -15,6 +15,8 @@ export interface Feedback {
   context: string;
   output_format: string;
   created_at: string;
+  owner_id?: number | null;
+  is_global?: boolean;
 }
 
 /**

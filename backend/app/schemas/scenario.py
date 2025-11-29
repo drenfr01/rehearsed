@@ -93,6 +93,8 @@ class ScenarioAdminResponse(BaseModel):
         system_instructions: System instructions for the scenario
         initial_prompt: Initial prompt for the scenario
         created_at: When the scenario was created
+        owner_id: Owner user ID (None means global)
+        is_global: Whether this is a global scenario
     """
     id: int = Field(..., description="Scenario ID")
     name: str = Field(..., description="Name of the scenario")
@@ -101,6 +103,33 @@ class ScenarioAdminResponse(BaseModel):
     system_instructions: str = Field(..., description="System instructions for the scenario")
     initial_prompt: str = Field(..., description="Initial prompt for the scenario")
     created_at: datetime = Field(..., description="When the scenario was created")
+    owner_id: Optional[int] = Field(None, description="Owner user ID (None means global)")
+    is_global: bool = Field(default=True, description="Whether this is a global scenario")
+
+
+class ScenarioWithOwnerResponse(BaseModel):
+    """Response model for scenario with ownership info (for scenario selection).
+    
+    Attributes:
+        id: Scenario ID
+        name: Name of the scenario
+        description: Description of the scenario
+        overview: Overview of the scenario
+        system_instructions: System instructions for the scenario
+        initial_prompt: Initial prompt for the scenario
+        created_at: When the scenario was created
+        owner_id: Owner user ID (None means global)
+        is_global: Whether this is a global scenario
+    """
+    id: int = Field(..., description="Scenario ID")
+    name: str = Field(..., description="Name of the scenario")
+    description: str = Field(..., description="Description of the scenario")
+    overview: str = Field(..., description="Overview of the scenario")
+    system_instructions: str = Field(..., description="System instructions for the scenario")
+    initial_prompt: str = Field(..., description="Initial prompt for the scenario")
+    created_at: Optional[datetime] = Field(None, description="When the scenario was created")
+    owner_id: Optional[int] = Field(None, description="Owner user ID (None means global)")
+    is_global: bool = Field(default=True, description="Whether this is a global scenario")
 
 
 class DeleteScenarioResponse(BaseModel):

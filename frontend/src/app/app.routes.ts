@@ -11,6 +11,11 @@ import { AdminAgentPersonalities } from './features/admin-agent-personalities/ad
 import { AdminAgents } from './features/admin-agents/admin-agents';
 import { AdminScenarios } from './features/admin-scenarios/admin-scenarios';
 import { AdminFeedback } from './features/admin-feedback/admin-feedback';
+import { UserContent } from './features/user-content/user-content';
+import { UserScenarios } from './features/user-scenarios/user-scenarios';
+import { UserAgents } from './features/user-agents/user-agents';
+import { UserPersonalities } from './features/user-personalities/user-personalities';
+import { UserFeedback } from './features/user-feedback/user-feedback';
 
 export const routes: Routes = [
     {
@@ -41,6 +46,28 @@ export const routes: Routes = [
                 path: 'scenario-feedback',
                 component: ScenarioFeedback,
             },
+            // User Content Routes
+            {
+                path: 'my-content',
+                component: UserContent,
+            },
+            {
+                path: 'my-content/scenarios',
+                component: UserScenarios,
+            },
+            {
+                path: 'my-content/agents',
+                component: UserAgents,
+            },
+            {
+                path: 'my-content/personalities',
+                component: UserPersonalities,
+            },
+            {
+                path: 'my-content/feedback',
+                component: UserFeedback,
+            },
+            // Admin Routes
             {
                 path: 'admin',
                 component: Admin,

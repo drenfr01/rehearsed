@@ -3,6 +3,7 @@
 from typing import (
     TYPE_CHECKING,
     List,
+    Optional,
 )
 from sqlmodel import (
     Field,
@@ -14,6 +15,7 @@ from app.models.base import BaseModel
 
 if TYPE_CHECKING:
     from app.models.agent import Agent
+    from app.models.user import User
 
 class Scenario(BaseModel, table=True):
     id: int = Field(default=None, primary_key=True, unique=True)
@@ -22,4 +24,9 @@ class Scenario(BaseModel, table=True):
     overview: str = Field(default=None)
     system_instructions: str = Field(default=None)
     initial_prompt: str = Field(default=None)
+    
+    # Owner ID: NULL means global (admin-created), user_id means user-local
+    owner_id: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
+    owner: Optional["User"] = Relationship()
+    
     agents: List["Agent"] = Relationship(back_populates="scenario")

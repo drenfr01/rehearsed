@@ -35,6 +35,11 @@ export class Header {
     { path: '/app/classroom', label: 'Classroom' }
   ];
 
+  // User content routes (available to all authenticated users)
+  userContentRoutes = [
+    { path: '/app/my-content', label: 'My Content', icon: 'folder_special' }
+  ];
+
   // Admin routes
   adminRoutes = [
     { path: '/app/admin', label: 'Admin Dashboard' }

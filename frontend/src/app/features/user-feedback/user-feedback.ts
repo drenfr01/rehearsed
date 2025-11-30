@@ -15,8 +15,11 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { LoadingSpinner } from '../../shared/loading-spinner/loading-spinner';
 import { UserContentService } from '../../core/services/user-content.service';
+import { ScenarioService } from '../../core/services/scenario.service';
 import { Feedback, FeedbackCreate, FeedbackType } from '../../core/models/feedback.model';
+import { Scenario } from '../../core/models/scenario.model';
 import { EditFeedbackDialog, EditFeedbackDialogData, EditFeedbackDialogResult } from '../../shared/dialogs/edit-feedback-dialog/edit-feedback-dialog';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-user-feedback',
@@ -42,13 +45,15 @@ import { EditFeedbackDialog, EditFeedbackDialogData, EditFeedbackDialogResult } 
 })
 export class UserFeedback implements OnInit {
   private userContentService = inject(UserContentService);
+  private scenarioService = inject(ScenarioService);
   private destroyRef = inject(DestroyRef);
   private fb = inject(FormBuilder);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
 
   feedbacks = signal<Feedback[]>([]);
-  displayedColumns: string[] = ['id', 'feedback_type', 'objective', 'created_at', 'actions'];
+  scenarios = signal<Scenario[]>([]);
+  displayedColumns: string[] = ['id', 'feedback_type', 'scenario', 'objective', 'created_at', 'actions'];
   isLoading = signal(false);
   showCreateForm = signal(false);
   feedbackTypes: FeedbackType[] = ['inline', 'summary'];
@@ -58,6 +63,7 @@ export class UserFeedback implements OnInit {
   constructor() {
     this.createFeedbackForm = this.fb.group({
       feedback_type: ['inline', [Validators.required]],
+      scenario_id: [null, [Validators.required]],
       objective: ['', [Validators.required, Validators.minLength(1)]],
       instructions: ['', [Validators.required, Validators.minLength(1)]],
       constraints: ['', [Validators.required, Validators.minLength(1)]],
@@ -73,14 +79,18 @@ export class UserFeedback implements OnInit {
   loadData() {
     this.isLoading.set(true);
     
-    const subscription = this.userContentService.getMyFeedback().subscribe({
-      next: (feedbacks) => {
-        this.feedbacks.set(feedbacks);
+    const subscription = forkJoin({
+      feedbacks: this.userContentService.getMyFeedback(),
+      scenarios: this.scenarioService.getScenarios(),
+    }).subscribe({
+      next: (data) => {
+        this.feedbacks.set(data.feedbacks);
+        this.scenarios.set(data.scenarios);
         this.isLoading.set(false);
       },
       error: (error) => {
-        console.error('Failed to load feedback', error);
-        this.snackBar.open('Failed to load feedback', 'Close', { duration: 3000 });
+        console.error('Failed to load data', error);
+        this.snackBar.open('Failed to load data', 'Close', { duration: 3000 });
         this.isLoading.set(false);
       },
     });
@@ -91,7 +101,7 @@ export class UserFeedback implements OnInit {
   toggleCreateForm() {
     this.showCreateForm.set(!this.showCreateForm());
     if (!this.showCreateForm()) {
-      this.createFeedbackForm.reset({ feedback_type: 'inline' });
+      this.createFeedbackForm.reset({ feedback_type: 'inline', scenario_id: null });
     }
   }
 
@@ -102,7 +112,7 @@ export class UserFeedback implements OnInit {
         next: (feedback) => {
           this.feedbacks.update(feedbacks => [...feedbacks, feedback]);
           this.snackBar.open('Feedback created successfully', 'Close', { duration: 3000 });
-          this.createFeedbackForm.reset({ feedback_type: 'inline' });
+          this.createFeedbackForm.reset({ feedback_type: 'inline', scenario_id: null });
           this.showCreateForm.set(false);
         },
         error: (error) => {
@@ -118,6 +128,7 @@ export class UserFeedback implements OnInit {
   openEditDialog(feedback: Feedback) {
     const dialogData: EditFeedbackDialogData = {
       feedback,
+      scenarios: this.scenarios(),
     };
     const dialogRef = this.dialog.open(EditFeedbackDialog, {
       width: '800px',
@@ -173,6 +184,11 @@ export class UserFeedback implements OnInit {
   truncateText(text: string, maxLength: number = 100): string {
     if (!text) return '-';
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+  }
+
+  getScenarioName(scenarioId: number): string {
+    const scenario = this.scenarios().find(s => s.id === scenarioId);
+    return scenario?.name || 'Unknown';
   }
 
   formatDate(dateString: string | null | undefined): string {

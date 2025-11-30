@@ -15,6 +15,7 @@ from app.models.base import BaseModel
 
 if TYPE_CHECKING:
     from app.models.agent import Agent
+    from app.models.feedback import Feedback
     from app.models.user import User
 
 class Scenario(BaseModel, table=True):
@@ -30,3 +31,4 @@ class Scenario(BaseModel, table=True):
     owner: Optional["User"] = Relationship()
     
     agents: List["Agent"] = Relationship(back_populates="scenario")
+    feedbacks: List["Feedback"] = Relationship(back_populates="scenario")

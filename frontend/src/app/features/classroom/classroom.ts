@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, signal, effect, ElementRef, ViewChild, OnInit } from '@angular/core';
+import { Component, DestroyRef, inject, signal, effect, ElementRef, ViewChild, OnInit, NgZone } from '@angular/core';
 import { Router } from '@angular/router';
 import { ChatGraphService } from '../../core/services/chat-graph.service';
 import { ScenarioService } from '../../core/services/scenario.service';
@@ -10,6 +10,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LoadingSpinner } from '../../shared/loading-spinner/loading-spinner';
@@ -24,6 +25,7 @@ import { ClassroomStatus } from './classroom-status/classroom-status';
     MatButtonModule,
     MatIconModule,
     MatSlideToggleModule,
+    MatTooltipModule,
     CommonModule,
     FormsModule,
     LoadingSpinner,
@@ -40,6 +42,7 @@ export class Classroom implements OnInit {
   private scenarioService = inject(ScenarioService);
   private destroyRef = inject(DestroyRef);
   private router = inject(Router);
+  private ngZone = inject(NgZone);
   
   // Map of agent name to their display_text_color
   private agentColorMap = signal<Map<string, string>>(new Map());
@@ -53,10 +56,21 @@ export class Classroom implements OnInit {
   private audioElement: HTMLAudioElement | null = null;
   private loadedAudioUrls: Map<number, string> = new Map();
 
+  // Audio recording state
+  protected isRecording = signal<boolean>(false);
+  private mediaRecorder: MediaRecorder | null = null;
+  private recordedChunks: Blob[] = [];
+  
+  // Recorded audio playback state
+  protected recordedAudioUrl = signal<string | null>(null);
+  protected isPlayingRecordedAudio = signal<boolean>(false);
+  private recordedAudioElement: HTMLAudioElement | null = null;
+
   // Expose readonly signals from the service
   protected messages = this.chatGraphService.loadedGraphMessages;
   protected inlineFeedback = this.chatGraphService.loadedInlineFeedback;
   protected studentResponses = this.chatGraphService.loadedStudentResponses;
+  protected transcribedText = this.chatGraphService.loadedTranscribedText;
 
   constructor() {
     // Watch for summary feedback and navigate when available
@@ -70,6 +84,8 @@ export class Classroom implements OnInit {
     // Cleanup audio element on destroy
     this.destroyRef.onDestroy(() => {
       this.cleanupAllAudio();
+      this.cleanupRecordedAudio();
+      this.stopRecording();
     });
   }
   
@@ -214,6 +230,146 @@ export class Classroom implements OnInit {
   
   hasAudioForMessage(message: { audio_base64?: string }): boolean {
     return !!(message.audio_base64 && message.audio_base64.length > 0);
+  }
+
+  // Audio recording methods
+  async toggleRecording() {
+    if (this.isRecording()) {
+      this.stopRecording();
+    } else {
+      await this.startRecording();
+    }
+  }
+
+  private async startRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      // Use webm format with opus codec for best compatibility
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+        ? 'audio/webm;codecs=opus' 
+        : 'audio/webm';
+      
+      this.mediaRecorder = new MediaRecorder(stream, { mimeType });
+      this.recordedChunks = [];
+
+      this.mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          this.recordedChunks.push(event.data);
+        }
+      };
+
+      this.mediaRecorder.onstop = async () => {
+        // Stop all tracks to release the microphone
+        stream.getTracks().forEach(track => track.stop());
+        
+        if (this.recordedChunks.length > 0) {
+          const audioBlob = new Blob(this.recordedChunks, { type: mimeType });
+          
+          // Store the recorded audio URL for playback
+          this.cleanupRecordedAudio();
+          const audioUrl = URL.createObjectURL(audioBlob);
+          this.ngZone.run(() => {
+            this.recordedAudioUrl.set(audioUrl);
+          });
+          
+          await this.sendAudioMessage(audioBlob);
+        }
+      };
+
+      this.mediaRecorder.start();
+      this.ngZone.run(() => {
+        this.isRecording.set(true);
+      });
+    } catch (error) {
+      console.error('Failed to start recording:', error);
+      this.ngZone.run(() => {
+        this.error.set('Could not access microphone. Please check permissions.');
+      });
+    }
+  }
+
+  private stopRecording() {
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      this.mediaRecorder.stop();
+    }
+    this.isRecording.set(false);
+  }
+
+  private cleanupRecordedAudio() {
+    if (this.recordedAudioElement) {
+      this.recordedAudioElement.pause();
+      this.recordedAudioElement = null;
+    }
+    const currentUrl = this.recordedAudioUrl();
+    if (currentUrl) {
+      URL.revokeObjectURL(currentUrl);
+    }
+    this.recordedAudioUrl.set(null);
+    this.isPlayingRecordedAudio.set(false);
+  }
+
+  togglePlayRecordedAudio() {
+    const audioUrl = this.recordedAudioUrl();
+    if (!audioUrl) return;
+
+    if (this.recordedAudioElement && this.isPlayingRecordedAudio()) {
+      this.recordedAudioElement.pause();
+      this.isPlayingRecordedAudio.set(false);
+      return;
+    }
+
+    if (!this.recordedAudioElement) {
+      this.recordedAudioElement = new Audio(audioUrl);
+      this.recordedAudioElement.onended = () => {
+        this.ngZone.run(() => {
+          this.isPlayingRecordedAudio.set(false);
+        });
+      };
+    }
+
+    this.recordedAudioElement.play();
+    this.isPlayingRecordedAudio.set(true);
+  }
+
+  clearRecordedAudio() {
+    this.cleanupRecordedAudio();
+  }
+
+  private async sendAudioMessage(audioBlob: Blob) {
+    // Convert blob to base64
+    const arrayBuffer = await audioBlob.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    let binary = '';
+    for (let i = 0; i < uint8Array.length; i++) {
+      binary += String.fromCharCode(uint8Array[i]);
+    }
+    const audioBase64 = btoa(binary);
+
+    this.isLoading.set(true);
+    this.error.set('');
+
+    const newChatRequest: ChatRequest = {
+      is_resumption: true,
+      resumption_text: '', // Will be filled by speech-to-text on backend
+      resumption_approved: this.isApproved(),
+      messages: [],
+      audio_base64: audioBase64,
+    };
+
+    const subscription = this.chatGraphService.sendGraphRequest(newChatRequest, false).subscribe({
+      error: (error: Error) => {
+        this.error.set(error.message);
+        this.isLoading.set(false);
+      },
+      complete: () => {
+        this.isLoading.set(false);
+      },
+    });
+
+    this.destroyRef.onDestroy(() => {
+      subscription.unsubscribe();
+    });
   }
 
   onSubmit() {

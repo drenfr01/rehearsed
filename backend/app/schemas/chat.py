@@ -59,6 +59,9 @@ class ChatRequest(BaseModel):
 
     Attributes:
         messages: List of messages in the conversation.
+        is_resumption: Whether the conversation is being resumed.
+        resumption_text: The text to resume the conversation.
+        audio_base64: Optional base64-encoded audio bytes for speech-to-text transcription.
     """
 
     messages: List[Message] = Field(
@@ -67,6 +70,7 @@ class ChatRequest(BaseModel):
     )
     is_resumption: bool = Field(default=False, description="Whether the conversation is being resumed")
     resumption_text: str = Field(default="", description="The text to resume the conversation")
+    audio_base64: str | None = Field(default=None, description="Optional base64-encoded audio bytes for speech-to-text transcription")
 
 
 class ChatResponse(BaseModel):
@@ -89,6 +93,7 @@ class ChatResponse(BaseModel):
     appropriate_response: bool = Field(default=False, description="Whether the response is appropriate")
     appropriate_explanation: str = Field(default="", description="The explanation for why the response is appropriate")
     learning_goals_achieved: bool = Field(default=False, description="Whether the learning goals were achieved")
+    transcribed_text: str = Field(default="", description="The transcribed text from audio input")
 
     interrupt: List[Interrupt] = Field(default_factory=list, description="List of interrupts")
 

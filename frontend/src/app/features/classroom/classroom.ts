@@ -39,15 +39,11 @@ export class Classroom {
   protected userInput = signal<string>('');
   protected isApproved = signal<boolean>(false);
 
-  // Audio playback state
+  // Audio playback state - track by message index
+  protected playingMessageIndex = signal<number | null>(null);
   protected isPlaying = signal<boolean>(false);
-  protected currentAudioUrl = signal<string>('');
-  protected audioProgress = signal<number>(0);
-  protected audioDuration = signal<number>(0);
-  protected audioCurrentTime = signal<number>(0);
   private audioElement: HTMLAudioElement | null = null;
-  private isLoadingAudio = false;
-  private lastLoadedAudioHash = '';
+  private loadedAudioUrls: Map<number, string> = new Map();
 
   // Expose readonly signals from the service
   protected messages = this.chatGraphService.loadedGraphMessages;
@@ -63,171 +59,108 @@ export class Classroom {
       }
     });
     
-    // Watch for new student responses and update audio
-    effect(() => {
-      const responses = this.studentResponses();
-      if (responses.length > 0) {
-        const latestResponse = responses[responses.length - 1];
-        if (latestResponse.audio_base64 && latestResponse.audio_base64.length > 0) {
-          // Create a simple hash to detect duplicate audio data
-          const audioHash = latestResponse.audio_base64.substring(0, 100) + latestResponse.audio_base64.length;
-          if (audioHash !== this.lastLoadedAudioHash && !this.isLoadingAudio) {
-            console.log('Loading audio, base64 length:', latestResponse.audio_base64.length);
-            this.lastLoadedAudioHash = audioHash;
-            this.loadAudio(latestResponse.audio_base64);
-          }
-        } else {
-          console.log('No audio data in response');
-        }
-      }
-    });
-    
     // Cleanup audio element on destroy
     this.destroyRef.onDestroy(() => {
-      this.cleanupAudio();
+      this.cleanupAllAudio();
     });
   }
   
-  private async loadAudio(base64Audio: string) {
-    // Validate input
+  private async getOrCreateAudioUrl(messageIndex: number, base64Audio: string): Promise<string | null> {
+    // Check if we already have a URL for this message
+    if (this.loadedAudioUrls.has(messageIndex)) {
+      return this.loadedAudioUrls.get(messageIndex)!;
+    }
+    
     if (!base64Audio || base64Audio.trim().length === 0) {
-      console.warn('No audio data provided');
-      return;
+      return null;
     }
-    
-    // Prevent concurrent loads
-    if (this.isLoadingAudio) {
-      console.log('Already loading audio, skipping');
-      return;
-    }
-    
-    this.isLoadingAudio = true;
     
     try {
-      // Convert base64 to blob using a more reliable method
+      // Convert base64 to blob
       const binaryString = atob(base64Audio);
       const len = binaryString.length;
       const bytes = new Uint8Array(len);
       
-      // Process in chunks to avoid blocking the main thread
-      const chunkSize = 8192;
-      for (let offset = 0; offset < len; offset += chunkSize) {
-        const end = Math.min(offset + chunkSize, len);
-        for (let i = offset; i < end; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        // Yield to main thread every chunk
-        if (offset + chunkSize < len) {
-          await new Promise(resolve => setTimeout(resolve, 0));
-        }
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
       }
       
       const blob = new Blob([bytes], { type: 'audio/mp3' });
-      const newAudioUrl = URL.createObjectURL(blob);
-      console.log('Audio blob created, URL:', newAudioUrl, 'Blob size:', blob.size);
+      const audioUrl = URL.createObjectURL(blob);
       
-      // Create the new audio element first
-      const newAudioElement = new Audio(newAudioUrl);
-      
-      // Wait for the audio to be ready before swapping
-      await new Promise<void>((resolve, reject) => {
-        newAudioElement.oncanplaythrough = () => {
-          console.log('Audio ready to play');
-          resolve();
-        };
-        newAudioElement.onerror = (e) => {
-          console.error('Audio element error:', e);
-          reject(e);
-        };
-        // Set a timeout in case the events don't fire
-        setTimeout(() => resolve(), 5000);
-      });
-      
-      // Now cleanup the old audio and swap in the new one
-      this.cleanupAudio();
-      
-      this.currentAudioUrl.set(newAudioUrl);
-      this.audioElement = newAudioElement;
-      this.audioDuration.set(newAudioElement.duration || 0);
-      this.audioProgress.set(0);
-      this.audioCurrentTime.set(0);
-      
-      this.audioElement.onended = () => {
-        this.isPlaying.set(false);
-        this.audioProgress.set(0);
-        this.audioCurrentTime.set(0);
-      };
-      
-      this.audioElement.ontimeupdate = () => {
-        if (this.audioElement && this.audioElement.duration) {
-          const progress = (this.audioElement.currentTime / this.audioElement.duration) * 100;
-          this.audioProgress.set(progress);
-          this.audioCurrentTime.set(this.audioElement.currentTime);
-        }
-      };
-      
-      this.audioElement.ondurationchange = () => {
-        if (this.audioElement) {
-          this.audioDuration.set(this.audioElement.duration);
-        }
-      };
+      // Cache the URL
+      this.loadedAudioUrls.set(messageIndex, audioUrl);
+      return audioUrl;
     } catch (error) {
-      console.error('Failed to load audio:', error);
-    } finally {
-      this.isLoadingAudio = false;
+      console.error('Failed to create audio URL:', error);
+      return null;
     }
   }
   
-  private cleanupAudio() {
+  private cleanupAllAudio() {
     if (this.audioElement) {
       this.audioElement.pause();
       this.audioElement = null;
     }
-    const currentUrl = this.currentAudioUrl();
-    if (currentUrl) {
-      URL.revokeObjectURL(currentUrl);
-      this.currentAudioUrl.set('');
-    }
+    // Revoke all cached URLs
+    this.loadedAudioUrls.forEach(url => URL.revokeObjectURL(url));
+    this.loadedAudioUrls.clear();
     this.isPlaying.set(false);
-    this.audioProgress.set(0);
-    this.audioCurrentTime.set(0);
-    this.audioDuration.set(0);
+    this.playingMessageIndex.set(null);
   }
   
-  seekAudio(event: MouseEvent, progressBarElement: HTMLElement) {
-    if (!this.audioElement || !this.audioElement.duration) return;
+  async togglePlayPauseForMessage(messageIndex: number, audioBase64: string) {
+    const currentlyPlaying = this.playingMessageIndex();
     
-    const rect = progressBarElement.getBoundingClientRect();
-    const clickX = event.clientX - rect.left;
-    const percentage = clickX / rect.width;
-    const newTime = percentage * this.audioElement.duration;
+    // If clicking on the same message that's playing, toggle pause/play
+    if (currentlyPlaying === messageIndex && this.audioElement) {
+      if (this.isPlaying()) {
+        this.audioElement.pause();
+        this.isPlaying.set(false);
+      } else {
+        this.audioElement.play();
+        this.isPlaying.set(true);
+      }
+      return;
+    }
     
-    this.audioElement.currentTime = newTime;
-    this.audioCurrentTime.set(newTime);
-    this.audioProgress.set(percentage * 100);
-  }
-  
-  formatTime(seconds: number): string {
-    if (!seconds || isNaN(seconds)) return '0:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  }
-  
-  togglePlayPause() {
-    if (!this.audioElement) return;
-    
-    if (this.isPlaying()) {
+    // Stop any currently playing audio
+    if (this.audioElement) {
       this.audioElement.pause();
+    }
+    
+    // Get or create the audio URL for this message
+    const audioUrl = await this.getOrCreateAudioUrl(messageIndex, audioBase64);
+    if (!audioUrl) {
+      console.error('Could not load audio for message', messageIndex);
+      return;
+    }
+    
+    // Create new audio element
+    this.audioElement = new Audio(audioUrl);
+    this.audioElement.onended = () => {
       this.isPlaying.set(false);
-    } else {
-      this.audioElement.play();
+      this.playingMessageIndex.set(null);
+    };
+    
+    // Play the audio
+    try {
+      await this.audioElement.play();
       this.isPlaying.set(true);
+      this.playingMessageIndex.set(messageIndex);
+    } catch (error) {
+      console.error('Failed to play audio:', error);
+      this.isPlaying.set(false);
+      this.playingMessageIndex.set(null);
     }
   }
   
-  hasAudio(): boolean {
-    return this.currentAudioUrl() !== '';
+  isMessagePlaying(messageIndex: number): boolean {
+    return this.playingMessageIndex() === messageIndex && this.isPlaying();
+  }
+  
+  hasAudioForMessage(message: { audio_base64?: string }): boolean {
+    return !!(message.audio_base64 && message.audio_base64.length > 0);
   }
 
   onSubmit() {
@@ -255,3 +188,4 @@ export class Classroom {
     });
   }
 }
+

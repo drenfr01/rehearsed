@@ -4,6 +4,7 @@ export interface Message {
     role: role;
     content: string;
     student_name?: string;
+    audio_base64?: string;
 }
 
 export interface Agent {

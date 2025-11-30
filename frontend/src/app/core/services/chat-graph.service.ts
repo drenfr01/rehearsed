@@ -82,7 +82,7 @@ export class ChatGraphService {
     if (!initialGraphRequest) {
       const humanMessage: Message = {
         role: 'user',
-        content: chatRequest.resumption_text || (isAudioMessage ? '🎤 Transcribing...' : '')
+        content: chatRequest.resumption_text || (isAudioMessage ? 'Transcribing...' : '')
       }
       this.graphMessages.set([...this.graphMessages(), humanMessage]);
     } else {

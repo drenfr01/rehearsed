@@ -33,6 +33,7 @@ from app.core.prompts.students import (
     STUDENT_PROFILES,
     STUDENT_SYSTEM_INSTRUCTIONS_TEMPLATE,
 )
+from app.core.prompts.pick_answering_student import PICK_ANSWERING_STUDENT_SYSTEM_INSTRUCTIONS
 from app.core.prompts.feedback import format_feedback_instructions
 from app.schemas.graph import (
     AppropriateResponse,
@@ -224,7 +225,11 @@ class LangGraphBuilder:
         
         system_message = [
             SystemMessage(
-                content=f"Based on the user message and these student profiles, pick which student (1-{len(self._agents)}) should respond:\n\n{student_profiles}",
+                content=PICK_ANSWERING_STUDENT_SYSTEM_INSTRUCTIONS.format(
+                    student_profiles=student_profiles, 
+                    student_number_range=f"1-{len(self._agents)}",
+                    messages=state.messages,
+                )
             ),
         ]
 

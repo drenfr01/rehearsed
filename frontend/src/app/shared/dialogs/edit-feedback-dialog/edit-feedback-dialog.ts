@@ -8,9 +8,11 @@ import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { Feedback, FeedbackType, FeedbackUpdate } from '../../../core/models/feedback.model';
+import { Scenario } from '../../../core/models/scenario.model';
 
 export interface EditFeedbackDialogData {
   feedback: Feedback;
+  scenarios: Scenario[];
 }
 
 export interface EditFeedbackDialogResult extends FeedbackUpdate {}
@@ -40,6 +42,7 @@ export class EditFeedbackDialog {
   constructor() {
     this.editForm = this.fb.group({
       feedback_type: [this.data.feedback.feedback_type, [Validators.required]],
+      scenario_id: [this.data.feedback.scenario_id, [Validators.required]],
       objective: [this.data.feedback.objective || '', [Validators.required, Validators.minLength(1)]],
       instructions: [this.data.feedback.instructions || '', [Validators.required, Validators.minLength(1)]],
       constraints: [this.data.feedback.constraints || '', [Validators.required, Validators.minLength(1)]],

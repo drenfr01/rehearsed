@@ -15,6 +15,7 @@ class FeedbackCreate(BaseModel):
     
     Attributes:
         feedback_type: Type of feedback ("inline" or "summary")
+        scenario_id: The scenario this feedback belongs to
         objective: The objective of the feedback
         instructions: The instructions for the feedback
         constraints: The constraints for the feedback
@@ -22,6 +23,7 @@ class FeedbackCreate(BaseModel):
         output_format: The output format for the feedback (optional)
     """
     feedback_type: FeedbackType = Field(..., description="Type of feedback (inline or summary)")
+    scenario_id: int = Field(..., description="The scenario this feedback belongs to")
     objective: str = Field(..., description="The objective of the feedback", min_length=1)
     instructions: str = Field(..., description="The instructions for the feedback", min_length=1)
     constraints: str = Field(..., description="The constraints for the feedback", min_length=1)
@@ -34,6 +36,7 @@ class FeedbackUpdate(BaseModel):
     
     Attributes:
         feedback_type: Optional new feedback type
+        scenario_id: Optional new scenario ID
         objective: Optional new objective
         instructions: Optional new instructions
         constraints: Optional new constraints
@@ -41,6 +44,7 @@ class FeedbackUpdate(BaseModel):
         output_format: Optional new output format
     """
     feedback_type: Optional[FeedbackType] = Field(None, description="Type of feedback (inline or summary)")
+    scenario_id: Optional[int] = Field(None, description="The scenario this feedback belongs to")
     objective: Optional[str] = Field(None, description="The objective of the feedback")
     instructions: Optional[str] = Field(None, description="The instructions for the feedback")
     constraints: Optional[str] = Field(None, description="The constraints for the feedback")
@@ -54,6 +58,7 @@ class FeedbackResponse(BaseModel):
     Attributes:
         id: Feedback ID
         feedback_type: Type of feedback
+        scenario_id: The scenario this feedback belongs to
         objective: The objective of the feedback
         instructions: The instructions for the feedback
         constraints: The constraints for the feedback
@@ -65,6 +70,7 @@ class FeedbackResponse(BaseModel):
     """
     id: int = Field(..., description="Feedback ID")
     feedback_type: FeedbackType = Field(..., description="Type of feedback")
+    scenario_id: int = Field(..., description="The scenario this feedback belongs to")
     objective: str = Field(..., description="The objective of the feedback")
     instructions: str = Field(..., description="The instructions for the feedback")
     constraints: str = Field(..., description="The constraints for the feedback")

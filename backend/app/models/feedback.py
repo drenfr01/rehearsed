@@ -17,6 +17,7 @@ from app.models.base import BaseModel
 
 if TYPE_CHECKING:
     from app.models.user import User
+    from app.models.scenario import Scenario
 
 
 class FeedbackType(str, Enum):
@@ -28,6 +29,10 @@ class Feedback(BaseModel, table=True):
     id: int = Field(default=None, primary_key=True, unique=True)
 
     feedback_type: FeedbackType = Field(..., description="Whether the feedback is inline or summary feedback")
+
+    # Link to scenario
+    scenario_id: int = Field(foreign_key="scenario.id", description="The scenario this feedback belongs to")
+    scenario: "Scenario" = Relationship(back_populates="feedbacks")
 
     # System instructions for the agent
     objective: str = Field(..., description="The objective of the feedback")

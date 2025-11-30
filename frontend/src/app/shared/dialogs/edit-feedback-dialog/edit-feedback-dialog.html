@@ -18,6 +18,18 @@
     </mat-form-field>
 
     <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Scenario</mat-label>
+      <mat-select formControlName="scenario_id">
+        @for (scenario of data.scenarios; track scenario.id) {
+          <mat-option [value]="scenario.id">{{ scenario.name }}</mat-option>
+        }
+      </mat-select>
+      @if (editForm.get('scenario_id')?.hasError('required')) {
+        <mat-error>Scenario is required</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
       <mat-label>Objective</mat-label>
       <textarea matInput formControlName="objective" rows="4" placeholder="The objective of the feedback"></textarea>
       @if (editForm.get('objective')?.hasError('required')) {

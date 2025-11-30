@@ -9,6 +9,7 @@ export type FeedbackType = 'inline' | 'summary';
 export interface Feedback {
   id: number;
   feedback_type: FeedbackType;
+  scenario_id: number;
   objective: string;
   instructions: string;
   constraints: string;
@@ -24,6 +25,7 @@ export interface Feedback {
  */
 export interface FeedbackCreate {
   feedback_type: FeedbackType;
+  scenario_id: number;
   objective: string;
   instructions: string;
   constraints: string;
@@ -36,6 +38,7 @@ export interface FeedbackCreate {
  */
 export interface FeedbackUpdate {
   feedback_type?: FeedbackType;
+  scenario_id?: number;
   objective?: string;
   instructions?: string;
   constraints?: string;

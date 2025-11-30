@@ -806,6 +806,7 @@ async def list_my_feedback(request: Request, user: User = Depends(get_current_us
             FeedbackResponse(
                 id=f.id,
                 feedback_type=f.feedback_type,
+                scenario_id=f.scenario_id,
                 objective=f.objective,
                 instructions=f.instructions,
                 constraints=f.constraints,
@@ -839,6 +840,7 @@ async def create_feedback(
         feedback = await database_service.create_user_feedback(
             user_id=user.id,
             feedback_type=feedback_data.feedback_type,
+            scenario_id=feedback_data.scenario_id,
             objective=feedback_data.objective,
             instructions=feedback_data.instructions,
             constraints=feedback_data.constraints,
@@ -846,11 +848,12 @@ async def create_feedback(
             output_format=feedback_data.output_format or "",
         )
 
-        logger.info("user_created_feedback", user_id=user.id, feedback_id=feedback.id)
+        logger.info("user_created_feedback", user_id=user.id, feedback_id=feedback.id, scenario_id=feedback.scenario_id)
 
         return FeedbackResponse(
             id=feedback.id,
             feedback_type=feedback.feedback_type,
+            scenario_id=feedback.scenario_id,
             objective=feedback.objective,
             instructions=feedback.instructions,
             constraints=feedback.constraints,
@@ -892,6 +895,7 @@ async def update_feedback(
             feedback_id=feedback_id,
             user_id=user.id,
             feedback_type=feedback_data.feedback_type,
+            scenario_id=feedback_data.scenario_id,
             objective=feedback_data.objective,
             instructions=feedback_data.instructions,
             constraints=feedback_data.constraints,
@@ -904,6 +908,7 @@ async def update_feedback(
         return FeedbackResponse(
             id=updated_feedback.id,
             feedback_type=updated_feedback.feedback_type,
+            scenario_id=updated_feedback.scenario_id,
             objective=updated_feedback.objective,
             instructions=updated_feedback.instructions,
             constraints=updated_feedback.constraints,
@@ -968,6 +973,7 @@ async def copy_feedback_to_local(
         return FeedbackResponse(
             id=new_feedback.id,
             feedback_type=new_feedback.feedback_type,
+            scenario_id=new_feedback.scenario_id,
             objective=new_feedback.objective,
             instructions=new_feedback.instructions,
             constraints=new_feedback.constraints,

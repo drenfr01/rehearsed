@@ -818,11 +818,12 @@ class DatabaseService:
             feedback = session.exec(statement).first()
             return feedback
 
-    async def get_feedback_by_type(self, feedback_type: FeedbackType | str) -> Optional[Feedback]:
-        """Get a feedback by type.
+    async def get_feedback_by_type(self, feedback_type: FeedbackType | str, scenario_id: int) -> Optional[Feedback]:
+        """Get a feedback by type and scenario.
 
         Args:
             feedback_type: The type of feedback to retrieve (FeedbackType.INLINE or FeedbackType.SUMMARY)
+            scenario_id: The ID of the scenario to get feedback for
 
         Returns:
             Optional[Feedback]: The feedback if found, None otherwise
@@ -831,7 +832,10 @@ class DatabaseService:
         if isinstance(feedback_type, str):
             feedback_type = FeedbackType(feedback_type)
         with Session(self.engine) as session:
-            statement = select(Feedback).where(Feedback.feedback_type == feedback_type)
+            statement = select(Feedback).where(
+                Feedback.feedback_type == feedback_type,
+                Feedback.scenario_id == scenario_id
+            )
             feedback = session.exec(statement).first()
             return feedback
 
@@ -849,6 +853,7 @@ class DatabaseService:
     async def create_feedback(
         self,
         feedback_type: FeedbackType | str,
+        scenario_id: int,
         objective: str,
         instructions: str,
         constraints: str,
@@ -859,6 +864,7 @@ class DatabaseService:
 
         Args:
             feedback_type: Type of feedback ("inline" or "summary")
+            scenario_id: The ID of the scenario this feedback belongs to
             objective: The objective of the feedback
             instructions: The instructions for the feedback
             constraints: The constraints for the feedback
@@ -875,6 +881,7 @@ class DatabaseService:
         with Session(self.engine) as session:
             feedback = Feedback(
                 feedback_type=feedback_type,
+                scenario_id=scenario_id,
                 objective=objective,
                 instructions=instructions,
                 constraints=constraints,
@@ -884,13 +891,14 @@ class DatabaseService:
             session.add(feedback)
             session.commit()
             session.refresh(feedback)
-            logger.info("feedback_created", feedback_id=feedback.id, feedback_type=feedback_type.value)
+            logger.info("feedback_created", feedback_id=feedback.id, feedback_type=feedback_type.value, scenario_id=scenario_id)
             return feedback
 
     async def update_feedback(
         self,
         feedback_id: int,
         feedback_type: Optional[FeedbackType | str] = None,
+        scenario_id: Optional[int] = None,
         objective: Optional[str] = None,
         instructions: Optional[str] = None,
         constraints: Optional[str] = None,
@@ -902,6 +910,7 @@ class DatabaseService:
         Args:
             feedback_id: The ID of the feedback to update
             feedback_type: Optional new feedback type
+            scenario_id: Optional new scenario ID
             objective: Optional new objective
             instructions: Optional new instructions
             constraints: Optional new constraints
@@ -923,6 +932,8 @@ class DatabaseService:
                 if isinstance(feedback_type, str):
                     feedback_type = FeedbackType(feedback_type)
                 feedback.feedback_type = feedback_type
+            if scenario_id is not None:
+                feedback.scenario_id = scenario_id
             if objective is not None:
                 feedback.objective = objective
             if instructions is not None:
@@ -1258,6 +1269,7 @@ class DatabaseService:
 
             new_feedback = Feedback(
                 feedback_type=original.feedback_type,
+                scenario_id=original.scenario_id,
                 objective=original.objective,
                 instructions=original.instructions,
                 constraints=original.constraints,
@@ -1622,6 +1634,7 @@ class DatabaseService:
         self,
         user_id: int,
         feedback_type: FeedbackType | str,
+        scenario_id: int,
         objective: str,
         instructions: str,
         constraints: str,
@@ -1633,6 +1646,7 @@ class DatabaseService:
         Args:
             user_id: The owner user's ID
             feedback_type: Type of feedback
+            scenario_id: The ID of the scenario this feedback belongs to
             objective: The objective
             instructions: The instructions
             constraints: The constraints
@@ -1648,6 +1662,7 @@ class DatabaseService:
         with Session(self.engine) as session:
             feedback = Feedback(
                 feedback_type=feedback_type,
+                scenario_id=scenario_id,
                 objective=objective,
                 instructions=instructions,
                 constraints=constraints,
@@ -1658,7 +1673,7 @@ class DatabaseService:
             session.add(feedback)
             session.commit()
             session.refresh(feedback)
-            logger.info("user_feedback_created", feedback_id=feedback.id, user_id=user_id)
+            logger.info("user_feedback_created", feedback_id=feedback.id, user_id=user_id, scenario_id=scenario_id)
             return feedback
 
     async def update_user_feedback(
@@ -1666,6 +1681,7 @@ class DatabaseService:
         feedback_id: int,
         user_id: int,
         feedback_type: Optional[FeedbackType | str] = None,
+        scenario_id: Optional[int] = None,
         objective: Optional[str] = None,
         instructions: Optional[str] = None,
         constraints: Optional[str] = None,
@@ -1677,6 +1693,7 @@ class DatabaseService:
         Args:
             feedback_id: The ID of the feedback to update
             user_id: The ID of the user (for ownership verification)
+            scenario_id: Optional new scenario ID
             Other args: Optional new values
 
         Returns:
@@ -1696,6 +1713,8 @@ class DatabaseService:
                 if isinstance(feedback_type, str):
                     feedback_type = FeedbackType(feedback_type)
                 feedback.feedback_type = feedback_type
+            if scenario_id is not None:
+                feedback.scenario_id = scenario_id
             if objective is not None:
                 feedback.objective = objective
             if instructions is not None:

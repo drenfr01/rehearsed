@@ -1,0 +1,46 @@
+<div class="classroom-status">
+  <div class="status-header">
+    <mat-icon class="header-icon">groups</mat-icon>
+    <h4>Students</h4>
+  </div>
+  
+  @if (isLoading()) {
+    <div class="loading-state">
+      <div class="loading-spinner"></div>
+      <span>Loading students...</span>
+    </div>
+  } @else if (error()) {
+    <div class="error-state">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ error() }}</span>
+    </div>
+  } @else if (studentStatuses().length === 0) {
+    <div class="empty-state">
+      <mat-icon>person_off</mat-icon>
+      <span>No students in this scenario</span>
+    </div>
+  } @else {
+    <div class="students-grid">
+      @for (status of studentStatuses(); track status.agent.id; let i = $index) {
+        <div 
+          class="student-card" 
+          [class]="getColorClass(status.agent.display_text_color)"
+          [matTooltip]="status.agent.name"
+          matTooltipPosition="above"
+        >
+          <div class="student-avatar">
+            <mat-icon class="student-icon">{{ getStudentIcon(i) }}</mat-icon>
+          </div>
+          <div class="student-info">
+            <span class="student-name">{{ status.agent.name }}</span>
+            <div class="message-counter">
+              <mat-icon class="counter-icon">chat_bubble</mat-icon>
+              <span class="counter-value">{{ status.messageCount }}</span>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
+

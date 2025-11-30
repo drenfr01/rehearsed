@@ -2,6 +2,7 @@ import { inject, Injectable, signal, effect } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { Scenario } from '../models/scenario.model';
+import { Agent } from '../models/agent.model';
 import { Observable, tap } from 'rxjs';
 
 const CURRENT_SCENARIO_KEY = 'rehearsed_current_scenario';
@@ -54,6 +55,10 @@ export class ScenarioService {
         this.currentScenario.set(scenario);
       })
     );
+  }
+
+  getAgentsByScenario(scenarioId: number): Observable<Agent[]> {
+    return this.httpClient.get<Agent[]>(`${environment.baseUrl}/api/v1/scenario/${scenarioId}/agents`);
   }
 
 }

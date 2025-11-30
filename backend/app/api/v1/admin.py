@@ -567,12 +567,11 @@ async def create_agent_personality(
     try:
         # Sanitize inputs
         name = sanitize_string(personality_data.name)
-        description = personality_data.personality_description
 
         # Create personality
         personality = await database_service.create_agent_personality(
             name=name,
-            personality_description=description,
+            personality_description=personality_data.personality_description,
         )
 
         logger.info("admin_created_agent_personality", admin_id=admin_user.id, personality_id=personality.id, name=name)
@@ -619,12 +618,11 @@ async def update_agent_personality(
 
         # Update fields with sanitized values
         name = sanitize_string(personality_data.name) if personality_data.name else None
-        description = sanitize_string(personality_data.personality_description) if personality_data.personality_description else None
 
         updated_personality = await database_service.update_agent_personality(
             personality_id=personality_id,
             name=name,
-            personality_description=description,
+            personality_description=personality_data.personality_description,
         )
 
         logger.info("admin_updated_agent_personality", admin_id=admin_user.id, personality_id=personality_id)

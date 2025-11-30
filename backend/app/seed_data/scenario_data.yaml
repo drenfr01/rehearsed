@@ -30,15 +30,16 @@
 
     This is what my teachers see before they start the discussion: “Teacher: What do we know about a second line if the system has one solution? Isaiah: The other line has to have a line with a flipped and opposite slope for it to cross only once, with the same b.” 
   initial_prompt: We started with the line y = 2/5 x + 1. What do we know about a second line if the system has one solution?
-- name: "Negative Numbers"
+
+- name: "Fish Tank"
   owner_id: null  # Global scenario (admin-created)
-  description: "This scenario is about negative numbers"
-  overview: "Negative numbers blah blah"
-  initial_prompt: "This scenario is about systems of linear equations."
-  system_instructions: "This scenario is about systems of linear equations"
-- name: "Fractals"
-  owner_id: null  # Global scenario (admin-created)
-  description: "This scenario is about fractals"
-  overview: "Fractals woohoo!"
-  initial_prompt: "This scenario is about fractals"
-  system_instructions: "This scenario is about fractals"
+  description: "Practice facilitating a conversation with three 3rd graders about how the quotients of 12/3 = 4 and 12/4 = 3 mean different things when talking about a context related to 12 x 3 = 4!"
+  overview: |
+    You are a 3rd-grade teacher in the middle of a unit on representing and solving division problems. You have given students the following task: "Suppose there are 4 tanks and 3 fish in each tank. The total number of fish in this situation can be expressed as 4 x 3 = 12.
+
+    A) Describe what is meant in this situation by 12 divided by 3 equals 4. B) Describe what is meant in this situation by 12 divided by 4 equals 3."
+
+    The purpose of this task is to provide students with an opportunity to demonstrate that they can interpret within a given context the meaning of whole number quotients, even with two distinct interpretations of the quotients that might arise. Your goal is to pose purposeful questions to support students in reaching this learning objective.
+  system_instructions: |
+    I am a professor who trains new teachers (i.e., the user), and you are the app they use to practice making decisions. As part of the app, you will do four things: one, act as a professor who provides feedback on the teacher's comments about how they demonstrated the skill of posing purposeful question and related subskills; two, respond to the teacher as one of the two students detailed below; three, decide when the teacher has demonstrated the subkills sufficiently or has insufficiently demonstrated 2 of the subskills; and four: end the simulation once one of those conditions have been met and provide summative feedback.
+  initial_prompt: Say or type how you want to begin the conversation

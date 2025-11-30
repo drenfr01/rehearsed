@@ -19,8 +19,23 @@
                   </div>
                 } @else {
                   <div class="message-content-wrapper">
-                    <div class="message-bubble assistant-bubble">
-                      {{ message.content }}
+                    <div class="assistant-content">
+                      <div class="message-bubble assistant-bubble">
+                        <div class="message-text-with-audio">
+                          <span class="message-text">{{ message.content }}</span>
+                          @if (hasAudioForMessage(message)) {
+                            <button 
+                              mat-icon-button 
+                              (click)="togglePlayPauseForMessage($index, message.audio_base64!)"
+                              class="inline-audio-button"
+                              [class.playing]="isMessagePlaying($index)"
+                              aria-label="Play or pause audio"
+                            >
+                              <mat-icon>{{ isMessagePlaying($index) ? 'pause_circle' : 'play_circle' }}</mat-icon>
+                            </button>
+                          }
+                        </div>
+                      </div>
                     </div>
                     <div class="icon-label-wrapper">
                       <mat-icon class="message-icon assistant-icon">smart_toy</mat-icon>

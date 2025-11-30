@@ -4,6 +4,7 @@ export interface Message {
     role: role;
     content: string;
     student_name?: string;
+    audio_base64?: string;
 }
 
 export interface Agent {
@@ -31,6 +32,7 @@ export interface StudentResponse {
     student_response: string;
     student_details: Agent;
     student_personality: AgentPersonality;
+    audio_base64: string;
 }
 
 export interface ChatResponse {

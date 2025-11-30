@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Agent, AgentCreate, AgentUpdate, AgentPersonality, AgentPersonalityCreate, AgentPersonalityUpdate } from '../models/agent.model';
+import { Agent, AgentCreate, AgentUpdate, AgentPersonality, AgentPersonalityCreate, AgentPersonalityUpdate, AgentVoice } from '../models/agent.model';
 import { Scenario, ScenarioCreate, ScenarioUpdate } from '../models/scenario.model';
 import { Feedback, FeedbackCreate, FeedbackUpdate } from '../models/feedback.model';
 
@@ -85,6 +85,15 @@ export class UserContentService {
    */
   copyGlobalAgentPersonality(personalityId: number): Observable<AgentPersonality> {
     return this.httpClient.post<AgentPersonality>(`${this.baseUrl}/agent-personalities/${personalityId}/copy`, {});
+  }
+
+  // ========== AgentVoice Methods ==========
+
+  /**
+   * Get all available agent voices
+   */
+  getAgentVoices(): Observable<AgentVoice[]> {
+    return this.httpClient.get<AgentVoice[]>(`${this.baseUrl}/agent-voices`);
   }
 
   // ========== Agent Methods ==========

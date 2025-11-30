@@ -25,7 +25,7 @@ from app.models.session import Session as ChatSession
 # Models: note, you need to import models here so they are created by create_all below
 from app.models.user import User
 from app.models.scenario import Scenario
-from app.models.agent import Agent, AgentPersonality
+from app.models.agent import Agent, AgentPersonality, AgentVoice
 from app.models.feedback import Feedback, FeedbackType
 
 
@@ -410,6 +410,33 @@ class DatabaseService:
             logger.info("user_deleted", user_id=user_id)
             return True
 
+    # ========== AgentVoice Methods ==========
+
+    async def get_all_agent_voices(self) -> List[AgentVoice]:
+        """Get all agent voices in the system.
+
+        Returns:
+            List[AgentVoice]: List of all agent voices
+        """
+        with Session(self.engine) as session:
+            statement = select(AgentVoice).order_by(AgentVoice.voice_name)
+            voices = session.exec(statement).all()
+            return voices
+
+    async def get_agent_voice_by_name(self, voice_name: str) -> Optional[AgentVoice]:
+        """Get an agent voice by name.
+
+        Args:
+            voice_name: The name of the voice to retrieve
+
+        Returns:
+            Optional[AgentVoice]: The agent voice if found, None otherwise
+        """
+        with Session(self.engine) as session:
+            statement = select(AgentVoice).where(AgentVoice.voice_name == voice_name)
+            voice = session.exec(statement).first()
+            return voice
+
     # ========== Agent Methods ==========
     
     async def create_agent(
@@ -418,7 +445,7 @@ class DatabaseService:
         name: str,
         scenario_id: int,
         agent_personality_id: int,
-        voice: str = "",
+        voice_id: Optional[int] = None,
         display_text_color: str = "",
         objective: str = "",
         instructions: str = "",
@@ -432,7 +459,7 @@ class DatabaseService:
             name: Name of the agent
             scenario_id: ID of the scenario this agent belongs to
             agent_personality_id: ID of the agent's personality
-            voice: Voice identifier for TTS
+            voice_id: ID of the agent voice for TTS (optional)
             display_text_color: Color for display
             objective: Agent's objective
             instructions: Agent's instructions
@@ -448,7 +475,7 @@ class DatabaseService:
                 name=name,
                 scenario_id=scenario_id,
                 agent_personality_id=agent_personality_id,
-                voice=voice,
+                voice_id=voice_id,
                 display_text_color=display_text_color,
                 objective=objective,
                 instructions=instructions,
@@ -471,7 +498,10 @@ class DatabaseService:
             Optional[Agent]: The agent if found, None otherwise
         """
         with Session(self.engine) as session:
-            statement = select(Agent).where(Agent.id == agent_id).options(selectinload(Agent.agent_personality))
+            statement = select(Agent).where(Agent.id == agent_id).options(
+                selectinload(Agent.agent_personality),
+                selectinload(Agent.voice)
+            )
             agent = session.exec(statement).first()
             return agent
 
@@ -482,7 +512,10 @@ class DatabaseService:
             List[Agent]: List of all agents
         """
         with Session(self.engine) as session:
-            statement = select(Agent).options(selectinload(Agent.agent_personality)).order_by(Agent.created_at)
+            statement = select(Agent).options(
+                selectinload(Agent.agent_personality),
+                selectinload(Agent.voice)
+            ).order_by(Agent.created_at)
             agents = session.exec(statement).all()
             return agents
 
@@ -496,7 +529,10 @@ class DatabaseService:
             List[Agent]: List of agents for the scenario
         """
         with Session(self.engine) as session:
-            statement = select(Agent).where(Agent.scenario_id == scenario_id).options(selectinload(Agent.agent_personality)).order_by(Agent.created_at)
+            statement = select(Agent).where(Agent.scenario_id == scenario_id).options(
+                selectinload(Agent.agent_personality),
+                selectinload(Agent.voice)
+            ).order_by(Agent.created_at)
             agents = session.exec(statement).all()
             return agents
 
@@ -504,7 +540,7 @@ class DatabaseService:
         self,
         agent_id: str,
         name: Optional[str] = None,
-        voice: Optional[str] = None,
+        voice_id: Optional[int] = None,
         display_text_color: Optional[str] = None,
         objective: Optional[str] = None,
         instructions: Optional[str] = None,
@@ -512,13 +548,14 @@ class DatabaseService:
         context: Optional[str] = None,
         scenario_id: Optional[int] = None,
         agent_personality_id: Optional[int] = None,
+        clear_voice: bool = False,
     ) -> Agent:
         """Update an agent's attributes.
 
         Args:
             agent_id: The ID of the agent to update
             name: Optional new name
-            voice: Optional new voice
+            voice_id: Optional new voice ID
             display_text_color: Optional new display color
             objective: Optional new objective
             instructions: Optional new instructions
@@ -526,6 +563,7 @@ class DatabaseService:
             context: Optional new context
             scenario_id: Optional new scenario ID
             agent_personality_id: Optional new personality ID
+            clear_voice: If True, explicitly set voice_id to None
 
         Returns:
             Agent: The updated agent
@@ -540,8 +578,10 @@ class DatabaseService:
 
             if name is not None:
                 agent.name = name
-            if voice is not None:
-                agent.voice = voice
+            if voice_id is not None:
+                agent.voice_id = voice_id
+            elif clear_voice:
+                agent.voice_id = None
             if display_text_color is not None:
                 agent.display_text_color = display_text_color
             if objective is not None:
@@ -1019,7 +1059,10 @@ class DatabaseService:
             from sqlalchemy import or_
             statement = select(Agent).where(
                 or_(Agent.owner_id == None, Agent.owner_id == user_id)
-            ).options(selectinload(Agent.agent_personality)).order_by(Agent.created_at)
+            ).options(
+                selectinload(Agent.agent_personality),
+                selectinload(Agent.voice)
+            ).order_by(Agent.created_at)
             agents = session.exec(statement).all()
             return list(agents)
 
@@ -1035,7 +1078,10 @@ class DatabaseService:
         with Session(self.engine) as session:
             statement = select(Agent).where(
                 Agent.owner_id == user_id
-            ).options(selectinload(Agent.agent_personality)).order_by(Agent.created_at)
+            ).options(
+                selectinload(Agent.agent_personality),
+                selectinload(Agent.voice)
+            ).order_by(Agent.created_at)
             agents = session.exec(statement).all()
             return list(agents)
 
@@ -1156,7 +1202,7 @@ class DatabaseService:
                         name=agent.name,
                         scenario_id=new_scenario.id,
                         agent_personality_id=agent.agent_personality_id,
-                        voice=agent.voice,
+                        voice_id=agent.voice_id,
                         display_text_color=agent.display_text_color,
                         objective=agent.objective,
                         instructions=agent.instructions,
@@ -1198,7 +1244,7 @@ class DatabaseService:
                 name=f"{original.name} (Copy)",
                 scenario_id=target_scenario_id,
                 agent_personality_id=original.agent_personality_id,
-                voice=original.voice,
+                voice_id=original.voice_id,
                 display_text_color=original.display_text_color,
                 objective=original.objective,
                 instructions=original.instructions,
@@ -1409,7 +1455,7 @@ class DatabaseService:
         name: str,
         scenario_id: int,
         agent_personality_id: int,
-        voice: str = "",
+        voice_id: Optional[int] = None,
         display_text_color: str = "",
         objective: str = "",
         instructions: str = "",
@@ -1424,7 +1470,7 @@ class DatabaseService:
             name: Name of the agent
             scenario_id: ID of the scenario this agent belongs to
             agent_personality_id: ID of the agent's personality
-            voice: Voice identifier for TTS
+            voice_id: ID of the agent voice for TTS (optional)
             display_text_color: Color for display
             objective: Agent's objective
             instructions: Agent's instructions
@@ -1440,7 +1486,7 @@ class DatabaseService:
                 name=name,
                 scenario_id=scenario_id,
                 agent_personality_id=agent_personality_id,
-                voice=voice,
+                voice_id=voice_id,
                 display_text_color=display_text_color,
                 objective=objective,
                 instructions=instructions,
@@ -1459,7 +1505,7 @@ class DatabaseService:
         agent_id: str,
         user_id: int,
         name: Optional[str] = None,
-        voice: Optional[str] = None,
+        voice_id: Optional[int] = None,
         display_text_color: Optional[str] = None,
         objective: Optional[str] = None,
         instructions: Optional[str] = None,
@@ -1467,12 +1513,15 @@ class DatabaseService:
         context: Optional[str] = None,
         scenario_id: Optional[int] = None,
         agent_personality_id: Optional[int] = None,
+        clear_voice: bool = False,
     ) -> Agent:
         """Update a user's local agent (with ownership check).
 
         Args:
             agent_id: The ID of the agent to update
             user_id: The ID of the user (for ownership verification)
+            voice_id: Optional new voice ID
+            clear_voice: If True, explicitly set voice_id to None
             Other args: Optional new values
 
         Returns:
@@ -1490,8 +1539,10 @@ class DatabaseService:
 
             if name is not None:
                 agent.name = name
-            if voice is not None:
-                agent.voice = voice
+            if voice_id is not None:
+                agent.voice_id = voice_id
+            elif clear_voice:
+                agent.voice_id = None
             if display_text_color is not None:
                 agent.display_text_color = display_text_color
             if objective is not None:

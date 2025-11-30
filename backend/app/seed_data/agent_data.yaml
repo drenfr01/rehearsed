@@ -1,7 +1,7 @@
 - id: "student_1_isaiah"
   name: "Isaiah"
   scenario_name: "Systems of Linear Equations"
-  voice: ""
+  voice_name: "Fenrir"
   display_text_color: ""
   agent_personality_name: "Default Student Personality"
   objective: |
@@ -29,7 +29,7 @@
 - id: "student_2_maura"
   name: "Maura"
   scenario_name: "Systems of Linear Equations"
-  voice: ""
+  voice_name: "Aoede"
   display_text_color: ""
   agent_personality_name: "Default Student Personality"
   objective: |
@@ -55,7 +55,7 @@
 - id: "student_3_isabel"
   name: "Isabel"
   scenario_name: "Systems of Linear Equations"
-  voice: ""
+  voice_name: "Kore"
   display_text_color: ""
   agent_personality_name: "Default Student Personality"
   objective: |

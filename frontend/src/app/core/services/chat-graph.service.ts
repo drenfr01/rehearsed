@@ -93,10 +93,12 @@ export class ChatGraphService {
         this.studentResponses.set(response.student_responses);
         
         if (response.interrupt_task) {
+          const studentResponse = response.student_responses[response.answering_student - 1];
           const responseMessage: Message = {
             role: 'assistant',
             content: response.interrupt_value,
-            student_name: response.student_responses[response.answering_student - 1].student_details.name
+            student_name: studentResponse.student_details.name,
+            audio_base64: studentResponse.audio_base64 || undefined
           }
           this.interruptionContent.set(response.interrupt_value);
           this.interruptionType.set(response.interrupt_value_type);

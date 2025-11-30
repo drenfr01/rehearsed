@@ -16,6 +16,13 @@ if TYPE_CHECKING:
     from app.models.user import User
     from app.models.scenario import Scenario
 
+class AgentVoice(BaseModel, table=True):
+    __tablename__ = "agent_voice"
+    
+    id: int = Field(default=None, primary_key=True, unique=True)
+    voice_name: str = Field(...)
+    
+
 class AgentPersonality(BaseModel, table=True):
     __tablename__ = "agent_personality"
     
@@ -47,8 +54,8 @@ class Agent(BaseModel, table=True):
     scenario: "Scenario" = Relationship(back_populates="agents")
 
     # Display Attributes
-    # TODO: make this a lookup table for gemini TTS voices
-    voice: str = Field(default="")
+    voice_id: Optional[int] = Field(default=None, foreign_key="agent_voice.id")
+    voice: Optional["AgentVoice"] = Relationship()
     display_text_color: str = Field(default="")
 
     # System instructions for the agent

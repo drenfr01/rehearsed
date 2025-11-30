@@ -187,6 +187,7 @@ class Settings:
             "get_all_scenarios": ["10 per minute"],
             "get_scenario_by_id": ["10 per minute"],
             "set_scenario_by_id": ["10 per minute"],
+            "get_all_agent_voices": ["10 per minute"],
             "get_all_agent_personalities": ["10 per minute"],
             "get_agent_personality_by_id": ["10 per minute"],
             "create_agent_personality": ["10 per minute"],

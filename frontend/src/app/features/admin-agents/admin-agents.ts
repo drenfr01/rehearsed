@@ -14,7 +14,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LoadingSpinner } from '../../shared/loading-spinner/loading-spinner';
 import { AdminService } from '../../core/services/admin.service';
-import { Agent, AgentCreate, AgentPersonality } from '../../core/models/agent.model';
+import { Agent, AgentCreate, AgentPersonality, AgentVoice } from '../../core/models/agent.model';
 import { Scenario } from '../../core/models/scenario.model';
 import { EditAgentDialog, EditAgentDialogData, EditAgentDialogResult } from '../../shared/dialogs/edit-agent-dialog/edit-agent-dialog';
 
@@ -49,6 +49,7 @@ export class AdminAgents implements OnInit {
   agents = signal<Agent[]>([]);
   scenarios = signal<Scenario[]>([]);
   personalities = signal<AgentPersonality[]>([]);
+  voices = signal<AgentVoice[]>([]);
   displayedColumns: string[] = ['id', 'name', 'scenario', 'personality', 'voice', 'created_at', 'actions'];
   isLoading = signal(false);
   showCreateForm = signal(false);
@@ -112,17 +113,29 @@ export class AdminAgents implements OnInit {
       },
     });
 
+    const voicesSubscription = this.adminService.getAgentVoices().subscribe({
+      next: (voices) => {
+        this.voices.set(voices);
+        this.checkLoadingComplete();
+      },
+      error: (error) => {
+        console.error('Failed to load voices', error);
+        this.checkLoadingComplete();
+      },
+    });
+
     this.destroyRef.onDestroy(() => {
       agentsSubscription.unsubscribe();
       scenariosSubscription.unsubscribe();
       personalitiesSubscription.unsubscribe();
+      voicesSubscription.unsubscribe();
     });
   }
 
   private loadingCounter = 0;
   private checkLoadingComplete() {
     this.loadingCounter++;
-    if (this.loadingCounter >= 3) {
+    if (this.loadingCounter >= 4) {
       this.isLoading.set(false);
       this.loadingCounter = 0;
     }
@@ -160,6 +173,7 @@ export class AdminAgents implements OnInit {
       agent,
       scenarios: this.scenarios(),
       personalities: this.personalities(),
+      voices: this.voices(),
     };
     const dialogRef = this.dialog.open(EditAgentDialog, {
       width: '700px',

@@ -20,6 +20,7 @@ class StudentResponse(BaseModel):
     student_response: str = Field(..., description="The response from the student")
     student_details: "Agent"
     student_personality: "AgentPersonality"
+    audio_base64: str = Field(default="", description="Base64-encoded audio bytes for the student response")
 
 
 class GraphState(BaseModel):

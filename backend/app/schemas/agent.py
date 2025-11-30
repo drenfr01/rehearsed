@@ -1,9 +1,22 @@
-"""Agent and AgentPersonality schemas for admin endpoints."""
+"""Agent, AgentPersonality, and AgentVoice schemas for admin endpoints."""
 
 from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field
+
+
+# ========== AgentVoice Schemas ==========
+
+class AgentVoiceResponse(BaseModel):
+    """Response model for agent voice.
+    
+    Attributes:
+        id: Voice ID
+        voice_name: Name of the voice
+    """
+    id: int = Field(..., description="Voice ID")
+    voice_name: str = Field(..., description="Name of the voice")
 
 
 # ========== AgentPersonality Schemas ==========

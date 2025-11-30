@@ -180,6 +180,54 @@ mat-card-content {
   border-bottom-right-radius: 4px;
 }
 
+.assistant-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Inline Audio Button Styles */
+.message-text-with-audio {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.message-text {
+  flex: 1;
+}
+
+.inline-audio-button {
+  flex-shrink: 0;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  color: #757575 !important;
+  transition: transform 0.2s ease, color 0.2s ease;
+  margin-top: -4px;
+}
+
+.inline-audio-button:hover {
+  color: #424242 !important;
+  transform: scale(1.1);
+}
+
+.inline-audio-button:active {
+  transform: scale(0.9);
+}
+
+.inline-audio-button.playing {
+  color: #424242 !important;
+}
+
+.inline-audio-button mat-icon {
+  font-size: 32px;
+  width: 32px;
+  height: 32px;
+}
+
 .message-icon {
   flex-shrink: 0;
   width: 40px;

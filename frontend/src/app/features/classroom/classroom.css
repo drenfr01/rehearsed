@@ -90,6 +90,12 @@ mat-card-content {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  gap: 1rem;
+}
+
+/* Classroom Status Panel */
+app-classroom-status {
+  flex-shrink: 0;
 }
 
 /* Two Column Layout */
@@ -248,6 +254,37 @@ mat-card-content {
 .assistant-icon {
   background-color: var(--mat-sys-secondary);
   color: var(--mat-sys-on-secondary);
+}
+
+/* Agent Color Classes - Based on display_text_color */
+.agent-teal .assistant-icon {
+  background-color: #009688;
+  color: white;
+}
+
+.agent-light-purple .assistant-icon {
+  background-color: #BA68C8;
+  color: white;
+}
+
+.agent-dark-purple .assistant-icon {
+  background-color: #673AB7;
+  color: white;
+}
+
+.agent-mustard .assistant-icon {
+  background-color: #CDA434;
+  color: white;
+}
+
+.agent-light-blue .assistant-icon {
+  background-color: #03A9F4;
+  color: white;
+}
+
+.agent-coral .assistant-icon {
+  background-color: #FF7F50;
+  color: white;
 }
 
 .icon-label-wrapper {

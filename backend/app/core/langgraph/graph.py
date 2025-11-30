@@ -247,7 +247,7 @@ class LangGraphBuilder:
             SystemMessage(
                 content=PICK_ANSWERING_STUDENT_SYSTEM_INSTRUCTIONS.format(
                     student_profiles=student_profiles, 
-                    student_number_range=f"1-{len(self._agents)}",
+                    student_number_range=len(self._agents),
                     messages=state.messages,
                 )
             ),

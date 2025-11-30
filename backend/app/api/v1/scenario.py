@@ -29,6 +29,7 @@ from app.schemas.scenario import (
     AddScenarioResponse,
     ScenarioWithOwnerResponse,
 )
+from app.schemas.agent import AgentResponse
 from app.models.scenario import Scenario
 from app.utils.auth import verify_token
 from app.utils.sanitization import sanitize_string
@@ -187,6 +188,71 @@ async def set_current_scenario_by_id(
         
     except Exception as e:
         logger.error("set_current_scenario_by_id_request_failed", error=str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{scenario_id}/agents", response_model=List[AgentResponse])
+@limiter.limit(settings.RATE_LIMIT_ENDPOINTS.get("get_scenario_agents", ["30 per minute"])[0])
+async def get_scenario_agents(
+    request: Request,
+    scenario_id: int,
+    user: Optional[User] = Depends(get_optional_user),
+) -> List[AgentResponse]:
+    """Get all agents for a specific scenario.
+
+    Args:
+        request: The FastAPI request object for rate limiting.
+        scenario_id: The ID of the scenario to get agents for.
+        user: The optional authenticated user.
+
+    Returns:
+        List[AgentResponse]: A list of agents belonging to the scenario.
+
+    Raises:
+        HTTPException: If the scenario is not found or user doesn't have access.
+    """
+    try:
+        logger.info(
+            "get_scenario_agents_request_received",
+            scenario_id=scenario_id,
+            user_id=user.id if user else None,
+        )
+
+        # Verify scenario exists
+        scenario = await database_service.get_scenario(scenario_id)
+        if not scenario:
+            raise HTTPException(status_code=404, detail="Scenario not found")
+
+        # Check access: global scenarios are accessible to all, user-local only to owner
+        if scenario.owner_id is not None:
+            if user is None or scenario.owner_id != user.id:
+                raise HTTPException(status_code=403, detail="Access denied to this scenario")
+
+        agents = await database_service.get_agents_by_scenario(scenario_id)
+        
+        return [
+            AgentResponse(
+                id=a.id,
+                name=a.name,
+                scenario_id=a.scenario_id,
+                agent_personality_id=a.agent_personality_id,
+                voice=a.voice.voice_name if a.voice else "",
+                display_text_color=a.display_text_color,
+                objective=a.objective,
+                instructions=a.instructions,
+                constraints=a.constraints,
+                context=a.context,
+                created_at=a.created_at,
+                owner_id=a.owner_id,
+                is_global=a.owner_id is None,
+            )
+            for a in agents
+        ]
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("get_scenario_agents_failed", scenario_id=scenario_id, error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

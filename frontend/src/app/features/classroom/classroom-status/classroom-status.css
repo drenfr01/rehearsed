@@ -1,0 +1,244 @@
+.classroom-status {
+  background: var(--mat-sys-surface);
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  animation: slideIn 0.4s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.status-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid var(--mat-sys-outline-variant);
+}
+
+.header-icon {
+  font-size: 24px;
+  width: 24px;
+  height: 24px;
+  color: var(--mat-sys-primary);
+}
+
+.status-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--mat-sys-on-surface);
+}
+
+/* Loading State */
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--mat-sys-outline-variant);
+  border-top-color: var(--mat-sys-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Error State */
+.error-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  color: var(--mat-sys-error);
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  color: var(--mat-sys-on-surface-variant);
+  opacity: 0.7;
+}
+
+/* Students Grid */
+.students-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+/* Student Card */
+.student-card {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: var(--mat-sys-surface-variant);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: default;
+  min-width: 120px;
+}
+
+.student-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+/* Student Avatar */
+.student-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.student-icon {
+  font-size: 28px;
+  width: 28px;
+  height: 28px;
+}
+
+/* Student Info */
+.student-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.student-name {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--mat-sys-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80px;
+}
+
+/* Message Counter */
+.message-counter {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.counter-icon {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.counter-value {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--mat-sys-on-surface-variant);
+  background: var(--mat-sys-surface);
+  padding: 0.125rem 0.375rem;
+  border-radius: 10px;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* Color Classes - Based on agent display_text_color */
+.student-teal .student-avatar {
+  background: rgba(0, 150, 136, 0.15);
+}
+.student-teal .student-icon {
+  color: #009688;
+}
+
+.student-light-purple .student-avatar {
+  background: rgba(186, 104, 200, 0.15);
+}
+.student-light-purple .student-icon {
+  color: #BA68C8;
+}
+
+.student-dark-purple .student-avatar {
+  background: rgba(103, 58, 183, 0.15);
+}
+.student-dark-purple .student-icon {
+  color: #673AB7;
+}
+
+.student-mustard .student-avatar {
+  background: rgba(205, 164, 52, 0.15);
+}
+.student-mustard .student-icon {
+  color: #CDA434;
+}
+
+.student-light-blue .student-avatar {
+  background: rgba(3, 169, 244, 0.15);
+}
+.student-light-blue .student-icon {
+  color: #03A9F4;
+}
+
+.student-coral .student-avatar {
+  background: rgba(255, 127, 80, 0.15);
+}
+.student-coral .student-icon {
+  color: #FF7F50;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .students-grid {
+    gap: 0.5rem;
+  }
+  
+  .student-card {
+    padding: 0.375rem 0.5rem;
+    min-width: 100px;
+  }
+  
+  .student-avatar {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .student-icon {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+  }
+  
+  .student-name {
+    font-size: 0.75rem;
+    max-width: 60px;
+  }
+}
+

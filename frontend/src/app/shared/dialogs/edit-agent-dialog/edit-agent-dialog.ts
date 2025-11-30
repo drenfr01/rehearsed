@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { Agent, AgentPersonality, AgentVoice } from '../../../core/models/agent.model';
 import { Scenario } from '../../../core/models/scenario.model';
+import { AGENT_DISPLAY_COLORS } from '../../../features/user-agents/user-agents';
 
 export interface EditAgentDialogData {
   agent: Agent;
@@ -49,6 +50,7 @@ export class EditAgentDialog {
   public data: EditAgentDialogData = inject(MAT_DIALOG_DATA);
 
   editForm: FormGroup;
+  displayColors = AGENT_DISPLAY_COLORS;
 
   constructor() {
     this.editForm = this.fb.group({

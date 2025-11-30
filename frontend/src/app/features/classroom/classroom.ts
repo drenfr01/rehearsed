@@ -1,7 +1,9 @@
-import { Component, DestroyRef, inject, signal, effect, ElementRef, ViewChild } from '@angular/core';
+import { Component, DestroyRef, inject, signal, effect, ElementRef, ViewChild, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { ChatGraphService } from '../../core/services/chat-graph.service';
+import { ScenarioService } from '../../core/services/scenario.service';
 import { ChatRequest } from '../../core/models/chat-graph.model';
+import { Agent } from '../../core/models/agent.model';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -11,6 +13,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LoadingSpinner } from '../../shared/loading-spinner/loading-spinner';
+import { ClassroomStatus } from './classroom-status/classroom-status';
 
 @Component({
   selector: 'app-classroom',
@@ -24,17 +27,22 @@ import { LoadingSpinner } from '../../shared/loading-spinner/loading-spinner';
     CommonModule,
     FormsModule,
     LoadingSpinner,
+    ClassroomStatus,
   ],
   templateUrl: './classroom.html',
   styleUrl: './classroom.css',
 })
-export class Classroom {
+export class Classroom implements OnInit {
 
   protected isLoading = signal(false);
   protected error = signal<string>('');
   private chatGraphService = inject(ChatGraphService);
+  private scenarioService = inject(ScenarioService);
   private destroyRef = inject(DestroyRef);
   private router = inject(Router);
+  
+  // Map of agent name to their display_text_color
+  private agentColorMap = signal<Map<string, string>>(new Map());
 
   protected userInput = signal<string>('');
   protected isApproved = signal<boolean>(false);
@@ -63,6 +71,51 @@ export class Classroom {
     this.destroyRef.onDestroy(() => {
       this.cleanupAllAudio();
     });
+  }
+  
+  ngOnInit() {
+    this.loadAgentColors();
+  }
+  
+  private loadAgentColors() {
+    const currentScenario = this.scenarioService.loadedCurrentScenario();
+    if (!currentScenario) return;
+    
+    const subscription = this.scenarioService.getAgentsByScenario(currentScenario.id).subscribe({
+      next: (agents) => {
+        const colorMap = new Map<string, string>();
+        agents.forEach(agent => {
+          if (agent.display_text_color) {
+            colorMap.set(agent.name, agent.display_text_color);
+          }
+        });
+        this.agentColorMap.set(colorMap);
+      },
+      error: (err) => {
+        console.error('Failed to load agent colors:', err);
+      },
+    });
+    
+    this.destroyRef.onDestroy(() => subscription.unsubscribe());
+  }
+  
+  // Get color class for an agent by name
+  getAgentColorClass(studentName: string | undefined): string {
+    if (!studentName) return 'agent-teal';
+    
+    const color = this.agentColorMap().get(studentName);
+    if (!color) return 'agent-teal';
+    
+    const colorMap: Record<string, string> = {
+      'teal': 'agent-teal',
+      'light purple': 'agent-light-purple',
+      'dark purple': 'agent-dark-purple',
+      'mustard': 'agent-mustard',
+      'light blue': 'agent-light-blue',
+      'coral': 'agent-coral',
+    };
+    
+    return colorMap[color.toLowerCase()] || 'agent-teal';
   }
   
   private async getOrCreateAudioUrl(messageIndex: number, base64Audio: string): Promise<string | null> {

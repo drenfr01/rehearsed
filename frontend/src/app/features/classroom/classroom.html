@@ -4,6 +4,9 @@
       <mat-card-title>Classroom Discussion</mat-card-title>
     </mat-card-header>
     <mat-card-content>
+      <!-- Student Status Panel -->
+      <app-classroom-status [messages]="messages()"></app-classroom-status>
+
       <div class="two-column-layout">
         <!-- Left Column: Messages and Chat Input -->
         <div class="messages-column">
@@ -37,7 +40,7 @@
                         </div>
                       </div>
                     </div>
-                    <div class="icon-label-wrapper">
+                    <div class="icon-label-wrapper" [ngClass]="getAgentColorClass(message.student_name)">
                       <mat-icon class="message-icon assistant-icon">smart_toy</mat-icon>
                       <div class="student-label">{{ message.student_name ?? 'Unknown' }}</div>
                     </div>

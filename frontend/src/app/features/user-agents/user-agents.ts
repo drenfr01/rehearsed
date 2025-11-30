@@ -20,6 +20,15 @@ import { Scenario } from '../../core/models/scenario.model';
 import { EditAgentDialog, EditAgentDialogData, EditAgentDialogResult } from '../../shared/dialogs/edit-agent-dialog/edit-agent-dialog';
 import { forkJoin } from 'rxjs';
 
+export const AGENT_DISPLAY_COLORS = [
+  { value: 'teal', label: 'Teal' },
+  { value: 'light purple', label: 'Light Purple' },
+  { value: 'dark purple', label: 'Dark Purple' },
+  { value: 'mustard', label: 'Mustard' },
+  { value: 'light blue', label: 'Light Blue' },
+  { value: 'coral', label: 'Coral' },
+];
+
 @Component({
   selector: 'app-user-agents',
   imports: [
@@ -53,6 +62,7 @@ export class UserAgents implements OnInit {
   scenarios = signal<Scenario[]>([]);
   personalities = signal<AgentPersonality[]>([]);
   voices = signal<AgentVoice[]>([]);
+  displayColors = AGENT_DISPLAY_COLORS;
   displayedColumns: string[] = ['id', 'name', 'scenario', 'personality', 'voice', 'created_at', 'actions'];
   isLoading = signal(false);
   showCreateForm = signal(false);

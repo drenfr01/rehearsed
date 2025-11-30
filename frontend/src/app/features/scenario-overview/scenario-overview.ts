@@ -35,7 +35,7 @@ export class ScenarioOverview {
     scenarioId: new FormControl(this.scenarioService.loadedCurrentScenario()?.id, [Validators.required]),
     scenarioName: new FormControl(this.scenarioService.loadedCurrentScenario()?.name, [Validators.required]),
     scenarioDescription: new FormControl(this.scenarioService.loadedCurrentScenario()?.overview, [Validators.required]),
-    initialPrompt: new FormControl('We started with the line y = 2/5 x + 1. What do we know about a second line if the system has one solution?', [Validators.required]),
+    initialPrompt: new FormControl(this.scenarioService.loadedCurrentScenario()?.initial_prompt, [Validators.required]),
   });
 
   onSubmit() {

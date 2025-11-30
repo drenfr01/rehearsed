@@ -1,5 +1,6 @@
 """This file contains the graph builder for the application."""
 
+import base64
 from typing import Callable, List, Optional
 
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -23,6 +24,7 @@ from psycopg_pool import AsyncConnectionPool
 
 from app.models.agent import Agent
 from app.services.database import database_service
+from app.services.gemini_text_to_speech import GeminiTextToSpeech
 from app.core.config import (
     Environment,
     settings,
@@ -50,6 +52,7 @@ class LangGraphBuilder:
         self._connection_pool = connection_pool
         self._agents: List[Agent] = []
         self._scenario_id: int = 0
+        self._tts_service = GeminiTextToSpeech()
 
     async def build_graph(self, scenario_id: int) -> CompiledStateGraph:
         """Build the LangGraph workflow for a specific scenario.
@@ -183,12 +186,29 @@ class LangGraphBuilder:
                 personality=personality_description,
             )
             response = await self._call_general_llm(state, system_instructions)
+            
+            # Generate TTS audio for the response
+            audio_base64 = ""
+            if agent.voice:
+                try:
+                    # Build a prompt for natural student speech
+                    tts_prompt = f"Speak as a {personality_description} student in a classroom setting."
+                    audio_bytes = self._tts_service.synthesize(
+                        prompt=tts_prompt,
+                        text=response,
+                        voice_name=agent.voice
+                    )
+                    audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
+                except Exception as e:
+                    logger.error("tts_synthesis_failed", error=str(e), agent_name=agent.name)
+            
             return {
                 "student_responses": [
                     StudentResponse(
                         student_response=response, 
                         student_details=agent, 
-                        student_personality=agent.agent_personality
+                        student_personality=agent.agent_personality,
+                        audio_base64=audio_base64
                     )
                 ]
             }

@@ -19,8 +19,24 @@
                   </div>
                 } @else {
                   <div class="message-content-wrapper">
-                    <div class="message-bubble assistant-bubble">
-                      {{ message.content }}
+                    <div class="assistant-content">
+                      <div class="message-bubble assistant-bubble">
+                        {{ message.content }}
+                      </div>
+                      @if ($last && hasAudio()) {
+                        <div class="audio-panel">
+                          <button 
+                            mat-mini-fab 
+                            color="accent" 
+                            (click)="togglePlayPause()"
+                            class="audio-button"
+                            aria-label="Play or pause audio"
+                          >
+                            <mat-icon>{{ isPlaying() ? 'pause' : 'play_arrow' }}</mat-icon>
+                          </button>
+                          <span class="audio-label">{{ isPlaying() ? 'Playing...' : 'Listen' }}</span>
+                        </div>
+                      }
                     </div>
                     <div class="icon-label-wrapper">
                       <mat-icon class="message-icon assistant-icon">smart_toy</mat-icon>

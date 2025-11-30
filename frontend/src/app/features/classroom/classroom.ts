@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, signal, effect } from '@angular/core';
+import { Component, DestroyRef, inject, signal, effect, ElementRef, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { ChatGraphService } from '../../core/services/chat-graph.service';
 import { ChatRequest } from '../../core/models/chat-graph.model';
@@ -39,6 +39,11 @@ export class Classroom {
   protected userInput = signal<string>('');
   protected isApproved = signal<boolean>(false);
 
+  // Audio playback state
+  protected isPlaying = signal<boolean>(false);
+  protected currentAudioUrl = signal<string>('');
+  private audioElement: HTMLAudioElement | null = null;
+
   // Expose readonly signals from the service
   protected messages = this.chatGraphService.loadedGraphMessages;
   protected inlineFeedback = this.chatGraphService.loadedInlineFeedback;
@@ -52,6 +57,72 @@ export class Classroom {
         this.router.navigate(['/app/scenario-feedback']);
       }
     });
+    
+    // Watch for new student responses and update audio
+    effect(() => {
+      const responses = this.studentResponses();
+      if (responses.length > 0) {
+        const latestResponse = responses[responses.length - 1];
+        if (latestResponse.audio_base64) {
+          this.loadAudio(latestResponse.audio_base64);
+        }
+      }
+    });
+    
+    // Cleanup audio element on destroy
+    this.destroyRef.onDestroy(() => {
+      this.cleanupAudio();
+    });
+  }
+  
+  private loadAudio(base64Audio: string) {
+    // Cleanup previous audio
+    this.cleanupAudio();
+    
+    // Create a blob URL from base64
+    const byteCharacters = atob(base64Audio);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: 'audio/mp3' });
+    const audioUrl = URL.createObjectURL(blob);
+    
+    this.currentAudioUrl.set(audioUrl);
+    this.audioElement = new Audio(audioUrl);
+    this.audioElement.onended = () => {
+      this.isPlaying.set(false);
+    };
+  }
+  
+  private cleanupAudio() {
+    if (this.audioElement) {
+      this.audioElement.pause();
+      this.audioElement = null;
+    }
+    const currentUrl = this.currentAudioUrl();
+    if (currentUrl) {
+      URL.revokeObjectURL(currentUrl);
+      this.currentAudioUrl.set('');
+    }
+    this.isPlaying.set(false);
+  }
+  
+  togglePlayPause() {
+    if (!this.audioElement) return;
+    
+    if (this.isPlaying()) {
+      this.audioElement.pause();
+      this.isPlaying.set(false);
+    } else {
+      this.audioElement.play();
+      this.isPlaying.set(true);
+    }
+  }
+  
+  hasAudio(): boolean {
+    return this.currentAudioUrl() !== '';
   }
 
   onSubmit() {

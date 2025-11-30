@@ -180,6 +180,66 @@ mat-card-content {
   border-bottom-right-radius: 4px;
 }
 
+.assistant-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Audio Panel Styles */
+.audio-panel {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: linear-gradient(135deg, 
+    var(--mat-sys-tertiary-container) 0%, 
+    var(--mat-sys-secondary-container) 100%);
+  border-radius: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  width: fit-content;
+  animation: audioSlideIn 0.3s ease-out;
+}
+
+@keyframes audioSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.audio-button {
+  width: 36px !important;
+  height: 36px !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.audio-button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.audio-button:active {
+  transform: scale(0.95);
+}
+
+.audio-button mat-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+.audio-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--mat-sys-on-tertiary-container);
+  letter-spacing: 0.25px;
+}
+
 .message-icon {
   flex-shrink: 0;
   width: 40px;

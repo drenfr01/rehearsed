@@ -567,7 +567,7 @@ async def create_agent_personality(
     try:
         # Sanitize inputs
         name = sanitize_string(personality_data.name)
-        description = sanitize_string(personality_data.personality_description)
+        description = personality_data.personality_description
 
         # Create personality
         personality = await database_service.create_agent_personality(

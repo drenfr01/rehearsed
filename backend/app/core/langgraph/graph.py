@@ -189,14 +189,14 @@ class LangGraphBuilder:
             
             # Generate TTS audio for the response
             audio_base64 = ""
-            if agent.voice:
+            if agent.voice and agent.voice.voice_name:
                 try:
                     # Build a prompt for natural student speech
                     tts_prompt = f"Speak as a {personality_description} student in a classroom setting."
                     audio_bytes = self._tts_service.synthesize(
                         prompt=tts_prompt,
                         text=response,
-                        voice_name=agent.voice
+                        voice_name=agent.voice.voice_name
                     )
                     audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
                 except Exception as e:

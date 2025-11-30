@@ -1,3 +1,8 @@
+export interface AgentVoice {
+    id: number;
+    voice_name: string;
+}
+
 export interface AgentPersonality {
     id: number;
     name: string;

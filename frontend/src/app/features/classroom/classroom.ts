@@ -42,7 +42,12 @@ export class Classroom {
   // Audio playback state
   protected isPlaying = signal<boolean>(false);
   protected currentAudioUrl = signal<string>('');
+  protected audioProgress = signal<number>(0);
+  protected audioDuration = signal<number>(0);
+  protected audioCurrentTime = signal<number>(0);
   private audioElement: HTMLAudioElement | null = null;
+  private isLoadingAudio = false;
+  private lastLoadedAudioHash = '';
 
   // Expose readonly signals from the service
   protected messages = this.chatGraphService.loadedGraphMessages;
@@ -63,8 +68,16 @@ export class Classroom {
       const responses = this.studentResponses();
       if (responses.length > 0) {
         const latestResponse = responses[responses.length - 1];
-        if (latestResponse.audio_base64) {
-          this.loadAudio(latestResponse.audio_base64);
+        if (latestResponse.audio_base64 && latestResponse.audio_base64.length > 0) {
+          // Create a simple hash to detect duplicate audio data
+          const audioHash = latestResponse.audio_base64.substring(0, 100) + latestResponse.audio_base64.length;
+          if (audioHash !== this.lastLoadedAudioHash && !this.isLoadingAudio) {
+            console.log('Loading audio, base64 length:', latestResponse.audio_base64.length);
+            this.lastLoadedAudioHash = audioHash;
+            this.loadAudio(latestResponse.audio_base64);
+          }
+        } else {
+          console.log('No audio data in response');
         }
       }
     });
@@ -75,25 +88,94 @@ export class Classroom {
     });
   }
   
-  private loadAudio(base64Audio: string) {
-    // Cleanup previous audio
-    this.cleanupAudio();
-    
-    // Create a blob URL from base64
-    const byteCharacters = atob(base64Audio);
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
+  private async loadAudio(base64Audio: string) {
+    // Validate input
+    if (!base64Audio || base64Audio.trim().length === 0) {
+      console.warn('No audio data provided');
+      return;
     }
-    const byteArray = new Uint8Array(byteNumbers);
-    const blob = new Blob([byteArray], { type: 'audio/mp3' });
-    const audioUrl = URL.createObjectURL(blob);
     
-    this.currentAudioUrl.set(audioUrl);
-    this.audioElement = new Audio(audioUrl);
-    this.audioElement.onended = () => {
-      this.isPlaying.set(false);
-    };
+    // Prevent concurrent loads
+    if (this.isLoadingAudio) {
+      console.log('Already loading audio, skipping');
+      return;
+    }
+    
+    this.isLoadingAudio = true;
+    
+    try {
+      // Convert base64 to blob using a more reliable method
+      const binaryString = atob(base64Audio);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      
+      // Process in chunks to avoid blocking the main thread
+      const chunkSize = 8192;
+      for (let offset = 0; offset < len; offset += chunkSize) {
+        const end = Math.min(offset + chunkSize, len);
+        for (let i = offset; i < end; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        // Yield to main thread every chunk
+        if (offset + chunkSize < len) {
+          await new Promise(resolve => setTimeout(resolve, 0));
+        }
+      }
+      
+      const blob = new Blob([bytes], { type: 'audio/mp3' });
+      const newAudioUrl = URL.createObjectURL(blob);
+      console.log('Audio blob created, URL:', newAudioUrl, 'Blob size:', blob.size);
+      
+      // Create the new audio element first
+      const newAudioElement = new Audio(newAudioUrl);
+      
+      // Wait for the audio to be ready before swapping
+      await new Promise<void>((resolve, reject) => {
+        newAudioElement.oncanplaythrough = () => {
+          console.log('Audio ready to play');
+          resolve();
+        };
+        newAudioElement.onerror = (e) => {
+          console.error('Audio element error:', e);
+          reject(e);
+        };
+        // Set a timeout in case the events don't fire
+        setTimeout(() => resolve(), 5000);
+      });
+      
+      // Now cleanup the old audio and swap in the new one
+      this.cleanupAudio();
+      
+      this.currentAudioUrl.set(newAudioUrl);
+      this.audioElement = newAudioElement;
+      this.audioDuration.set(newAudioElement.duration || 0);
+      this.audioProgress.set(0);
+      this.audioCurrentTime.set(0);
+      
+      this.audioElement.onended = () => {
+        this.isPlaying.set(false);
+        this.audioProgress.set(0);
+        this.audioCurrentTime.set(0);
+      };
+      
+      this.audioElement.ontimeupdate = () => {
+        if (this.audioElement && this.audioElement.duration) {
+          const progress = (this.audioElement.currentTime / this.audioElement.duration) * 100;
+          this.audioProgress.set(progress);
+          this.audioCurrentTime.set(this.audioElement.currentTime);
+        }
+      };
+      
+      this.audioElement.ondurationchange = () => {
+        if (this.audioElement) {
+          this.audioDuration.set(this.audioElement.duration);
+        }
+      };
+    } catch (error) {
+      console.error('Failed to load audio:', error);
+    } finally {
+      this.isLoadingAudio = false;
+    }
   }
   
   private cleanupAudio() {
@@ -107,6 +189,29 @@ export class Classroom {
       this.currentAudioUrl.set('');
     }
     this.isPlaying.set(false);
+    this.audioProgress.set(0);
+    this.audioCurrentTime.set(0);
+    this.audioDuration.set(0);
+  }
+  
+  seekAudio(event: MouseEvent, progressBarElement: HTMLElement) {
+    if (!this.audioElement || !this.audioElement.duration) return;
+    
+    const rect = progressBarElement.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const percentage = clickX / rect.width;
+    const newTime = percentage * this.audioElement.duration;
+    
+    this.audioElement.currentTime = newTime;
+    this.audioCurrentTime.set(newTime);
+    this.audioProgress.set(percentage * 100);
+  }
+  
+  formatTime(seconds: number): string {
+    if (!seconds || isNaN(seconds)) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
   
   togglePlayPause() {

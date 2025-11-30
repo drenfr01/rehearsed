@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { User, UserCreate } from '../models/user.model';
-import { Agent, AgentCreate, AgentPersonality, AgentPersonalityCreate } from '../models/agent.model';
+import { Agent, AgentCreate, AgentPersonality, AgentPersonalityCreate, AgentVoice } from '../models/agent.model';
 import { Scenario, ScenarioCreate } from '../models/scenario.model';
 import { Feedback, FeedbackCreate, FeedbackUpdate } from '../models/feedback.model';
 
@@ -13,6 +13,7 @@ import { Feedback, FeedbackCreate, FeedbackUpdate } from '../models/feedback.mod
 export class AdminService {
   private httpClient = inject(HttpClient);
   private baseUrl = `${environment.baseUrl}/api/v1/admin`;
+  private apiBaseUrl = `${environment.baseUrl}/api/v1`;
 
   // ========== User Methods ==========
 
@@ -114,6 +115,15 @@ export class AdminService {
    */
   deleteAgentPersonality(personalityId: number): Observable<{ message: string }> {
     return this.httpClient.delete<{ message: string }>(`${this.baseUrl}/agent-personalities/${personalityId}`);
+  }
+
+  // ========== AgentVoice Methods ==========
+
+  /**
+   * Get all available agent voices
+   */
+  getAgentVoices(): Observable<AgentVoice[]> {
+    return this.httpClient.get<AgentVoice[]>(`${this.apiBaseUrl}/agent-voices`);
   }
 
   // ========== Agent Methods ==========

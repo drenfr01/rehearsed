@@ -15,7 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { LoadingSpinner } from '../../shared/loading-spinner/loading-spinner';
 import { UserContentService } from '../../core/services/user-content.service';
 import { ScenarioService } from '../../core/services/scenario.service';
-import { Agent, AgentCreate, AgentPersonality } from '../../core/models/agent.model';
+import { Agent, AgentCreate, AgentPersonality, AgentVoice } from '../../core/models/agent.model';
 import { Scenario } from '../../core/models/scenario.model';
 import { EditAgentDialog, EditAgentDialogData, EditAgentDialogResult } from '../../shared/dialogs/edit-agent-dialog/edit-agent-dialog';
 import { forkJoin } from 'rxjs';
@@ -52,6 +52,7 @@ export class UserAgents implements OnInit {
   agents = signal<Agent[]>([]);
   scenarios = signal<Scenario[]>([]);
   personalities = signal<AgentPersonality[]>([]);
+  voices = signal<AgentVoice[]>([]);
   displayedColumns: string[] = ['id', 'name', 'scenario', 'personality', 'voice', 'created_at', 'actions'];
   isLoading = signal(false);
   showCreateForm = signal(false);
@@ -83,12 +84,14 @@ export class UserAgents implements OnInit {
     forkJoin({
       agents: this.userContentService.getMyAgents(),
       scenarios: this.scenarioService.getScenarios(),
-      personalities: this.userContentService.getMyAgentPersonalities()
+      personalities: this.userContentService.getMyAgentPersonalities(),
+      voices: this.userContentService.getAgentVoices()
     }).subscribe({
       next: (data) => {
         this.agents.set(data.agents);
         this.scenarios.set(data.scenarios);
         this.personalities.set(data.personalities);
+        this.voices.set(data.voices);
         this.isLoading.set(false);
       },
       error: (error) => {
@@ -131,6 +134,7 @@ export class UserAgents implements OnInit {
       agent,
       scenarios: this.scenarios(),
       personalities: this.personalities(),
+      voices: this.voices(),
     };
     const dialogRef = this.dialog.open(EditAgentDialog, {
       width: '700px',

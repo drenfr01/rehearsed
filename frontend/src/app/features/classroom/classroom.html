@@ -24,17 +24,21 @@
                         {{ message.content }}
                       </div>
                       @if ($last && hasAudio()) {
-                        <div class="audio-panel">
+                        <div class="audio-player">
                           <button 
-                            mat-mini-fab 
-                            color="accent" 
+                            mat-icon-button 
                             (click)="togglePlayPause()"
-                            class="audio-button"
+                            class="audio-play-button"
                             aria-label="Play or pause audio"
                           >
                             <mat-icon>{{ isPlaying() ? 'pause' : 'play_arrow' }}</mat-icon>
                           </button>
-                          <span class="audio-label">{{ isPlaying() ? 'Playing...' : 'Listen' }}</span>
+                          <div class="audio-progress-container" #progressBar (click)="seekAudio($event, progressBar)">
+                            <div class="audio-progress-track">
+                              <div class="audio-progress-fill" [style.width.%]="audioProgress()"></div>
+                            </div>
+                          </div>
+                          <span class="audio-time">{{ formatTime(audioCurrentTime()) }} / {{ formatTime(audioDuration()) }}</span>
                         </div>
                       }
                     </div>

@@ -186,18 +186,17 @@ mat-card-content {
   gap: 0.5rem;
 }
 
-/* Audio Panel Styles */
-.audio-panel {
+/* Audio Player Styles */
+.audio-player {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.5rem 0.75rem;
-  background: linear-gradient(135deg, 
-    var(--mat-sys-tertiary-container) 0%, 
-    var(--mat-sys-secondary-container) 100%);
-  border-radius: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  width: fit-content;
+  padding: 0.5rem 1rem;
+  background: #424242;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 320px;
   animation: audioSlideIn 0.3s ease-out;
 }
 
@@ -212,32 +211,67 @@ mat-card-content {
   }
 }
 
-.audio-button {
+.audio-play-button {
   width: 36px !important;
   height: 36px !important;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  min-width: 36px !important;
+  background: #616161 !important;
+  color: #fff !important;
+  transition: transform 0.2s ease, background 0.2s ease;
 }
 
-.audio-button:hover {
-  transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+.audio-play-button:hover {
+  background: #757575 !important;
+  transform: scale(1.05);
 }
 
-.audio-button:active {
+.audio-play-button:active {
   transform: scale(0.95);
 }
 
-.audio-button mat-icon {
+.audio-play-button mat-icon {
   font-size: 20px;
   width: 20px;
   height: 20px;
 }
 
-.audio-label {
-  font-size: 0.85rem;
+.audio-progress-container {
+  flex: 1;
+  cursor: pointer;
+  padding: 8px 0;
+}
+
+.audio-progress-track {
+  height: 4px;
+  background: #616161;
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.audio-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #9e9e9e 0%, #bdbdbd 100%);
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}
+
+.audio-progress-container:hover .audio-progress-track {
+  height: 6px;
+}
+
+.audio-progress-container:hover .audio-progress-fill {
+  background: linear-gradient(90deg, #bdbdbd 0%, #e0e0e0 100%);
+}
+
+.audio-time {
+  font-size: 0.75rem;
   font-weight: 500;
-  color: var(--mat-sys-on-tertiary-container);
+  color: #bdbdbd;
+  font-family: 'Roboto Mono', monospace;
   letter-spacing: 0.25px;
+  min-width: 70px;
+  text-align: right;
 }
 
 .message-icon {

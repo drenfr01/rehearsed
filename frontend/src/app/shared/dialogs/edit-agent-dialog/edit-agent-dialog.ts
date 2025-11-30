@@ -7,13 +7,14 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
-import { Agent, AgentPersonality } from '../../../core/models/agent.model';
+import { Agent, AgentPersonality, AgentVoice } from '../../../core/models/agent.model';
 import { Scenario } from '../../../core/models/scenario.model';
 
 export interface EditAgentDialogData {
   agent: Agent;
   scenarios: Scenario[];
   personalities: AgentPersonality[];
+  voices: AgentVoice[];
 }
 
 export interface EditAgentDialogResult {

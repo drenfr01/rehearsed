@@ -528,7 +528,7 @@ async def list_my_agents(request: Request, user: User = Depends(get_current_user
                 name=a.name,
                 scenario_id=a.scenario_id,
                 agent_personality_id=a.agent_personality_id,
-                voice=a.voice,
+                voice=a.voice.voice_name if a.voice else "",
                 display_text_color=a.display_text_color,
                 objective=a.objective,
                 instructions=a.instructions,
@@ -561,7 +561,7 @@ async def create_agent(
     try:
         agent_id = sanitize_string(agent_data.id)
         name = sanitize_string(agent_data.name)
-        voice = sanitize_string(agent_data.voice) if agent_data.voice else ""
+        voice_name = sanitize_string(agent_data.voice) if agent_data.voice else ""
         display_text_color = sanitize_string(agent_data.display_text_color) if agent_data.display_text_color else ""
 
         # Verify scenario exists and user has access
@@ -578,13 +578,21 @@ async def create_agent(
         if personality.owner_id is not None and personality.owner_id != user.id:
             raise HTTPException(status_code=403, detail="You don't have access to this personality")
 
+        # Look up voice_id from voice name if provided
+        voice_id = None
+        if voice_name:
+            voice = await database_service.get_agent_voice_by_name(voice_name)
+            if not voice:
+                raise HTTPException(status_code=404, detail=f"Voice '{voice_name}' not found")
+            voice_id = voice.id
+
         agent = await database_service.create_user_agent(
             user_id=user.id,
             agent_id=agent_id,
             name=name,
             scenario_id=agent_data.scenario_id,
             agent_personality_id=agent_data.agent_personality_id,
-            voice=voice,
+            voice_id=voice_id,
             display_text_color=display_text_color,
             objective=agent_data.objective or "",
             instructions=agent_data.instructions or "",
@@ -601,7 +609,7 @@ async def create_agent(
             name=agent.name,
             scenario_id=agent.scenario_id,
             agent_personality_id=agent.agent_personality_id,
-            voice=agent.voice,
+            voice=agent.voice.voice_name if agent.voice else "",
             display_text_color=agent.display_text_color,
             objective=agent.objective,
             instructions=agent.instructions,
@@ -655,8 +663,20 @@ async def update_agent(
                 raise HTTPException(status_code=403, detail="You don't have access to this personality")
 
         name = sanitize_string(agent_data.name) if agent_data.name else None
-        voice = sanitize_string(agent_data.voice) if agent_data.voice else None
+        voice_name = sanitize_string(agent_data.voice) if agent_data.voice else None
         display_text_color = sanitize_string(agent_data.display_text_color) if agent_data.display_text_color else None
+
+        # Look up voice_id from voice name if provided
+        voice_id = None
+        clear_voice = False
+        if voice_name:
+            voice_obj = await database_service.get_agent_voice_by_name(voice_name)
+            if not voice_obj:
+                raise HTTPException(status_code=404, detail=f"Voice '{voice_name}' not found")
+            voice_id = voice_obj.id
+        elif agent_data.voice == "":
+            # Explicitly clear the voice if empty string provided
+            clear_voice = True
 
         # Get old scenario_id for graph invalidation
         old_agent = await database_service.get_agent(agent_id)
@@ -666,7 +686,7 @@ async def update_agent(
             agent_id=agent_id,
             user_id=user.id,
             name=name,
-            voice=voice,
+            voice_id=voice_id,
             display_text_color=display_text_color,
             objective=agent_data.objective,
             instructions=agent_data.instructions,
@@ -674,6 +694,7 @@ async def update_agent(
             context=agent_data.context,
             scenario_id=agent_data.scenario_id,
             agent_personality_id=agent_data.agent_personality_id,
+            clear_voice=clear_voice,
         )
 
         # Invalidate affected graphs
@@ -688,7 +709,7 @@ async def update_agent(
             name=updated_agent.name,
             scenario_id=updated_agent.scenario_id,
             agent_personality_id=updated_agent.agent_personality_id,
-            voice=updated_agent.voice,
+            voice=updated_agent.voice.voice_name if updated_agent.voice else "",
             display_text_color=updated_agent.display_text_color,
             objective=updated_agent.objective,
             instructions=updated_agent.instructions,

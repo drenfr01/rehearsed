@@ -240,5 +240,29 @@ export class Classroom implements OnInit {
       subscription.unsubscribe();
     });
   }
+
+  onEndScenario() {
+    this.isLoading.set(true);
+    this.error.set('');
+    const endScenarioRequest: ChatRequest = {
+      is_resumption: true,
+      resumption_text: 'goals achieved',
+      resumption_approved: this.isApproved()!,
+      messages: [],
+    }
+    const subscription = this.chatGraphService.sendGraphRequest(endScenarioRequest, false).subscribe({
+      error: (error: Error) => {
+        this.error.set(error.message);
+        this.isLoading.set(false);
+      },
+      complete: () => {
+        this.isLoading.set(false);
+      },
+    });
+
+    this.destroyRef.onDestroy(() => {
+      subscription.unsubscribe();
+    });
+  }
 }
 

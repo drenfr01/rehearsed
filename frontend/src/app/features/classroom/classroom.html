@@ -2,11 +2,9 @@
   <mat-card class="classroom-card">
     <mat-card-header>
       <mat-card-title>Classroom Discussion</mat-card-title>
+      <app-classroom-status [messages]="messages()" class="header-status"></app-classroom-status>
     </mat-card-header>
     <mat-card-content>
-      <!-- Student Status Panel -->
-      <app-classroom-status [messages]="messages()"></app-classroom-status>
-
       <div class="two-column-layout">
         <!-- Left Column: Messages and Chat Input -->
         <div class="messages-column">
@@ -65,44 +63,86 @@
             }
             
             <div class="input-controls">
-              <mat-form-field appearance="outline" class="chat-input-field">
-                <mat-label>Your message</mat-label>
-                <textarea 
-                  matInput 
-                  [(ngModel)]="userInput"
-                  [value]="userInput()"
-                  (ngModelChange)="userInput.set($event)"
-                  placeholder="Type your message here..."
-                  rows="3"
+              <div class="input-row">
+                <mat-form-field appearance="outline" class="chat-input-field">
+                  <mat-label>Your message</mat-label>
+                  <textarea 
+                    matInput 
+                    [(ngModel)]="userInput"
+                    [value]="userInput()"
+                    (ngModelChange)="userInput.set($event)"
+                    placeholder="Type your message here..."
+                    rows="2"
+                    [disabled]="isLoading() || isRecording()"
+                  ></textarea>
+                </mat-form-field>
+                
+                <button
+                  mat-fab
+                  [color]="isRecording() ? 'warn' : 'primary'"
+                  (click)="toggleRecording()"
                   [disabled]="isLoading()"
-                ></textarea>
-              </mat-form-field>
+                  class="mic-button"
+                  [matTooltip]="isRecording() ? 'Stop recording' : 'Record voice message'"
+                >
+                  <mat-icon>{{ isRecording() ? 'stop' : 'mic' }}</mat-icon>
+                </button>
+                
+                <button
+                  mat-raised-button
+                  color="primary"
+                  type="button"
+                  (click)="onSubmit()"
+                  [disabled]="!userInput() || isLoading()"
+                  class="submit-button"
+                >
+                  @if (isLoading()) {
+                    <app-loading-spinner></app-loading-spinner>
+                  } @else {
+                    <span>Submit</span>
+                  }
+                </button>
+                
+                <button
+                  mat-raised-button
+                  type="button"
+                  (click)="onEndScenario()"
+                  [disabled]="isLoading()"
+                  class="end-scenario-button"
+                >
+                  End
+                </button>
+              </div>
               
-              <button
-                mat-raised-button
-                color="primary"
-                type="button"
-                (click)="onSubmit()"
-                [disabled]="!userInput() || isLoading()"
-                class="submit-button"
-              >
-                @if (isLoading()) {
-                  <app-loading-spinner></app-loading-spinner>
-                  <span>Sending...</span>
-                } @else {
-                  <span>Submit</span>
-                }
-              </button>
-              
-              <button
-                mat-raised-button
-                type="button"
-                (click)="onEndScenario()"
-                [disabled]="isLoading()"
-                class="end-scenario-button"
-              >
-                End Scenario
-              </button>
+              <!-- Recorded Audio Display -->
+              @if (transcribedText() && recordedAudioUrl()) {
+                <div class="recorded-audio-container">
+                  <div class="recorded-audio-header">
+                    <mat-icon class="recorded-icon">graphic_eq</mat-icon>
+                    <span class="recorded-label">Recorded Text</span>
+                    <button 
+                      mat-icon-button 
+                      (click)="clearRecordedAudio()"
+                      class="clear-audio-button"
+                      matTooltip="Clear recording"
+                    >
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  </div>
+                  <div class="recorded-audio-content">
+                    <p class="transcribed-text">{{ transcribedText() }}</p>
+                    <button 
+                      mat-mini-fab 
+                      color="accent"
+                      (click)="togglePlayRecordedAudio()"
+                      class="play-recorded-button"
+                      [matTooltip]="isPlayingRecordedAudio() ? 'Pause' : 'Play your recording'"
+                    >
+                      <mat-icon>{{ isPlayingRecordedAudio() ? 'pause' : 'play_arrow' }}</mat-icon>
+                    </button>
+                  </div>
+                </div>
+              }
             </div>
           </div>
         </div>

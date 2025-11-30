@@ -26,6 +26,7 @@ export interface ChatRequest {
     is_resumption: boolean;
     resumption_text: string;
     resumption_approved: boolean;
+    audio_base64?: string;
 }
 
 export interface StudentResponse {
@@ -48,5 +49,6 @@ export interface ChatResponse {
     appropriate_response: boolean;
     appropriate_explanation: string;
     learning_goals_achieved: boolean;
+    transcribed_text: string;
     interrupt: object[];
 }

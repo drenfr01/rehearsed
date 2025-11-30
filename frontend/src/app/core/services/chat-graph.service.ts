@@ -21,9 +21,11 @@ export class ChatGraphService {
   // TODO: make this not an array? 
   private inlineFeedback = signal<string[]>(this.loadInlineFeedbackFromStorage());
   private studentResponses = signal<ChatResponse['student_responses']>([]);
+  private transcribedText = signal<string>('');
 
   loadedSummaryFeedback = this.summaryFeedback.asReadonly();
   loadedStudentResponses = this.studentResponses.asReadonly();
+  loadedTranscribedText = this.transcribedText.asReadonly();
 
   constructor() {
     // Effect to persist graphMessages to localStorage
@@ -74,10 +76,13 @@ export class ChatGraphService {
   sendGraphRequest (chatRequest: ChatRequest, initialGraphRequest: boolean): Observable<ChatResponse> {
     // If this is the initial graph request, we need to add the human message to the graph messages
     // otherwise we will build a new resumption message 
+    // For audio messages, we'll add a placeholder that gets updated when transcription returns
+    const isAudioMessage = !!chatRequest.audio_base64;
+    
     if (!initialGraphRequest) {
       const humanMessage: Message = {
         role: 'user',
-        content: chatRequest.resumption_text
+        content: chatRequest.resumption_text || (isAudioMessage ? 'Transcribing...' : '')
       }
       this.graphMessages.set([...this.graphMessages(), humanMessage]);
     } else {
@@ -91,14 +96,43 @@ export class ChatGraphService {
         this.inlineFeedback.set(response.inline_feedback);
         this.summaryFeedback.set(response.summary_feedback);
         this.studentResponses.set(response.student_responses);
+        this.transcribedText.set(response.transcribed_text || '');
         
-        if (response.interrupt_task) {
-          const studentResponse = response.student_responses[response.answering_student - 1];
+        // If this was an audio message, update the user message with the transcribed text
+        if (isAudioMessage && response.transcribed_text) {
+          const messages = this.graphMessages();
+          // Find the last user message and update its content
+          const lastUserIndex = messages.map(m => m.role).lastIndexOf('user');
+          if (lastUserIndex !== -1) {
+            const updatedMessages = [...messages];
+            updatedMessages[lastUserIndex] = {
+              ...updatedMessages[lastUserIndex],
+              content: response.transcribed_text
+            };
+            this.graphMessages.set(updatedMessages);
+          }
+        }
+        
+        if (response.interrupt_task && response.student_responses?.length > 0) {
+          const studentIndex = response.answering_student - 1;
+          // Use the specified student, or fall back to the first student if index is invalid
+          const studentResponse = (studentIndex >= 0 && studentIndex < response.student_responses.length)
+            ? response.student_responses[studentIndex]
+            : response.student_responses[0];
           const responseMessage: Message = {
             role: 'assistant',
             content: response.interrupt_value,
             student_name: studentResponse.student_details.name,
             audio_base64: studentResponse.audio_base64 || undefined
+          }
+          this.interruptionContent.set(response.interrupt_value);
+          this.interruptionType.set(response.interrupt_value_type);
+          this.graphMessages.set([...this.graphMessages(), responseMessage]);
+        } else if (response.interrupt_task) {
+          // Handle case where there's an interrupt but no student responses
+          const responseMessage: Message = {
+            role: 'assistant',
+            content: response.interrupt_value,
           }
           this.interruptionContent.set(response.interrupt_value);
           this.interruptionType.set(response.interrupt_value_type);

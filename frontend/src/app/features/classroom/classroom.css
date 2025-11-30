@@ -367,6 +367,32 @@ app-classroom-status {
   transform: translateY(0);
 }
 
+.end-scenario-button {
+  width: 100%;
+  margin-top: 0.5rem;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  border-radius: 8px !important;
+  transition: all 0.3s ease;
+  background-color: #ef9a9a !important;
+  color: #b71c1c !important;
+}
+
+.end-scenario-button:not([disabled]):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.end-scenario-button:not([disabled]):active {
+  transform: translateY(0);
+}
+
 @keyframes slideIn {
   from {
     opacity: 0;

@@ -12,7 +12,6 @@ import { Feedback, FeedbackCreate, FeedbackUpdate } from '../models/feedback.mod
 export class UserContentService {
   private httpClient = inject(HttpClient);
   private baseUrl = `${environment.baseUrl}/api/v1/user-content`;
-  private apiBaseUrl = `${environment.baseUrl}/api/v1`;
 
   // ========== Scenario Methods ==========
 
@@ -94,7 +93,7 @@ export class UserContentService {
    * Get all available agent voices
    */
   getAgentVoices(): Observable<AgentVoice[]> {
-    return this.httpClient.get<AgentVoice[]>(`${this.apiBaseUrl}/agent-voices`);
+    return this.httpClient.get<AgentVoice[]>(`${this.baseUrl}/agent-voices`);
   }
 
   // ========== Agent Methods ==========

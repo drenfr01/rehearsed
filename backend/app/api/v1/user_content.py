@@ -31,6 +31,7 @@ from app.schemas.agent import (
     AgentUpdate,
     AgentResponse,
     DeleteAgentResponse,
+    AgentVoiceResponse,
 )
 from app.schemas.scenario import (
     ScenarioCreateRequest,
@@ -130,6 +131,32 @@ async def get_current_user_from_session(
             detail="Invalid token format",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+# ========== AgentVoice Endpoints ==========
+
+@router.get("/agent-voices", response_model=List[AgentVoiceResponse], tags=["agents"])
+@limiter.limit(settings.RATE_LIMIT_ENDPOINTS.get("get_all_agent_voices", ["10 per minute"])[0])
+async def get_agent_voices(request: Request, user: User = Depends(get_current_user_from_session)):
+    """Get all available agent voices.
+
+    This endpoint returns all voice options that can be assigned to agents.
+
+    Args:
+        request: The FastAPI request object for rate limiting.
+        user: The authenticated user.
+
+    Returns:
+        List[AgentVoiceResponse]: List of all available agent voices.
+    """
+    voices = await database_service.get_all_agent_voices()
+    return [
+        AgentVoiceResponse(
+            id=v.id,
+            voice_name=v.voice_name,
+        )
+        for v in voices
+    ]
 
 
 # ========== Scenario Endpoints ==========

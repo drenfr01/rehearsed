@@ -13,7 +13,6 @@ import { Feedback, FeedbackCreate, FeedbackUpdate } from '../models/feedback.mod
 export class AdminService {
   private httpClient = inject(HttpClient);
   private baseUrl = `${environment.baseUrl}/api/v1/admin`;
-  private apiBaseUrl = `${environment.baseUrl}/api/v1`;
 
   // ========== User Methods ==========
 
@@ -123,7 +122,7 @@ export class AdminService {
    * Get all available agent voices
    */
   getAgentVoices(): Observable<AgentVoice[]> {
-    return this.httpClient.get<AgentVoice[]>(`${this.apiBaseUrl}/agent-voices`);
+    return this.httpClient.get<AgentVoice[]>(`${environment.baseUrl}/api/v1/user-content/agent-voices`);
   }
 
   // ========== Agent Methods ==========

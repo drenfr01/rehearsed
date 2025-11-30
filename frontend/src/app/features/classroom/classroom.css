@@ -190,7 +190,7 @@ mat-card-content {
 .message-text-with-audio {
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
+  gap: 0.25rem;
 }
 
 .message-text {
@@ -199,43 +199,33 @@ mat-card-content {
 
 .inline-audio-button {
   flex-shrink: 0;
-  width: 32px !important;
-  height: 32px !important;
-  min-width: 32px !important;
-  background: #757575 !important;
-  color: #fff !important;
-  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  color: #757575 !important;
+  transition: transform 0.2s ease, color 0.2s ease;
   margin-top: -4px;
 }
 
 .inline-audio-button:hover {
-  background: #616161 !important;
+  color: #424242 !important;
   transform: scale(1.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .inline-audio-button:active {
-  transform: scale(0.95);
+  transform: scale(0.9);
 }
 
 .inline-audio-button.playing {
-  background: #424242 !important;
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(117, 117, 117, 0.4);
-  }
-  50% {
-    box-shadow: 0 0 0 8px rgba(117, 117, 117, 0);
-  }
+  color: #424242 !important;
 }
 
 .inline-audio-button mat-icon {
-  font-size: 20px;
-  width: 20px;
-  height: 20px;
+  font-size: 32px;
+  width: 32px;
+  height: 32px;
 }
 
 .message-icon {

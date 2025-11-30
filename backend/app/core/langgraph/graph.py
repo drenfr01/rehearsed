@@ -263,12 +263,11 @@ class LangGraphBuilder:
         if not isinstance(last_message, HumanMessage):
             raise ValueError("last message should be the human message input")
 
-        response = self.llm.with_structured_output(GeneralResponse).invoke(
-            [
-                SystemMessage(content=system_instructions),
-                HumanMessage(content=last_message.content),
-            ]
-        )
+        # Build messages with full conversation history for context
+        messages = [SystemMessage(content=system_instructions)]
+        messages.extend(state.messages)  # Include full conversation history
+        
+        response = self.llm.with_structured_output(GeneralResponse).invoke(messages)
 
         return response.llm_response
 
@@ -290,10 +289,9 @@ class LangGraphBuilder:
 
     async def _additional_user_input(self, state: GraphState) -> GraphState:
         """This node is used to gather additional user input after the student agents have responded."""
-        # Only one student responds now, so take the first (and only) response
-        student_message = state.student_responses[0].student_response
+        # Get the most recent student response (last one added)
+        student_message = state.student_responses[-1].student_response
         result = interrupt(
-            # TODO: figure out how to restore correct student response
             {
                 "task": "Review the student_response",
                 "student_response": student_message,

@@ -102,11 +102,20 @@ frozenlist==1.8.0
 google-ai-generativelanguage==0.9.0
     # via langchain-google-genai
 google-api-core==2.28.1
-    # via google-ai-generativelanguage
+    # via
+    #   google-ai-generativelanguage
+    #   google-cloud-speech
+    #   google-cloud-texttospeech
 google-auth==2.43.0
     # via
     #   google-ai-generativelanguage
     #   google-api-core
+    #   google-cloud-speech
+    #   google-cloud-texttospeech
+google-cloud-speech==2.34.0
+    # via rehearsed (pyproject.toml)
+google-cloud-texttospeech==2.33.0
+    # via rehearsed (pyproject.toml)
 googleapis-common-protos==1.72.0
     # via
     #   google-api-core
@@ -116,6 +125,8 @@ grpcio==1.76.0
     # via
     #   google-ai-generativelanguage
     #   google-api-core
+    #   google-cloud-speech
+    #   google-cloud-texttospeech
     #   grpcio-status
 grpcio-status==1.76.0
     # via google-api-core
@@ -313,10 +324,14 @@ proto-plus==1.26.1
     # via
     #   google-ai-generativelanguage
     #   google-api-core
+    #   google-cloud-speech
+    #   google-cloud-texttospeech
 protobuf==6.33.1
     # via
     #   google-ai-generativelanguage
     #   google-api-core
+    #   google-cloud-speech
+    #   google-cloud-texttospeech
     #   googleapis-common-protos
     #   grpcio-status
     #   opentelemetry-proto

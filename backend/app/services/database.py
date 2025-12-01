@@ -485,6 +485,8 @@ class DatabaseService:
             session.add(agent)
             session.commit()
             session.refresh(agent)
+            # Eagerly load voice relationship before session closes
+            _ = agent.voice
             logger.info("agent_created", agent_id=agent_id, name=name)
             return agent
 
@@ -600,6 +602,8 @@ class DatabaseService:
             session.add(agent)
             session.commit()
             session.refresh(agent)
+            # Eagerly load voice relationship before session closes
+            _ = agent.voice
             logger.info("agent_updated", agent_id=agent_id)
             return agent
 

@@ -114,11 +114,8 @@ export class ChatGraphService {
         }
         
         if (response.interrupt_task && response.student_responses?.length > 0) {
-          const studentIndex = response.answering_student - 1;
-          // Use the specified student, or fall back to the first student if index is invalid
-          const studentResponse = (studentIndex >= 0 && studentIndex < response.student_responses.length)
-            ? response.student_responses[studentIndex]
-            : response.student_responses[0];
+          // Always use the last (most recent) student response since student_responses is cumulative
+          const studentResponse = response.student_responses[response.student_responses.length - 1];
           const responseMessage: Message = {
             role: 'assistant',
             content: response.interrupt_value,

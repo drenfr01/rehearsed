@@ -296,9 +296,28 @@ class LangGraphBuilder:
         messages = [SystemMessage(content=system_instructions)]
         messages.extend(state.messages)  # Include full conversation history
         
-        response = self.llm.with_structured_output(GeneralResponse).invoke(messages)
+        response = self.llm.with_structured_output(
+            GeneralResponse, method="json_schema", include_raw=True
+        ).invoke(messages)
 
-        return response.llm_response
+        if response["parsed"] is None:
+            logger.error(
+                "general_llm_call_failed",
+                error=str(response["raw"]),
+                system_instructions_preview=system_instructions[:100],
+            )
+            return "I'm sorry, I couldn't generate a response. Please try again."
+        
+        llm_response = response["parsed"].llm_response
+        if not llm_response or not llm_response.strip():
+            logger.warning(
+                "general_llm_returned_empty_response",
+                raw_response=str(response["raw"]),
+                system_instructions_preview=system_instructions[:100],
+            )
+            return "I'm sorry, I couldn't generate a response. Please try again."
+
+        return llm_response
 
     async def _inline_feedback_agent(self, state: GraphState) -> GraphState:
         """This node is used to call the inline feedback agent."""
@@ -322,7 +341,9 @@ class LangGraphBuilder:
     async def _additional_user_input(self, state: GraphState) -> GraphState:
         """This node is used to gather additional user input after the student agents have responded."""
         # Get the most recent student response (last one added)
-        student_message = state.student_responses[-1].student_response
+        latest_response = state.student_responses[-1]
+        student_message = latest_response.student_response
+        student_name = latest_response.student_details.name
         result = interrupt(
             {
                 "task": "Review the student_response",
@@ -330,9 +351,12 @@ class LangGraphBuilder:
             }
         )
 
+        # Include student name in AI message so pick_answering_student can track who has spoken
+        ai_message_content = f"[{student_name}]: {student_message}"
+        
         # Update the state with the edited text
         return {"messages": [
-            AIMessage(content=student_message),
+            AIMessage(content=ai_message_content),
             HumanMessage(content=result["response"]),
         ]}
 

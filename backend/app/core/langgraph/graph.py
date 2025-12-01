@@ -3,6 +3,7 @@
 import base64
 from typing import Callable, List, Optional
 
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import (
     HumanMessage,
@@ -386,7 +387,15 @@ class LangGraphBuilder:
             SystemMessage(content=system_instructions),
             *state.messages,
         ]
-        response = self.llm.with_structured_output(GeneralResponse, method="json_schema", include_raw=True).invoke(prompt)
+            
+        
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-3-pro-preview",
+            temperature=settings.DEFAULT_LLM_TEMPERATURE,
+            google_api_key=settings.LLM_API_KEY,
+            max_tokens=settings.MAX_TOKENS,
+        )
+        response = llm.with_structured_output(GeneralResponse, method="json_schema", include_raw=True).invoke(prompt)
         if response["parsed"] is None:
             logger.error("summary_feedback_generation_failed", error=response["raw"], exc_info=True)
             return {"summary_feedback": "Could not generate summary feedback"}

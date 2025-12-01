@@ -1157,13 +1157,14 @@ class DatabaseService:
 
     # ========== Copy Methods (Global to User-Local) ==========
 
-    async def copy_scenario_to_user(self, scenario_id: int, user_id: int, copy_agents: bool = True) -> Scenario:
+    async def copy_scenario_to_user(self, scenario_id: int, user_id: int, copy_agents: bool = True, copy_feedback: bool = True) -> Scenario:
         """Copy a global scenario to a user's local scenarios.
 
         Args:
             scenario_id: The ID of the scenario to copy
             user_id: The ID of the user to copy to
             copy_agents: Whether to also copy agents belonging to this scenario
+            copy_feedback: Whether to also copy feedback belonging to this scenario
 
         Returns:
             Scenario: The new local copy of the scenario
@@ -1220,6 +1221,29 @@ class DatabaseService:
                 logger.info("agents_copied_with_scenario", 
                            scenario_id=new_scenario.id, 
                            agent_count=len(original_agents))
+
+            # Optionally copy feedback as well
+            if copy_feedback:
+                feedback_statement = select(Feedback).where(Feedback.scenario_id == scenario_id)
+                original_feedbacks = session.exec(feedback_statement).all()
+                
+                for feedback in original_feedbacks:
+                    new_feedback = Feedback(
+                        feedback_type=feedback.feedback_type,
+                        scenario_id=new_scenario.id,
+                        objective=feedback.objective,
+                        instructions=feedback.instructions,
+                        constraints=feedback.constraints,
+                        context=feedback.context,
+                        output_format=feedback.output_format,
+                        owner_id=user_id,
+                    )
+                    session.add(new_feedback)
+                
+                session.commit()
+                logger.info("feedback_copied_with_scenario", 
+                           scenario_id=new_scenario.id, 
+                           feedback_count=len(original_feedbacks))
 
             return new_scenario
 

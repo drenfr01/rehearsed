@@ -1588,9 +1588,14 @@ class DatabaseService:
 
             session.add(agent)
             session.commit()
-            session.refresh(agent)
+            # Re-query with eager loading to avoid lazy load issues after session closes
+            statement = select(Agent).where(Agent.id == agent_id).options(
+                selectinload(Agent.voice),
+                selectinload(Agent.agent_personality)
+            )
+            updated_agent = session.exec(statement).first()
             logger.info("user_agent_updated", agent_id=agent_id, user_id=user_id)
-            return agent
+            return updated_agent
 
     async def delete_user_agent(self, agent_id: str, user_id: int) -> bool:
         """Delete a user's local agent (with ownership check).

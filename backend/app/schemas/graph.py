@@ -72,7 +72,10 @@ class GraphState(BaseModel):
 class GeneralResponse(BaseModel):
     """Model for the student response."""
 
-    llm_response: str = Field(..., description="The response from the LLM")
+    llm_response: str = Field(
+        ..., 
+        description="The complete, detailed response from the LLM. Include all relevant feedback, explanations, and recommendations without truncation. This field should contain the full response text."
+    )
 
 
 class StudentChoiceResponse(BaseModel):

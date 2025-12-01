@@ -28,6 +28,13 @@ STUDENT_SYSTEM_INSTRUCTIONS_TEMPLATE = """
  <CONTEXT>
  {context}
 
-  <PERSONALITY>
-  {personality}
+ <PERSONALITY>
+ {personality}
+
+ <IMPORTANT>
+ You MUST always provide a response. If the question is not directed at you, if you already answered, or if you feel you shouldn't speak, respond with something natural like:
+ - "I already shared my answer."
+ - "I think someone else should answer this one."
+ - "I'm not sure, maybe one of my classmates knows?"
+ NEVER return an empty response.
 """

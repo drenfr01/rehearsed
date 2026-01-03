@@ -53,6 +53,7 @@ def load_agent_data(session: Session) -> list[Agent]:
             scenario_id=scenario_id,
             voice_id=voice_id,
             display_text_color=agent_data["display_text_color"],
+            avatar_gcs_uri=agent_data.get("avatar_gcs_uri", ""),
             objective=agent_data["objective"],
             instructions=agent_data["instructions"],
             constraints=agent_data["constraints"],

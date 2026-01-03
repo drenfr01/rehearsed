@@ -1,60 +1,10 @@
-.register-page-container {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
+/* Register page uses shared auth styles from global stylesheet */
 
-.register-background {
-  flex: 1;
-  background-color: var(--color-brand-teal-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-}
-
-.register-card {
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  padding: 2rem;
-  width: 100%;
-  max-width: 28rem;
-}
-
-.register-header {
-  text-align: center;
-  margin-bottom: 2rem;
-}
-
-.brand-logo {
-  height: 5rem;
-  margin: 0 auto 0.5rem;
-  display: block;
-}
-
-.tagline-text {
-  color: #6b7280;
-  margin: 0;
-  font-size: 1rem;
-}
-
-.register-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.email-field-group,
-.password-field-group,
+/* Register-specific styles */
 .confirm-password-field-group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-}
-
-.full-width {
-  width: 100%;
 }
 
 .password-requirements {
@@ -150,72 +100,6 @@
   }
 }
 
-.submit-button {
-  width: 100%;
-  background-color: var(--color-brand-teal-primary) !important;
-  color: white !important;
-  height: 2.5rem;
-  font-size: 1rem;
-  font-weight: 500;
-}
-
-.submit-button:hover:not([disabled]) {
-  background-color: var(--color-brand-teal-primary-hover) !important;
-}
-
-.submit-button:disabled {
-  opacity: 0.6;
-}
-
-.inline-spinner {
-  display: inline-block;
-}
-
-.button-text {
-  display: inline-block;
-}
-
-.error-message {
-  color: var(--mat-sys-error);
-  background-color: var(--mat-sys-error-container);
-  padding: 1rem 1.25rem;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  margin-top: 0.5rem;
-  border-left: 4px solid var(--mat-sys-error);
-  animation: shake 0.5s ease-in-out;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-@keyframes shake {
-  0%, 100% {
-    transform: translateX(0);
-  }
-  25% {
-    transform: translateX(-10px);
-  }
-  75% {
-    transform: translateX(10px);
-  }
-}
-
-.login-link {
-  text-align: center;
-  margin-top: 1.5rem;
-  color: #6b7280;
-  font-size: 0.875rem;
-}
-
-.login-link-anchor {
-  color: var(--color-brand-teal-primary);
-  text-decoration: none;
-  font-weight: 500;
-}
-
-.login-link-anchor:hover {
-  text-decoration: underline;
-}
-
 /* Success state */
 .success-content {
   padding: 2rem;
@@ -264,17 +148,8 @@
   background-color: var(--color-brand-teal-primary-hover) !important;
 }
 
-/* Responsive adjustments */
+/* Responsive adjustments for password requirements */
 @media (max-width: 480px) {
-  .register-card {
-    padding: 1.5rem;
-    border-radius: 8px;
-  }
-  
-  .brand-logo {
-    height: 4rem;
-  }
-
   .password-requirements {
     padding: 0.75rem;
     font-size: 0.8rem;

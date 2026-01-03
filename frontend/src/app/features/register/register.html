@@ -1,6 +1,6 @@
-<div class="register-page-container">
-  <div class="register-background">
-    <div class="register-card">
+<div class="auth-page-container">
+  <div class="auth-background">
+    <div class="auth-card">
       @if (success()) {
         <div class="success-content">
           <div class="success-message">
@@ -14,13 +14,13 @@
           </div>
         </div>
       } @else {
-        <div class="register-header">
+        <div class="auth-header">
           <img src="/rehearsed-logo.png" alt="Rehearsed Logo" class="brand-logo" />
           <p class="tagline-text">Rehearse Today. Inspire Tomorrow.</p>
         </div>
 
-        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="register-form">
-          <div class="email-field-group">
+        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="auth-form">
+          <div class="auth-field-group">
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Email</mat-label>
               <input matInput type="email" formControlName="email" placeholder="teacher@example.com" />
@@ -33,7 +33,7 @@
             </mat-form-field>
           </div>
 
-          <div class="password-field-group">
+          <div class="auth-field-group">
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Password</mat-label>
               <input matInput type="password" formControlName="password" placeholder="••••••••" />
@@ -90,7 +90,7 @@
           <button
             mat-raised-button
             type="submit"
-            class="full-width submit-button"
+            class="full-width auth-submit-button"
             [disabled]="form.invalid || isLoading() || !passwordsMatch"
           >
             @if (isLoading()) {
@@ -102,8 +102,8 @@
           </button>
         </form>
 
-        <p class="login-link">
-          Already have an account? <a routerLink="/" class="login-link-anchor">Login</a>
+        <p class="auth-link">
+          Already have an account? <a routerLink="/" class="auth-link-anchor">Login</a>
         </p>
       }
     </div>

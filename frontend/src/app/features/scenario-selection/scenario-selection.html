@@ -36,7 +36,7 @@
               type="button"
               class="view-details-button"
               [disabled]="isLoading()"
-              (click)="form.patchValue({selectedScenario: scenario}); form.markAsTouched(); onSubmit();"
+              (click)="selectScenario(scenario)"
             >
               View Details
             </button>

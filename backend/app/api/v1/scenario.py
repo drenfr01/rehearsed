@@ -238,6 +238,7 @@ async def get_scenario_agents(
                 agent_personality_id=a.agent_personality_id,
                 voice=a.voice.voice_name if a.voice else "",
                 display_text_color=a.display_text_color,
+                avatar_gcs_uri=a.avatar_gcs_uri or "",
                 objective=a.objective,
                 instructions=a.instructions,
                 constraints=a.constraints,

@@ -1,68 +1,91 @@
-<div class="scenario-overview-container">
-  <mat-card class="scenario-overview-card">
-    <mat-card-header>
-      <mat-card-title>Start Your Scenario</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="scenario-overview-form">
-        <div class="inline-fields">
-          <mat-form-field appearance="outline" class="scenario-id-field readonly-field">
-            <mat-label>ID</mat-label>
-            <input matInput type="text" formControlName="scenarioId" readonly />
-            @if (form.get('scenarioId')?.hasError('required') && form.get('scenarioId')?.touched) {
-              <mat-error>Scenario ID is required</mat-error>
-            }
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="scenario-name-field readonly-field">
-            <mat-label>Scenario Name</mat-label>
-            <input matInput type="text" formControlName="scenarioName" readonly />
-            @if (form.get('scenarioName')?.hasError('required') && form.get('scenarioName')?.touched) {
-              <mat-error>Scenario Name is required</mat-error>
-            }
-          </mat-form-field>
+<div class="scenario-overview-page">
+  <main class="main-content">
+    @if (scenario()) {
+      <div class="scenario-header-section">
+        <div class="scenario-title-row">
+          <h2 class="scenario-title">{{ scenario()!.name }}</h2>
+          <!-- Note: Difficulty badge would need to be added to scenario model if needed -->
         </div>
-
-        <div class="full-width">
-          <label class="description-label">Scenario Description</label>
-          <div class="description-content">
-            {{ form.get('scenarioDescription')?.value }}
+        
+        <div class="scenario-metadata">
+          <div class="metadata-item">
+            <mat-icon class="metadata-icon">people</mat-icon>
+            <span>{{ agents().length }} students</span>
           </div>
         </div>
+      </div>
 
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Initial Prompt</mat-label>
-          <textarea 
-            matInput 
-            formControlName="initialPrompt" 
-            placeholder="Enter initial prompt"
-            rows="8"
-          ></textarea>
-          @if (form.get('initialPrompt')?.hasError('required') && form.get('initialPrompt')?.touched) {
-            <mat-error>Initial Prompt is required</mat-error>
-          }
-        </mat-form-field>
-
-        @if (error()) {
-          <div class="error-message">
-            {{ error() }}
+      <!-- Overview Section -->
+      <mat-card class="overview-card">
+        <div class="overview-content">
+          <mat-icon class="section-icon">menu_book</mat-icon>
+          <div class="overview-text">
+            <h3 class="section-heading">Scenario Overview</h3>
+            <p class="section-description">{{ scenario()!.overview }}</p>
           </div>
-        }
+        </div>
+      </mat-card>
 
-        <button
-          mat-raised-button
+      <!-- Student Profiles -->
+      @if (agents().length > 0) {
+        <mat-card class="student-profiles-card">
+          <h3 class="section-heading">Student Profiles</h3>
+          <div class="student-profiles-list">
+            @for (agent of agents(); track agent.id) {
+              <div class="student-profile">
+                @if (getAvatarUrl(agent)) {
+                  <img 
+                    [src]="getAvatarUrl(agent)" 
+                    [alt]="agent.name" 
+                    class="student-avatar"
+                  />
+                } @else {
+                  <div class="student-avatar-placeholder">
+                    <mat-icon>person</mat-icon>
+                  </div>
+                }
+                <div class="student-info">
+                  <p class="student-name">{{ agent.name }}</p>
+                  @if (agent.objective) {
+                    <p class="student-description">{{ agent.objective }}</p>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </mat-card>
+      }
+
+      <!-- Begin Button -->
+      <div class="begin-simulation-button-container">
+        <button 
+          mat-raised-button 
           color="primary"
-          type="submit"
-          class="full-width submit-button"
-          [disabled]="form.invalid || isLoading()"
+          class="begin-simulation-button"
+          (click)="onBeginSimulation()"
+          [disabled]="isLoading()"
         >
           @if (isLoading()) {
-            <span class="button-text">Submitting...</span>
+            <mat-icon class="spinner-icon">hourglass_empty</mat-icon>
+            <span>Starting...</span>
           } @else {
-            <span class="button-text">Start Scenario</span>
+            <span>Begin Simulation</span>
           }
         </button>
-      </form>
-    </mat-card-content>
-  </mat-card>
+      </div>
+
+      @if (error()) {
+        <div class="error-message">
+          {{ error() }}
+        </div>
+      }
+    } @else {
+      <div class="scenario-not-found">
+        <h2>Scenario not found</h2>
+        <button mat-raised-button routerLink="/app/scenario-selection">
+          Return to Scenario Selection
+        </button>
+      </div>
+    }
+  </main>
 </div>

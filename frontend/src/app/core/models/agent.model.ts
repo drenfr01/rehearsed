@@ -29,6 +29,7 @@ export interface Agent {
     agent_personality_id: number;
     voice: string;
     display_text_color: string;
+    avatar_gcs_uri?: string;
     objective: string;
     instructions: string;
     constraints: string;

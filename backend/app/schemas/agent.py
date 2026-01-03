@@ -149,6 +149,7 @@ class AgentResponse(BaseModel):
     agent_personality_id: int = Field(..., description="ID of the agent's personality")
     voice: str = Field(..., description="Voice identifier for TTS")
     display_text_color: str = Field(..., description="Color for display")
+    avatar_gcs_uri: str = Field(default="", description="GCS URI for agent avatar image")
     objective: str = Field(..., description="Agent's objective")
     instructions: str = Field(..., description="Agent's instructions")
     constraints: str = Field(..., description="Agent's constraints")

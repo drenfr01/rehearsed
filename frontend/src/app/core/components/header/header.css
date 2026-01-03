@@ -2,26 +2,9 @@
   position: sticky;
   top: 0;
   z-index: 1000;
-  background-color: rgba(var(--mat-sys-primary-rgb), 0.95) !important;
-  backdrop-filter: blur(10px);
+  background-color: white !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-/* Fallback for browsers that don't support CSS custom properties with rgb */
-.app-header::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    135deg,
-    var(--mat-sys-primary-container) 0%,
-    var(--mat-sys-primary) 100%
-  );
-  opacity: 0.95;
-  z-index: -1;
+  color: rgba(0, 0, 0, 0.87) !important;
 }
 
 .header-container {
@@ -34,6 +17,12 @@
   padding: 0 1rem;
   position: relative;
   z-index: 1;
+}
+
+.header-logo {
+  height: 40px;
+  margin-right: 1rem;
+  object-fit: contain;
 }
 
 .nav-center {
@@ -50,12 +39,12 @@
 }
 
 .nav-link.active-link {
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: rgba(0, 0, 0, 0.08);
 }
 
 .nav-divider {
   margin: 0 0.5rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(0, 0, 0, 0.3);
   font-weight: 300;
 }
 
@@ -63,12 +52,13 @@
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  background-color: rgba(255, 152, 0, 0.2);
-  border: 1px solid rgba(255, 152, 0, 0.4);
+  background-color: white;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  color: rgba(0, 0, 0, 0.87);
 }
 
 .admin-link:hover {
-  background-color: rgba(255, 152, 0, 0.3);
+  background-color: rgba(0, 0, 0, 0.04);
 }
 
 .admin-link mat-icon {
@@ -83,27 +73,18 @@
   gap: 0.75rem;
 }
 
-.session-id {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  font-family: 'Courier New', monospace;
-  padding: 0.5rem 0.75rem;
-  background-color: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
-  cursor: help;
-  white-space: nowrap;
-}
-
-.session-id mat-icon {
-  font-size: 18px;
-  width: 18px;
-  height: 18px;
-}
-
 button mat-icon {
   margin-right: 0.25rem;
+}
+
+.logout-button {
+  background-color: rgba(255, 152, 0, 0.2) !important;
+  border: 1px solid rgba(255, 152, 0, 0.4) !important;
+  color: rgba(0, 0, 0, 0.87) !important;
+}
+
+.logout-button:hover {
+  background-color: rgba(255, 152, 0, 0.3) !important;
 }
 
 /* Responsive design */
@@ -112,6 +93,11 @@ button mat-icon {
     flex-direction: column;
     gap: 1rem;
     padding: 1rem;
+  }
+
+  .header-logo {
+    margin-right: 0;
+    margin-bottom: 0.5rem;
   }
 
   .nav-center {
@@ -139,11 +125,6 @@ button mat-icon {
   .nav-right {
     gap: 0.5rem;
     width: 100%;
-  }
-
-  .session-id {
-    font-size: 0.75rem;
-    padding: 0.375rem 0.5rem;
   }
 
   button {

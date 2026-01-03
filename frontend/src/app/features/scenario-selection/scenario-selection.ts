@@ -106,7 +106,6 @@ export class ScenarioSelection {
 
   selectScenario(scenario: Scenario) {
     this.form.patchValue({ selectedScenario: scenario });
-    this.form.markAsTouched();
     this.onSubmit();
   }
 

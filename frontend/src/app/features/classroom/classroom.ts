@@ -15,6 +15,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LoadingSpinner } from '../../shared/loading-spinner/loading-spinner';
 import { ClassroomStatus } from './classroom-status/classroom-status';
+import { gcsUriToHttpUrl } from '../../core/utils/gcs-uri.util';
 
 @Component({
   selector: 'app-classroom',
@@ -46,6 +47,9 @@ export class Classroom implements OnInit {
   
   // Map of agent name to their display_text_color
   private agentColorMap = signal<Map<string, string>>(new Map());
+  
+  // Map of agent name to Agent object for avatar access
+  private agentMap = signal<Map<string, Agent>>(new Map());
 
   protected userInput = signal<string>('');
   protected isApproved = signal<boolean>(false);
@@ -100,12 +104,15 @@ export class Classroom implements OnInit {
     const subscription = this.scenarioService.getAgentsByScenario(currentScenario.id).subscribe({
       next: (agents) => {
         const colorMap = new Map<string, string>();
+        const agentNameMap = new Map<string, Agent>();
         agents.forEach(agent => {
           if (agent.display_text_color) {
             colorMap.set(agent.name, agent.display_text_color);
           }
+          agentNameMap.set(agent.name, agent);
         });
         this.agentColorMap.set(colorMap);
+        this.agentMap.set(agentNameMap);
       },
       error: (err) => {
         console.error('Failed to load agent colors:', err);
@@ -113,6 +120,16 @@ export class Classroom implements OnInit {
     });
     
     this.destroyRef.onDestroy(() => subscription.unsubscribe());
+  }
+  
+  // Get avatar URL for a student by name
+  getStudentAvatarUrl(studentName: string | undefined): string {
+    if (!studentName) return '';
+    const agent = this.agentMap().get(studentName);
+    if (agent && agent.avatar_gcs_uri) {
+      return gcsUriToHttpUrl(agent.avatar_gcs_uri);
+    }
+    return '';
   }
   
   // Get color class for an agent by name

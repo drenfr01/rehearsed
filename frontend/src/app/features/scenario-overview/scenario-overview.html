@@ -46,8 +46,8 @@
                 }
                 <div class="student-info">
                   <p class="student-name">{{ agent.name }}</p>
-                  @if (agent.objective) {
-                    <p class="student-description">{{ agent.objective }}</p>
+                  @if (agent.agent_personality?.personality_description) {
+                    <p class="student-description">{{ agent.agent_personality?.personality_description }}</p>
                   }
                 </div>
               </div>

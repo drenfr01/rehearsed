@@ -133,6 +133,7 @@ class AgentResponse(BaseModel):
         name: Name of the agent
         scenario_id: ID of the scenario this agent belongs to
         agent_personality_id: ID of the agent's personality
+        agent_personality: Optional agent personality object
         voice: Voice identifier for TTS
         display_text_color: Color for display
         objective: Agent's objective
@@ -147,6 +148,7 @@ class AgentResponse(BaseModel):
     name: str = Field(..., description="Name of the agent")
     scenario_id: int = Field(..., description="ID of the scenario this agent belongs to")
     agent_personality_id: int = Field(..., description="ID of the agent's personality")
+    agent_personality: Optional[AgentPersonalityResponse] = Field(None, description="Agent personality object")
     voice: str = Field(..., description="Voice identifier for TTS")
     display_text_color: str = Field(..., description="Color for display")
     avatar_gcs_uri: str = Field(default="", description="GCS URI for agent avatar image")

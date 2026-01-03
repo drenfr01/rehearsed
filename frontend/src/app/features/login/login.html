@@ -1,31 +1,37 @@
-<div class="login-container">
-  <mat-card class="login-card">
-    <mat-card-header>
-      <mat-card-title>Login</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="login-form">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Email</mat-label>
-          <input matInput type="email" formControlName="email" placeholder="Enter your email" />
-          @if (form.get('email')?.hasError('required') && form.get('email')?.touched) {
-            <mat-error>Email is required</mat-error>
-          }
-          @if (form.get('email')?.hasError('email') && form.get('email')?.touched) {
-            <mat-error>Please enter a valid email</mat-error>
-          }
-        </mat-form-field>
+<div class="login-page-container">
+  <div class="login-background">
+    <div class="login-card">
+      <div class="login-header">
+        <img src="/rehearsed-logo.png" alt="Rehearsed Logo" class="brand-logo" />
+        <p class="tagline-text">Rehearse Today. Inspire Tomorrow.</p>
+      </div>
 
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Password</mat-label>
-          <input matInput type="password" formControlName="password" placeholder="Enter your password" />
-          @if (form.get('password')?.hasError('required') && form.get('password')?.touched) {
-            <mat-error>Password is required</mat-error>
-          }
-          @if (form.get('password')?.hasError('minlength') && form.get('password')?.touched) {
-            <mat-error>Password must be at least 6 characters</mat-error>
-          }
-        </mat-form-field>
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="login-form">
+        <div class="email-field-group">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Email</mat-label>
+            <input matInput type="email" formControlName="email" placeholder="teacher@example.com" />
+            @if (form.get('email')?.hasError('required') && form.get('email')?.touched) {
+              <mat-error>Email is required</mat-error>
+            }
+            @if (form.get('email')?.hasError('email') && form.get('email')?.touched) {
+              <mat-error>Please enter a valid email</mat-error>
+            }
+          </mat-form-field>
+        </div>
+
+        <div class="password-field-group">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Password</mat-label>
+            <input matInput type="password" formControlName="password" placeholder="••••••••" />
+            @if (form.get('password')?.hasError('required') && form.get('password')?.touched) {
+              <mat-error>Password is required</mat-error>
+            }
+            @if (form.get('password')?.hasError('minlength') && form.get('password')?.touched) {
+              <mat-error>Password must be at least 6 characters</mat-error>
+            }
+          </mat-form-field>
+        </div>
 
         @if (error()) {
           <div class="error-message">
@@ -35,23 +41,22 @@
 
         <button
           mat-raised-button
-          color="primary"
           type="submit"
           class="full-width submit-button"
           [disabled]="form.invalid || isLoading()"
         >
           @if (isLoading()) {
             <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
-            <span class="button-text">Logging in...</span>
+            <span class="button-text">Signing in...</span>
           } @else {
-            <span class="button-text">Login</span>
+            <span class="button-text">Sign In</span>
           }
         </button>
       </form>
 
       <p class="register-link">
-        Don't have an account? <a routerLink="/register">Create one</a>
+        Don't have an account? <a routerLink="/register" class="register-link-anchor">Create one</a>
       </p>
-    </mat-card-content>
-  </mat-card>
+    </div>
+  </div>
 </div>

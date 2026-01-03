@@ -1,5 +1,11 @@
 /* You can add global styles to this file, and also import other style files */
 
+:root {
+  /* Brand color - matches the "Rehears" letters in the logo */
+  --color-brand-teal-primary: #3C9688;
+  --color-brand-teal-primary-hover: #3C9688;
+}
+
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 

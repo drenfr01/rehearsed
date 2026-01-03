@@ -1,293 +1,102 @@
 .scenario-selection-container {
   display: flex;
-  justify-content: center;
-  align-items: center;
+  flex-direction: column;
   min-height: 100vh;
-  padding: 1rem;
-  background: linear-gradient(135deg, 
-    var(--mat-sys-primary-container) 0%, 
-    var(--mat-sys-secondary-container) 50%,
-    var(--mat-sys-tertiary-container) 100%);
-  position: relative;
-  overflow: hidden;
-}
-
-/* Animated background effect */
-.scenario-selection-container::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, 
-    rgba(255, 255, 255, 0.1) 0%, 
-    transparent 70%);
-  animation: rotate 20s linear infinite;
-}
-
-@keyframes rotate {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-.scenario-selection-card {
-  width: 100%;
-  max-width: 75vw;
+  background-color: var(--mat-sys-background, #f5f5f5);
   padding: 0;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1),
-              0 16px 64px rgba(0, 0, 0, 0.08);
-  border-radius: 16px !important;
-  backdrop-filter: blur(10px);
-  position: relative;
-  z-index: 1;
-  animation: fadeInUp 0.6s ease-out;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.scenario-selection-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15),
-              0 20px 80px rgba(0, 0, 0, 0.12);
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.scenario-selection-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.full-width {
+/* Welcome Section */
+.welcome-section {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem 1rem 1.5rem;
   width: 100%;
 }
 
-.inline-fields {
-  display: flex;
-  gap: 1rem;
-  width: 100%;
-  animation: slideIn 0.4s ease-out 0.1s backwards;
+.welcome-heading {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--mat-sys-on-surface, #1a1a1a);
+  margin: 0 0 0.5rem 0;
 }
 
-.scenario-id-field {
-  flex: 0 0 100px;
-  min-width: 80px;
-}
-
-.scenario-name-field {
-  flex: 1;
-}
-
-.scenario-details {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  animation: fadeIn 0.5s ease-out;
-  padding-top: 0.5rem;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* Read-only field styling */
-mat-form-field.readonly-field {
-  opacity: 0.85;
-}
-
-mat-form-field.readonly-field input[readonly],
-mat-form-field.readonly-field textarea[readonly] {
-  cursor: not-allowed;
-  background-color: var(--mat-sys-surface-variant);
-  color: var(--mat-sys-on-surface-variant);
-}
-
-/* Field label and content styling */
-.field-label {
-  display: block;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--mat-sys-on-surface-variant);
-  margin-bottom: 0.5rem;
-  letter-spacing: 0.5px;
-}
-
-.field-content {
-  background-color: var(--mat-sys-surface-variant);
-  color: var(--mat-sys-on-surface-variant);
-  padding: 1rem;
-  border-radius: 4px;
-  line-height: 1.6;
-  text-align: justify;
-  border: 1px solid var(--mat-sys-outline-variant);
-  cursor: not-allowed;
-  min-height: 80px;
-  white-space: normal;
-  word-wrap: break-word;
-  animation: slideIn 0.4s ease-out 0.2s backwards;
-}
-
-mat-form-field {
-  animation: slideIn 0.4s ease-out backwards;
-}
-
-.full-width:has(.field-content) {
-  animation: slideIn 0.4s ease-out 0.2s backwards;
-}
-
-mat-form-field.full-width {
-  animation-delay: 0.3s;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-.submit-button {
-  margin-top: 0.75rem;
-  height: 52px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
+.welcome-description {
   font-size: 1rem;
-  font-weight: 500;
-  letter-spacing: 0.5px;
-  border-radius: 8px !important;
-  transition: all 0.3s ease;
-  animation: slideIn 0.4s ease-out 0.5s backwards;
-}
-
-.submit-button:not([disabled]):hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-}
-
-.submit-button:not([disabled]):active {
-  transform: translateY(0);
-}
-
-.button-text {
-  display: inline-block;
-}
-
-.error-message {
-  color: var(--mat-sys-error);
-  background-color: var(--mat-sys-error-container);
-  padding: 1rem 1.25rem;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  margin-top: 0.5rem;
-  border-left: 4px solid var(--mat-sys-error);
-  animation: shake 0.5s ease-in-out;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-@keyframes shake {
-  0%, 100% {
-    transform: translateX(0);
-  }
-  25% {
-    transform: translateX(-10px);
-  }
-  75% {
-    transform: translateX(10px);
-  }
-}
-
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem 2rem;
-  gap: 1.5rem;
-}
-
-.loading-text {
-  color: var(--mat-sys-on-surface-variant);
-  font-size: 1rem;
-  font-weight: 500;
+  color: var(--mat-sys-on-surface-variant, #666);
   margin: 0;
 }
 
-mat-card-header {
-  padding: 2rem 2rem 1rem;
-  background: linear-gradient(180deg, 
-    var(--mat-sys-surface-container) 0%, 
-    transparent 100%);
-  border-radius: 16px 16px 0 0;
+/* Form Container */
+.scenario-form-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1rem 2rem;
+  width: 100%;
 }
 
-mat-card-title {
-  font-size: 1.75rem;
+/* Scenarios Grid */
+.scenarios-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+/* Scenario Card */
+.scenario-card {
+  flex: 1;
+  min-width: calc(50% - 0.75rem);
+  padding: 0 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
+  border-radius: 8px;
+}
+
+.scenario-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.scenario-card-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1.5rem !important;
+}
+
+/* Card Header */
+.scenario-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.scenario-title {
+  font-size: 1.25rem;
   font-weight: 600;
-  background: linear-gradient(135deg, 
-    var(--mat-sys-primary) 0%, 
-    var(--mat-sys-tertiary) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  letter-spacing: 0.5px;
+  color: var(--mat-sys-on-surface, #1a1a1a);
+  margin: 0;
+  flex: 1;
+  line-height: 1.4;
 }
 
-mat-card-content {
-  padding: 1rem 2rem 2rem;
-}
-
-/* Scenario type icons in dropdown */
-.global-icon {
-  color: #1976d2;
-  margin-right: 8px;
-  font-size: 18px;
-  width: 18px;
-  height: 18px;
-}
-
-.local-icon {
-  color: #43a047;
-  margin-right: 8px;
-  font-size: 18px;
-  width: 18px;
-  height: 18px;
-}
-
-/* Scenario type badge */
+/* Scenario Type Badge */
 .scenario-type-badge {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 8px 16px;
-  border-radius: 20px;
+  gap: 0.25rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 1rem;
   font-size: 0.875rem;
   font-weight: 500;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .scenario-type-badge.global {
@@ -301,58 +110,129 @@ mat-card-content {
 }
 
 .scenario-type-badge mat-icon {
-  font-size: 18px;
-  width: 18px;
-  height: 18px;
+  font-size: 1rem;
+  width: 1rem;
+  height: 1rem;
 }
 
-/* Copy section */
-.copy-section {
-  padding-top: 0.5rem;
-  animation: fadeIn 0.4s ease-out;
+/* Description */
+.scenario-description {
+  font-size: 0.9375rem;
+  color: var(--mat-sys-on-surface-variant, #666);
+  margin: 0 0 1rem 0;
+  flex: 1;
+  line-height: 1.5;
 }
 
-.copy-section button {
+/* View Details Button */
+.view-details-button {
+  width: 100%;
+  margin-top: auto;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: 4px;
+}
+
+.view-details-button[color="primary"] {
+  background-color: var(--mat-sys-primary, #6200ee);
+  color: var(--mat-sys-on-primary, #fff);
+}
+
+.view-details-button[color="primary"]:hover:not([disabled]) {
+  background-color: var(--mat-sys-primary-container, #7c3aed);
+}
+
+/* Loading Container */
+.loading-container {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  padding: 4rem 2rem;
+  gap: 1.5rem;
+  min-height: 50vh;
 }
 
-/* Responsive adjustments */
+.loading-text {
+  color: var(--mat-sys-on-surface-variant, #666);
+  font-size: 1rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+/* Error Message */
+.error-message {
+  color: var(--mat-sys-error, #b00020);
+  background-color: var(--mat-sys-error-container, #ffebee);
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  margin-top: 1rem;
+  border-left: 4px solid var(--mat-sys-error, #b00020);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  width: calc(100% - 2rem);
+}
+
+/* Responsive Design */
 @media (max-width: 768px) {
-  .scenario-selection-card {
-    max-width: 90vw;
+  .welcome-section {
+    padding: 1.5rem 1rem 1rem;
+  }
+
+  .welcome-heading {
+    font-size: 1.25rem;
+  }
+
+  .welcome-description {
+    font-size: 0.9375rem;
+  }
+
+  .scenario-form-container {
+    padding: 0 1rem 1.5rem;
+  }
+
+  .scenarios-grid {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .scenario-card {
+    min-width: 100%;
+  }
+
+  .scenario-card-content {
+    padding: 1.25rem !important;
+  }
+
+  .scenario-title {
+    font-size: 1.125rem;
   }
 }
 
 @media (max-width: 480px) {
-  .scenario-selection-card {
-    border-radius: 12px !important;
-  }
-  
-  mat-card-header {
-    padding: 1.5rem 1.5rem 0.75rem;
-  }
-  
-  mat-card-title {
-    font-size: 1.5rem;
-  }
-  
-  mat-card-content {
-    padding: 0.75rem 1.5rem 1.5rem;
+  .welcome-section {
+    padding: 1rem 0.75rem 0.75rem;
   }
 
-  .inline-fields {
+  .scenario-form-container {
+    padding: 0 0.75rem 1rem;
+  }
+
+  .scenario-card-content {
+    padding: 1rem !important;
+  }
+
+  .scenario-card-header {
     flex-direction: column;
-    gap: 1.25rem;
-  }
-
-  .scenario-id-field {
-    flex: 1;
+    align-items: flex-start;
+    gap: 0.5rem;
   }
 
   .scenario-type-badge {
-    margin-top: 0.5rem;
+    align-self: flex-start;
   }
 }
-

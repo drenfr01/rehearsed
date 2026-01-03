@@ -1,116 +1,55 @@
 <div class="scenario-selection-container">
-  <mat-card class="scenario-selection-card">
-    <mat-card-header>
-      <mat-card-title>Select Your Scenario</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      @if (isLoading()) {
-        <div class="loading-container">
-          <app-loading-spinner></app-loading-spinner>
-          <p class="loading-text">Loading scenarios...</p>
-        </div>
-      } @else {
-        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="scenario-selection-form">
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Select Scenario</mat-label>
-            <mat-select formControlName="selectedScenario">
-              <!-- Global Scenarios Section -->
-              @if (globalScenarios().length > 0) {
-                <mat-optgroup label="Global Scenarios">
-                  @for (scenario of globalScenarios(); track scenario.id) {
-                    <mat-option [value]="scenario">
-                      <mat-icon class="global-icon">public</mat-icon>
-                      {{ scenario.name }}
-                    </mat-option>
-                  }
-                </mat-optgroup>
-              }
-              <!-- My Scenarios Section -->
-              @if (myScenarios().length > 0) {
-                <mat-optgroup label="My Scenarios">
-                  @for (scenario of myScenarios(); track scenario.id) {
-                    <mat-option [value]="scenario">
-                      <mat-icon class="local-icon">person</mat-icon>
-                      {{ scenario.name }}
-                    </mat-option>
-                  }
-                </mat-optgroup>
-              }
-            </mat-select>
-            @if (form.get('selectedScenario')?.hasError('required') && form.get('selectedScenario')?.touched) {
-              <mat-error>Please select a scenario</mat-error>
-            }
-          </mat-form-field>
+  @if (isLoading()) {
+    <div class="loading-container">
+      <app-loading-spinner></app-loading-spinner>
+      <p class="loading-text">Loading scenarios...</p>
+    </div>
+  } @else {
+    <!-- Welcome Section -->
+    <div class="welcome-section">
+      <h2 class="welcome-heading">Welcome Back, Teacher!</h2>
+      <p class="welcome-description">Select a simulation to practice your teaching discourse moves</p>
+    </div>
 
-          @if (selectedScenario) {
-            <div class="scenario-details">
-              <div class="inline-fields">
-                <mat-form-field appearance="outline" class="scenario-id-field readonly-field">
-                  <mat-label>ID</mat-label>
-                  <input matInput type="text" [value]="selectedScenario.id" readonly />
-                </mat-form-field>
-
-                <mat-form-field appearance="outline" class="scenario-name-field readonly-field">
-                  <mat-label>Scenario Name</mat-label>
-                  <input matInput type="text" [value]="selectedScenario.name" readonly />
-                </mat-form-field>
-
-                <div class="scenario-type-badge" [class.global]="selectedScenario.is_global" [class.local]="!selectedScenario.is_global">
-                  <mat-icon>{{ selectedScenario.is_global ? 'public' : 'person' }}</mat-icon>
-                  {{ selectedScenario.is_global ? 'Global' : 'My Scenario' }}
-                </div>
+    <!-- Scenarios Grid -->
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="scenario-form-container">
+      <div class="scenarios-grid">
+        @for (scenario of allScenarios(); track scenario.id) {
+        <mat-card class="scenario-card">
+          <mat-card-content class="scenario-card-content">
+            <!-- Card Header with Title and Badge -->
+            <div class="scenario-card-header">
+              <h3 class="scenario-title">{{ scenario.name }}</h3>
+              <div class="scenario-type-badge" [class.global]="scenario.is_global" [class.local]="!scenario.is_global">
+                <mat-icon>{{ scenario.is_global ? 'public' : 'person' }}</mat-icon>
+                {{ scenario.is_global ? 'Global' : 'My Scenario' }}
               </div>
-
-              <div class="full-width">
-                <label class="field-label">Overview</label>
-                <div class="field-content">
-                  {{ selectedScenario.overview }}
-                </div>
-              </div>
-
-              @if (selectedScenario.is_global) {
-                <div class="copy-section">
-                  <button
-                    mat-stroked-button
-                    color="primary"
-                    type="button"
-                    (click)="copyToMyScenarios(selectedScenario)"
-                    [disabled]="isCopying()"
-                    matTooltip="Create a personal copy of this scenario that you can customize"
-                  >
-                    <mat-icon>content_copy</mat-icon>
-                    @if (isCopying()) {
-                      Copying...
-                    } @else {
-                      Copy to My Scenarios
-                    }
-                  </button>
-                </div>
-              }
             </div>
-          }
 
-          @if (error()) {
-            <div class="error-message">
-              {{ error() }}
-            </div>
-          }
+            <!-- Description -->
+            <p class="scenario-description">{{ scenario.description || scenario.overview }}</p>
 
-          <button
-            mat-raised-button
-            color="primary"
-            type="submit"
-            class="full-width submit-button"
-            [disabled]="form.invalid || isLoading()"
-          >
-            @if (isLoading()) {
-              <span class="button-text">Submitting...</span>
-            } @else {
-              <span class="button-text">Select Scenario</span>
-            }
-          </button>
-        </form>
-      }
-    </mat-card-content>
-  </mat-card>
+            <!-- Action Button -->
+            <button
+              mat-raised-button
+              color="primary"
+              type="button"
+              class="view-details-button"
+              [disabled]="isLoading()"
+              (click)="form.patchValue({selectedScenario: scenario}); form.markAsTouched(); onSubmit();"
+            >
+              View Details
+            </button>
+          </mat-card-content>
+        </mat-card>
+        }
+      </div>
+    </form>
+
+    @if (error()) {
+      <div class="error-message">
+        {{ error() }}
+      </div>
+    }
+  }
 </div>

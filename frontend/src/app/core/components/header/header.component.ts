@@ -47,10 +47,10 @@ export class Header {
 
   getTruncatedSessionId(): string {
     const sessionToken = this.token();
-    if (!sessionToken) return '';
-    // Show first 8 and last 4 characters
-    if (sessionToken.length <= 12) return sessionToken;
-    return `${sessionToken.slice(0, 8)}...${sessionToken.slice(-4)}`;
+    if (!sessionToken) return 'No session ID';
+    // Show first 4 and last 4 characters
+    if (sessionToken.length <= 8) return sessionToken;
+    return `${sessionToken.slice(0, 4)}...${sessionToken.slice(-4)}`;
   }
 
   logout() {

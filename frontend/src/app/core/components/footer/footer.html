@@ -1,24 +1,32 @@
 <mat-toolbar color="primary" class="app-footer">
   <div class="footer-container">
     <div class="footer-content">
-      <div class="copyright">
-        <mat-icon>copyright</mat-icon>
-        <span>Rehearsed Copyright {{ currentYear }}</span>
+      <div class="footer-left"></div>
+      
+      <div class="footer-center">
+        <img src="/rehearsed-logo.png" alt="Rehearsed Logo" class="footer-logo" />
       </div>
       
-      <nav class="footer-links">
-        @for (link of footerLinks; track link.path) {
-          <a 
-            mat-button
-            [routerLink]="link.path" 
-            routerLinkActive="active-link"
-            class="footer-link"
-          >
-            <mat-icon>{{ link.icon }}</mat-icon>
-            {{ link.label }}
-          </a>
-        }
-      </nav>
+      <div class="footer-right">
+        <div class="copyright">
+          <mat-icon>copyright</mat-icon>
+          <span>Rehearsed Copyright {{ currentYear }}</span>
+        </div>
+        
+        <nav class="footer-links">
+          @for (link of footerLinks; track link.path) {
+            <a 
+              mat-button
+              [routerLink]="link.path" 
+              routerLinkActive="active-link"
+              class="footer-link"
+            >
+              <mat-icon>{{ link.icon }}</mat-icon>
+              {{ link.label }}
+            </a>
+          }
+        </nav>
+      </div>
     </div>
   </div>
 </mat-toolbar>

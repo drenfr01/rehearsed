@@ -2,28 +2,12 @@
   position: relative;
   bottom: 0;
   z-index: 1000;
-  background-color: rgba(var(--mat-sys-primary-rgb), 0.95) !important;
-  backdrop-filter: blur(10px);
+  background-color: white !important;
+  border-top: 1px solid black;
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.15);
   margin-top: auto;
   min-height: 64px;
-}
-
-/* Fallback for browsers that don't support CSS custom properties with rgb */
-.app-footer::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    135deg,
-    var(--mat-sys-primary) 0%,
-    var(--mat-sys-primary-container) 100%
-  );
-  opacity: 0.95;
-  z-index: -1;
+  color: rgba(0, 0, 0, 0.87) !important;
 }
 
 .footer-container {
@@ -46,6 +30,30 @@
   gap: 2rem;
 }
 
+.footer-left {
+  flex: 1;
+}
+
+.footer-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.footer-logo {
+  height: 40px;
+  object-fit: contain;
+}
+
+.footer-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
 .copyright {
   display: flex;
   align-items: center;
@@ -53,6 +61,7 @@
   font-size: 0.875rem;
   font-weight: 500;
   white-space: nowrap;
+  color: rgba(0, 0, 0, 0.87);
 }
 
 .copyright mat-icon {
@@ -82,7 +91,7 @@
 }
 
 .footer-link.active-link {
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: rgba(0, 0, 0, 0.08);
 }
 
 /* Responsive design */
@@ -92,6 +101,23 @@
     gap: 1rem;
     padding: 1rem 0;
     text-align: center;
+  }
+
+  .footer-left,
+  .footer-center,
+  .footer-right {
+    flex: none;
+    width: 100%;
+  }
+
+  .footer-center {
+    order: 1;
+  }
+
+  .footer-right {
+    order: 2;
+    flex-direction: column;
+    gap: 0.75rem;
   }
 
   .copyright {

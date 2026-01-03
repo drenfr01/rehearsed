@@ -1,6 +1,7 @@
 @if (isLoggedIn()) {
   <mat-toolbar color="primary" class="app-header">
     <div class="header-container">
+      <img src="/rehearsed-logo.png" alt="Rehearsed Logo" class="header-logo" />
       <nav class="nav-center">
         @for (route of routes; track route.path) {
           <a 
@@ -41,19 +42,12 @@
       </nav>
       
       <div class="nav-right">
-        <span 
-          class="session-id" 
-          [matTooltip]="token() || ''"
-          matTooltipPosition="below"
-        >
-          <mat-icon>vpn_key</mat-icon>
-          {{ getTruncatedSessionId() }}
-        </span>
-        
         <button 
           mat-raised-button 
           color="accent"
           (click)="createSession()"
+          [matTooltip]="getTruncatedSessionId()"
+          matTooltipPosition="below"
         >
           <mat-icon>add_circle</mat-icon>
           New Session
@@ -63,6 +57,7 @@
           mat-raised-button 
           color="warn"
           (click)="logout()"
+          class="logout-button"
         >
           <mat-icon>logout</mat-icon>
           Logout

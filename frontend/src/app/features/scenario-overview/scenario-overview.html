@@ -66,8 +66,10 @@
           [disabled]="isLoading()"
         >
           @if (isLoading()) {
-            <mat-icon class="spinner-icon">hourglass_empty</mat-icon>
-            <span>Starting...</span>
+            <ng-container>
+              <mat-icon class="spinner-icon">hourglass_empty</mat-icon>
+              <span>Starting...</span>
+            </ng-container>
           } @else {
             <span>Begin Simulation</span>
           }

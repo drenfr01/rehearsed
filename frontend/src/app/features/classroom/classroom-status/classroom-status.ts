@@ -5,6 +5,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { Agent } from '../../../core/models/agent.model';
 import { Message } from '../../../core/models/chat-graph.model';
 import { ScenarioService } from '../../../core/services/scenario.service';
+import { gcsUriToHttpUrl } from '../../../core/utils/gcs-uri.util';
 
 export interface StudentStatus {
   agent: Agent;
@@ -89,9 +90,12 @@ export class ClassroomStatus implements OnInit {
     });
   }
 
-  // Get icon for student based on their index
-  getStudentIcon(index: number): string {
-    return 'smart_toy'
+  // Get avatar URL for an agent
+  getAvatarUrl(agent: Agent): string {
+    if (agent.avatar_gcs_uri) {
+      return gcsUriToHttpUrl(agent.avatar_gcs_uri);
+    }
+    return '';
   }
 
   // Get a color class based on the agent's display_text_color

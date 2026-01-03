@@ -1,9 +1,4 @@
 <div class="classroom-status">
-  <div class="status-header">
-    <mat-icon class="header-icon">groups</mat-icon>
-    <h4>Students</h4>
-  </div>
-  
   @if (isLoading()) {
     <div class="loading-state">
       <div class="loading-spinner"></div>
@@ -25,18 +20,26 @@
         <div 
           class="student-card" 
           [class]="getColorClass(status.agent.display_text_color)"
-          [matTooltip]="status.agent.name"
-          matTooltipPosition="above"
         >
-          <div class="student-avatar">
-            <mat-icon class="student-icon">{{ getStudentIcon(i) }}</mat-icon>
+          @if (getAvatarUrl(status.agent)) {
+            <img 
+              [src]="getAvatarUrl(status.agent)" 
+              [alt]="status.agent.name"
+              class="student-avatar-img"
+            />
+          } @else {
+            <div class="student-avatar-placeholder">
+              <mat-icon class="student-icon">person</mat-icon>
+            </div>
+          }
+          <div class="message-counter">
+            <span class="counter-value">{{ status.messageCount }}</span>
           </div>
           <div class="student-info">
-            <span class="student-name">{{ status.agent.name }}</span>
-            <div class="message-counter">
-              <mat-icon class="counter-icon">chat_bubble</mat-icon>
-              <span class="counter-value">{{ status.messageCount }}</span>
-            </div>
+            <div class="student-name">{{ status.agent.name }}</div>
+            @if (status.agent.agent_personality?.personality_description) {
+              <div class="student-personality">{{ status.agent.agent_personality?.personality_description }}</div>
+            }
           </div>
         </div>
       }

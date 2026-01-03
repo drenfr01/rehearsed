@@ -1,60 +1,15 @@
 <div class="classroom-container">
   <mat-card class="classroom-card">
-    <mat-card-header>
-      <mat-card-title>Classroom Discussion</mat-card-title>
-      <app-classroom-status [messages]="messages()" class="header-status"></app-classroom-status>
-    </mat-card-header>
     <mat-card-content>
-      <div class="two-column-layout">
-        <!-- Left Column: Messages and Chat Input -->
-        <div class="messages-column">
-          <div class="messages-container">
-            @for (message of messages(); track $index) {
-              <div class="message-wrapper" [class.user-message]="message.role === 'user'" [class.assistant-message]="message.role === 'assistant'">
-                @if (message.role === 'user') {
-                  <div class="message-content-wrapper">
-                    <mat-icon class="message-icon user-icon">school</mat-icon>
-                    <div class="message-bubble user-bubble">
-                      {{ message.content }}
-                    </div>
-                  </div>
-                } @else {
-                  <div class="message-content-wrapper">
-                    <div class="assistant-content">
-                      <div class="message-bubble assistant-bubble">
-                        <div class="message-text-with-audio">
-                          <span class="message-text">{{ message.content }}</span>
-                          @if (hasAudioForMessage(message)) {
-                            <button 
-                              mat-icon-button 
-                              (click)="togglePlayPauseForMessage($index, message.audio_base64!)"
-                              class="inline-audio-button"
-                              [class.playing]="isMessagePlaying($index)"
-                              aria-label="Play or pause audio"
-                            >
-                              <mat-icon>{{ isMessagePlaying($index) ? 'pause_circle' : 'play_circle' }}</mat-icon>
-                            </button>
-                          }
-                        </div>
-                      </div>
-                    </div>
-                    <div class="icon-label-wrapper" [ngClass]="getAgentColorClass(message.student_name)">
-                      <mat-icon class="message-icon assistant-icon">smart_toy</mat-icon>
-                      <div class="student-label">{{ message.student_name ?? 'Unknown' }}</div>
-                    </div>
-                  </div>
-                }
-              </div>
-            }
-            @if (messages().length === 0) {
-              <div class="no-messages">
-                <mat-icon class="empty-icon">chat_bubble_outline</mat-icon>
-                <p>No messages yet. Start the conversation!</p>
-              </div>
-            }
-          </div>
+      <!-- Student Panel - Centered at top -->
+      <div class="student-panel-container">
+        <app-classroom-status [messages]="messages()"></app-classroom-status>
+      </div>
 
-          <!-- Chat Input Area -->
+      <div class="two-column-layout">
+        <!-- Left Column: Chat Input and Messages -->
+        <div class="messages-column">
+          <!-- Chat Input Area - At top of column -->
           <div class="chat-input-area">
             @if (error()) {
               <div class="error-message">
@@ -71,7 +26,7 @@
                     [(ngModel)]="userInput"
                     [value]="userInput()"
                     (ngModelChange)="userInput.set($event)"
-                    placeholder="Type your message here..."
+                    placeholder="Type your response or question to the students..."
                     rows="2"
                     [disabled]="isLoading() || isRecording()"
                   ></textarea>
@@ -145,26 +100,82 @@
               }
             </div>
           </div>
+
+          <!-- Messages Container -->
+          <div class="messages-container">
+            @for (message of messages(); track $index) {
+              <div class="message-wrapper" [class.user-message]="message.role === 'user'" [class.assistant-message]="message.role === 'assistant'">
+                @if (message.role === 'user') {
+                  <div class="message-content-wrapper">
+                    <div class="teacher-avatar">
+                      <mat-icon>school</mat-icon>
+                    </div>
+                    <div class="message-bubble user-bubble">
+                      {{ message.content }}
+                    </div>
+                  </div>
+                } @else {
+                  <div class="message-content-wrapper">
+                    @if (getStudentAvatarUrl(message.student_name)) {
+                      <img 
+                        [src]="getStudentAvatarUrl(message.student_name)" 
+                        [alt]="message.student_name ?? 'Student'"
+                        class="student-avatar-img"
+                      />
+                    } @else {
+                      <div class="student-avatar-placeholder" [ngClass]="getAgentColorClass(message.student_name)">
+                        <mat-icon class="message-icon assistant-icon">smart_toy</mat-icon>
+                      </div>
+                    }
+                    <div class="assistant-content">
+                      <div class="student-name-label">{{ message.student_name ?? 'Unknown' }}</div>
+                      <div class="message-bubble assistant-bubble">
+                        <div class="message-text-with-audio">
+                          <span class="message-text">{{ message.content }}</span>
+                          @if (hasAudioForMessage(message)) {
+                            <button 
+                              mat-icon-button 
+                              (click)="togglePlayPauseForMessage($index, message.audio_base64!)"
+                              class="inline-audio-button"
+                              [class.playing]="isMessagePlaying($index)"
+                              aria-label="Play or pause audio"
+                            >
+                              <mat-icon>{{ isMessagePlaying($index) ? 'pause_circle' : 'play_circle' }}</mat-icon>
+                            </button>
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+            @if (messages().length === 0) {
+              <div class="no-messages">
+                <mat-icon class="empty-icon">chat_bubble_outline</mat-icon>
+                <p>No messages yet. Start the conversation!</p>
+              </div>
+            }
+          </div>
         </div>
 
-        <!-- Right Column: Inline Feedback -->
+        <!-- Right Column: Immediate Feedback -->
         <div class="feedback-column">
           <div class="feedback-header">
             <mat-icon class="feedback-icon">feedback</mat-icon>
-            <h3>Inline Feedback</h3>
+            <h3>Immediate Feedback</h3>
           </div>
           <div class="feedback-content">
             @if (inlineFeedback().length > 0) {
               @for (feedback of inlineFeedback(); track $index) {
                 <div class="feedback-item">
-                  <div class="feedback-number">{{ $index + 1 }}</div>
                   <div class="feedback-text">{{ feedback }}</div>
                 </div>
               }
             } @else {
               <div class="no-feedback">
                 <mat-icon class="empty-feedback-icon">info_outline</mat-icon>
-                <p>No feedback available yet.</p>
+                <p>Let's get started with opening up the discussion.</p>
               </div>
             }
           </div>

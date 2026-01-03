@@ -104,6 +104,11 @@ export class ScenarioSelection {
     });
   }
 
+  selectScenario(scenario: Scenario) {
+    this.form.patchValue({ selectedScenario: scenario });
+    this.onSubmit();
+  }
+
   onSubmit() {
     if (this.form.invalid) return;
     

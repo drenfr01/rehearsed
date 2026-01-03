@@ -29,7 +29,7 @@ from app.schemas.scenario import (
     AddScenarioResponse,
     ScenarioWithOwnerResponse,
 )
-from app.schemas.agent import AgentResponse
+from app.schemas.agent import AgentResponse, AgentPersonalityResponse
 from app.models.scenario import Scenario
 from app.utils.auth import verify_token
 from app.utils.sanitization import sanitize_string
@@ -236,8 +236,17 @@ async def get_scenario_agents(
                 name=a.name,
                 scenario_id=a.scenario_id,
                 agent_personality_id=a.agent_personality_id,
+                agent_personality=AgentPersonalityResponse(
+                    id=a.agent_personality.id,
+                    name=a.agent_personality.name,
+                    personality_description=a.agent_personality.personality_description,
+                    created_at=a.agent_personality.created_at,
+                    owner_id=a.agent_personality.owner_id,
+                    is_global=a.agent_personality.owner_id is None,
+                ) if a.agent_personality else None,
                 voice=a.voice.voice_name if a.voice else "",
                 display_text_color=a.display_text_color,
+                avatar_gcs_uri=a.avatar_gcs_uri or "",
                 objective=a.objective,
                 instructions=a.instructions,
                 constraints=a.constraints,

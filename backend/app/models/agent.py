@@ -57,6 +57,7 @@ class Agent(BaseModel, table=True):
     voice_id: Optional[int] = Field(default=None, foreign_key="agent_voice.id")
     voice: Optional["AgentVoice"] = Relationship()
     display_text_color: str = Field(default="")
+    avatar_gcs_uri: str = Field(default="")
 
     # System instructions for the agent
     objective: str = Field(default="")

@@ -55,7 +55,9 @@ class LangGraphAgent:
         self.llm = ChatGoogleGenerativeAI(
             model=settings.LLM_MODEL,
             temperature=settings.DEFAULT_LLM_TEMPERATURE,
-            google_api_key=settings.LLM_API_KEY,
+            api_key=settings.LLM_API_KEY,
+            project=settings.GOOGLE_CLOUD_PROJECT,
+            location=settings.GOOGLE_CLOUD_LOCATION,
             max_tokens=settings.MAX_TOKENS,
             **self._get_model_kwargs(),
         ).bind_tools(tools)

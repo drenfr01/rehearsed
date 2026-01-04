@@ -14,7 +14,13 @@ def load_feedback_data(session: Session) -> list[Feedback]:
     Args:
         session: Database session to look up scenario IDs by name
     """
-    with open(os.path.join(os.path.dirname(__file__), "feedback_data.yaml"), "r") as f:
+    # Load common fields (objective, instructions, constraints) for each feedback type
+    common_file_path = os.path.join(os.path.dirname(__file__), "feedback_data_common.yaml")
+    with open(common_file_path, "r") as f:
+        common_fields = safe_load(f)
+    
+    # Load scenario-specific feedback data
+    with open(os.path.join(os.path.dirname(__file__), "feedback_data_scenario_specific.yaml"), "r") as f:
         feedback_data_yaml = safe_load(f)
     
     # Build cache of scenario names to IDs
@@ -28,12 +34,19 @@ def load_feedback_data(session: Session) -> list[Feedback]:
         if scenario_id is None:
             raise ValueError(f"Scenario '{scenario_name}' not found. Make sure scenarios are seeded first.")
         
+        feedback_type = feedback_data["feedback_type"]
+        
+        # Get common fields for this feedback type
+        common = common_fields.get(feedback_type)
+        if common is None:
+            raise ValueError(f"Common fields not found for feedback_type '{feedback_type}' in global_feedback_common.yaml")
+        
         feedback = Feedback(
-            feedback_type=FeedbackType(feedback_data["feedback_type"]),
+            feedback_type=FeedbackType(feedback_type),
             scenario_id=scenario_id,
-            objective=feedback_data["objective"],
-            instructions=feedback_data["instructions"],
-            constraints=feedback_data["constraints"],
+            objective=common["objective"],
+            instructions=common["instructions"],
+            constraints=common["constraints"],
             context=feedback_data["context"],
             output_format=feedback_data.get("output_format", ""),
             owner_id=feedback_data.get("owner_id"),  # None for global feedback

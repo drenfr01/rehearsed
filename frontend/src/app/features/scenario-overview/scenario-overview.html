@@ -39,6 +39,19 @@
         </mat-card>
       }
 
+      <!-- Initial Prompt Section -->
+      @if (scenario()!.initial_prompt) {
+        <mat-card class="overview-card">
+          <div class="overview-content">
+            <mat-icon class="section-icon">chat</mat-icon>
+            <div class="overview-text">
+              <h3 class="section-heading">Initial Prompt</h3>
+              <p class="section-description">{{ scenario()!.initial_prompt }}</p>
+            </div>
+          </div>
+        </mat-card>
+      }
+
       <!-- Student Profiles -->
       @if (agents().length > 0) {
         <mat-card class="student-profiles-card">

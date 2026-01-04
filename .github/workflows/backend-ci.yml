@@ -22,7 +22,7 @@ jobs:
         with:
           python-version-file: "backend/.python-version"
 
-      - name: Install libq
+      - name: Install libpq-dev
         run: |
           apt update && apt install -y libpq-dev
 

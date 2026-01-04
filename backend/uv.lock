@@ -2898,7 +2898,7 @@ requires-dist = [
     { name = "langchain", specifier = ">=0.3.25" },
     { name = "langchain-community", specifier = ">=0.3.20" },
     { name = "langchain-core", specifier = ">=0.3.58" },
-    { name = "langchain-google-genai", specifier = ">=2.1.12" },
+    { name = "langchain-google-genai", specifier = ">=4.1.2" },
     { name = "langchain-openai", specifier = ">=0.3.16" },
     { name = "langfuse", specifier = ">=3.10.0" },
     { name = "langgraph", specifier = ">=0.4.1" },

@@ -20,6 +20,7 @@ from langgraph.graph.state import (
 from langgraph.types import (
     Command,
     interrupt,
+    RetryPolicy,
 )
 from psycopg_pool import AsyncConnectionPool
 
@@ -114,10 +115,19 @@ class LangGraphBuilder:
     def _build_graph(self) -> StateGraph:
         graph_builder = StateGraph(GraphState)
         
+        # Configure retry policy: retry once after 1 second
+        retry_policy = RetryPolicy(
+            max_attempts=2,        # Total attempts: initial + 1 retry
+            initial_interval=1.0,  # Wait 1 second before retrying
+            backoff_factor=1.0,    # No exponential backoff
+            max_interval=1.0,      # Maximum interval between retries
+            jitter=False           # No random jitter
+        )
+        
         # Initial Nodes
-        graph_builder.add_node("check_appropriate_response", self._check_appropriate_response)
-        graph_builder.add_node("pick_answering_student", self._pick_answering_student)
-        graph_builder.add_node("gather_new_human_response", self._gather_new_human_response)
+        graph_builder.add_node("check_appropriate_response", self._check_appropriate_response, retry_policy=retry_policy)
+        graph_builder.add_node("pick_answering_student", self._pick_answering_student, retry_policy=retry_policy)
+        graph_builder.add_node("gather_new_human_response", self._gather_new_human_response, retry_policy=retry_policy)
 
         # Dynamically create student agent nodes based on agents from the database
         student_node_names = []
@@ -126,13 +136,13 @@ class LangGraphBuilder:
             student_node_names.append(node_name)
             # Create a closure to capture the agent for each node
             node_handler = self._create_student_agent_handler(agent, idx + 1)
-            graph_builder.add_node(node_name, node_handler)
+            graph_builder.add_node(node_name, node_handler, retry_policy=retry_policy)
 
         # Feedback nodes
-        graph_builder.add_node("inline_feedback_agent", self._inline_feedback_agent)
-        graph_builder.add_node("additional_user_input", self._additional_user_input)
-        graph_builder.add_node("check_if_goals_achieved", self._check_if_goals_achieved)
-        graph_builder.add_node("generate_summary_feedback", self._generate_summary_feedback)
+        graph_builder.add_node("inline_feedback_agent", self._inline_feedback_agent, retry_policy=retry_policy)
+        graph_builder.add_node("additional_user_input", self._additional_user_input, retry_policy=retry_policy)
+        graph_builder.add_node("check_if_goals_achieved", self._check_if_goals_achieved, retry_policy=retry_policy)
+        graph_builder.add_node("generate_summary_feedback", self._generate_summary_feedback, retry_policy=retry_policy)
 
         # Edges
         graph_builder.add_edge(START, "check_appropriate_response")

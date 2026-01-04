@@ -381,7 +381,7 @@ class LangGraphBuilder:
             return {"learning_goals_achieved": False}
 
     async def _generate_summary_feedback(self, state: GraphState) -> GraphState:
-        """This node is used to generate a summary feedback for the entire conversation"""
+        """Generate summary feedback for the entire conversation."""
         feedback = await database_service.get_feedback_by_type("summary", self._scenario_id)
         if feedback is None:
             logger.warning("summary_feedback_not_found", scenario_id=self._scenario_id)

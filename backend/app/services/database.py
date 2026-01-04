@@ -156,7 +156,7 @@ class DatabaseService:
             List[User]: List of unapproved users
         """
         with Session(self.engine) as session:
-            statement = select(User).where(User.is_approved == False).order_by(User.created_at)
+            statement = select(User).where(~User.is_approved).order_by(User.created_at)
             users = list(session.exec(statement).all())
             return users
 
@@ -298,20 +298,18 @@ class DatabaseService:
             return False
 
     def get_current_scenario(self) -> Scenario:
-        """
-        Returns the scenario data for the currently set scenario
+        """Return the scenario data for the currently set scenario.
 
         Returns:
-            The scenario data for the current scenario
+            The scenario data for the current scenario.
         """
         return self.current_scenario
 
     def set_scenario(self, scenario_id: int) -> None:
-        """
-        Sets the scenario data for the currently set scenario
+        """Set the scenario data for the currently set scenario.
 
         Args:
-            scenario: The scenario to set
+            scenario_id: The ID of the scenario to set.
         """
         with Session(self.engine) as session:
             statement = select(Scenario).where(Scenario.id == scenario_id)
@@ -1036,7 +1034,7 @@ class DatabaseService:
             # Get global scenarios (owner_id is NULL) and user's local scenarios
             from sqlalchemy import or_
             statement = select(Scenario).where(
-                or_(Scenario.owner_id == None, Scenario.owner_id == user_id)
+                or_(Scenario.owner_id.is_(None), Scenario.owner_id == user_id)
             ).order_by(Scenario.created_at)
             scenarios = session.exec(statement).all()
             return list(scenarios)
@@ -1069,7 +1067,7 @@ class DatabaseService:
         with Session(self.engine) as session:
             from sqlalchemy import or_
             statement = select(Agent).where(
-                or_(Agent.owner_id == None, Agent.owner_id == user_id)
+                or_(Agent.owner_id.is_(None), Agent.owner_id == user_id)
             ).options(
                 selectinload(Agent.agent_personality),
                 selectinload(Agent.voice)
@@ -1108,7 +1106,7 @@ class DatabaseService:
         with Session(self.engine) as session:
             from sqlalchemy import or_
             statement = select(AgentPersonality).where(
-                or_(AgentPersonality.owner_id == None, AgentPersonality.owner_id == user_id)
+                or_(AgentPersonality.owner_id.is_(None), AgentPersonality.owner_id == user_id)
             ).order_by(AgentPersonality.created_at)
             personalities = session.exec(statement).all()
             return list(personalities)
@@ -1141,7 +1139,7 @@ class DatabaseService:
         with Session(self.engine) as session:
             from sqlalchemy import or_
             statement = select(Feedback).where(
-                or_(Feedback.owner_id == None, Feedback.owner_id == user_id)
+                or_(Feedback.owner_id.is_(None), Feedback.owner_id == user_id)
             ).order_by(Feedback.created_at)
             feedbacks = session.exec(statement).all()
             return list(feedbacks)
@@ -1560,17 +1558,24 @@ class DatabaseService:
         """Update a user's local agent (with ownership check).
 
         Args:
-            agent_id: The ID of the agent to update
-            user_id: The ID of the user (for ownership verification)
-            voice_id: Optional new voice ID
-            clear_voice: If True, explicitly set voice_id to None
-            Other args: Optional new values
+            agent_id: The ID of the agent to update.
+            user_id: The ID of the user (for ownership verification).
+            name: Optional new name for the agent.
+            voice_id: Optional new voice ID.
+            display_text_color: Optional new display text color.
+            objective: Optional new objective.
+            instructions: Optional new instructions.
+            constraints: Optional new constraints.
+            context: Optional new context.
+            scenario_id: Optional new scenario ID.
+            agent_personality_id: Optional new agent personality ID.
+            clear_voice: If True, explicitly set voice_id to None.
 
         Returns:
-            Agent: The updated agent
+            Agent: The updated agent.
 
         Raises:
-            HTTPException: If agent is not found or user doesn't own it
+            HTTPException: If agent is not found or user doesn't own it.
         """
         with Session(self.engine) as session:
             agent = session.get(Agent, agent_id)
@@ -1789,16 +1794,21 @@ class DatabaseService:
         """Update a user's local feedback (with ownership check).
 
         Args:
-            feedback_id: The ID of the feedback to update
-            user_id: The ID of the user (for ownership verification)
-            scenario_id: Optional new scenario ID
-            Other args: Optional new values
+            feedback_id: The ID of the feedback to update.
+            user_id: The ID of the user (for ownership verification).
+            feedback_type: Optional new feedback type.
+            scenario_id: Optional new scenario ID.
+            objective: Optional new objective.
+            instructions: Optional new instructions.
+            constraints: Optional new constraints.
+            context: Optional new context.
+            output_format: Optional new output format.
 
         Returns:
-            Feedback: The updated feedback
+            Feedback: The updated feedback.
 
         Raises:
-            HTTPException: If feedback is not found or user doesn't own it
+            HTTPException: If feedback is not found or user doesn't own it.
         """
         with Session(self.engine) as session:
             feedback = session.get(Feedback, feedback_id)

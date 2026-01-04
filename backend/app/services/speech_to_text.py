@@ -9,14 +9,13 @@ class SpeechToTextService:
         self.client = speech.SpeechClient()
 
     async def transcribe_audio(self, audio_content: bytes) -> Optional[str]:
-        """
-        Transcribe audio content using Google Cloud Speech-to-Text.
+        """Transcribe audio content using Google Cloud Speech-to-Text.
 
         Args:
-            audio_content: The audio content in bytes
+            audio_content: The audio content in bytes.
 
         Returns:
-            The transcribed text or None if transcription fails
+            The transcribed text or None if transcription fails.
         """
         try:
             # Configure the audio and recognition settings

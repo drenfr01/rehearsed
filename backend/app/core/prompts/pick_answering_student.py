@@ -1,3 +1,5 @@
+"""System instructions for selecting which student should respond to the teacher's message."""
+
 PICK_ANSWERING_STUDENT_SYSTEM_INSTRUCTIONS = """
 You must select which student should respond to the teacher's latest message.
 

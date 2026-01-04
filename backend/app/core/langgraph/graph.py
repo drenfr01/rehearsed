@@ -393,10 +393,11 @@ class LangGraphBuilder:
         llm = ChatGoogleGenerativeAI(
             model="gemini-3-pro-preview",
             temperature=settings.DEFAULT_LLM_TEMPERATURE,
-            api_key=settings.LLM_API_KEY,
             project=settings.GOOGLE_CLOUD_PROJECT,
             location=settings.GOOGLE_CLOUD_LOCATION,
             max_tokens=settings.MAX_TOKENS,
+            vertexai=True,
+            google_api_key=None,  # Explicitly disable API key to force Vertex AI usage
         )
         response = llm.with_structured_output(SummaryFeedbackResponse, method="json_schema", include_raw=True).invoke(prompt)
         if response["parsed"] is None:

@@ -22,13 +22,7 @@
     2. Asked a question that surfaced why a student chose a particular slope, or asked if the student's slope was the only slope that would work or was an example of a set of potential slopes;
     3. Asked a question that explicitly connected the slope and/or the y-intercept as a feature within a graph of that line and/or a feature of that line and another line within a system of linear equations
     4. Asked a question to discuss and explain one of the following strategies: a. how a new line with the opposite-reciprocal slope and the same y-intercept of the original linear equation can make a system of linear equations with one solution, b. how a new line with the opposite-reciprocal slope of the original linear equation can make a system of linear equations with one solution,  c. how a new line with the same y-intercept of the original linear equation can make a system of linear equations with one solution, d. how a new line with a non-equivalent slope of the original linear equation can make a system of linear equations with one solution.
-  output_format: |
-    The output format must be in markdown format.
-    1. List the Skill as a Header
-    2. List the Subskill as a Subheader
-    3. List an example of what the user did to demonstrate that subskill, and describe why it was a good example using 1-2 sentences.
-    4. If the user did not demonstrate that subskill, describe how the user could demonstrate that subskill in the conversation next time using 3-4 sentences.
-    5. Do this for each subskill.
+  output_format: "" 
 
 - feedback_type: "inline"
   owner_id: null  # Global feedback (admin-created)
@@ -56,11 +50,5 @@
     3. Asked a question that explicitly connected what is known in the division situation to what is being determined by the quotient operation; that if dividing by three what is known is the amount of fish in each group and what is being found is the number of groups or tanks; that if dividing by 4 what is known is the number of groups or number of tanks than what is being found is the number of fish in each tank.
     4. Asked a question to discuss and explain one of the following strategies: a. To describe what is meant by 12 divided by 3, you can make groups of three and keep going until you get to 12, and count the number of groups of 3 (which would be 4); b. To describe what is meant by 12 divided by 3, you can start with three groups, and put something in each group one at a time until you get twelve, and count the number of times you did it (which would be 4). C. To describe what is meant by 12 divided by four, you can make groups of four and keep going until you get to 12, and count the number of groups of 4 (which would be 3); d. To describe what is meant by 12 divided by 4, you can start with four groups, and put something in each group one at a time until you get to twelve, and count the number of times you did it (which would be 3).
     5. Pose pursoseful questions to use the two students’ methods to epmhasize the two different models of division: in one model of division, what you know is the size of each group and the quotient (answer) is the number of groups; in the other model, what you know is the number of groups and the quotient (answer) is the size of each group. 
-  output_format: |
-    The output format must be in markdown format.
-    1. List the Skill as a Header
-    2. List the Subskill as a Subheader
-    3. List an example of what the user did to demonstrate that subskill, and describe why it was a good example using 1-2 sentences.
-    4. If the user did not demonstrate that subskill, describe how the user could demonstrate that subskill in the conversation next time using 3-4 sentences.
-    5. Do this for each subskill.
+  output_format: ""
 

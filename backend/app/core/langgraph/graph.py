@@ -44,6 +44,7 @@ from app.schemas.graph import (
     StudentResponse,
     GraphState,
     StudentChoiceResponse,
+    SummaryFeedbackResponse,
 )
 
 
@@ -395,12 +396,12 @@ class LangGraphBuilder:
             google_api_key=settings.LLM_API_KEY,
             max_tokens=settings.MAX_TOKENS,
         )
-        response = llm.with_structured_output(GeneralResponse, method="json_schema", include_raw=True).invoke(prompt)
+        response = llm.with_structured_output(SummaryFeedbackResponse, method="json_schema", include_raw=True).invoke(prompt)
         if response["parsed"] is None:
             logger.error("summary_feedback_generation_failed", error=response["raw"], exc_info=True)
             return {"summary_feedback": "Could not generate summary feedback"}
 
-        return {"summary_feedback": response["parsed"].llm_response}
+        return {"summary_feedback": response["parsed"]}
 
     async def _route_appropriate_response(self, state: GraphState) -> GraphState:
         """This node is used to route the conversation based on if the human response is appropriate.

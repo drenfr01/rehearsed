@@ -77,6 +77,38 @@ class GeneralResponse(BaseModel):
         description="The complete, detailed response from the LLM. Include all relevant feedback, explanations, and recommendations without truncation. This field should contain the full response text."
     )
 
+class SummaryFeedbackResponse(BaseModel):
+    """Model for the summary feedback response."""
+
+    lesson_summary: str = Field(
+        ..., 
+        description="What happened in the lesson"
+    )
+    key_moments: str = Field(
+        ..., 
+        description="Two to three things they did excellent in the lesson"
+    )
+    overall_feedback: str = Field(
+        ..., 
+        description="Briefly describe how they did overall in the lesson"
+    )
+    your_strengths: str = Field(
+        ..., 
+        description="What they did well in the lesson"
+    )
+    areas_for_growth: str = Field(
+        ..., 
+        description="What they could improve in the lesson"
+    )
+    next_steps: str = Field(
+        ..., 
+        description="What they should try next in the lesson to demonstrate the skill in the future"
+    )
+    celebration: str = Field(
+        ..., 
+        description="What they should celebrate in the lesson"
+    )
+
 
 class StudentChoiceResponse(BaseModel):
     """Model for the student choice response."""

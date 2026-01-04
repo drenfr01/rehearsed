@@ -16,8 +16,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LoadingSpinner } from '../../shared/loading-spinner/loading-spinner';
 import { ClassroomStatus } from './classroom-status/classroom-status';
-import { gcsUriToHttpUrl } from '../../core/utils/gcs-uri.util';
 import { ScenarioFeedbackDialog } from '../../shared/dialogs/scenario-feedback-dialog/scenario-feedback-dialog';
+import { gcsUriToHttpUrl } from '../../core/utils/gcs-uri.util';
 
 @Component({
   selector: 'app-classroom',
@@ -122,7 +122,12 @@ export class Classroom implements OnInit {
     if (!studentName) return '';
     const agent = this.agentMap().get(studentName);
     if (agent && agent.avatar_gcs_uri) {
-      return gcsUriToHttpUrl(agent.avatar_gcs_uri);
+      // If it's a GCS URI (starts with gs://), convert it to HTTP URL
+      if (agent.avatar_gcs_uri.startsWith('gs://')) {
+        return gcsUriToHttpUrl(agent.avatar_gcs_uri);
+      }
+      // Otherwise, treat it as a public filename and prepend /
+      return `/${agent.avatar_gcs_uri}`;
     }
     return '';
   }

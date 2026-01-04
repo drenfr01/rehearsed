@@ -93,7 +93,12 @@ export class ClassroomStatus implements OnInit {
   // Get avatar URL for an agent
   getAvatarUrl(agent: Agent): string {
     if (agent.avatar_gcs_uri) {
-      return gcsUriToHttpUrl(agent.avatar_gcs_uri);
+      // If it's a GCS URI (starts with gs://), convert it to HTTP URL
+      if (agent.avatar_gcs_uri.startsWith('gs://')) {
+        return gcsUriToHttpUrl(agent.avatar_gcs_uri);
+      }
+      // Otherwise, treat it as a public filename and prepend /
+      return `/${agent.avatar_gcs_uri}`;
     }
     return '';
   }

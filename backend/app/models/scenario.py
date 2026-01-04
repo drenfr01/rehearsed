@@ -25,6 +25,7 @@ class Scenario(BaseModel, table=True):
     overview: str = Field(default=None)
     system_instructions: str = Field(default=None)
     initial_prompt: str = Field(default=None)
+    teaching_objectives: str = Field(default=None)
     
     # Owner ID: NULL means global (admin-created), user_id means user-local
     owner_id: Optional[int] = Field(default=None, foreign_key="user.id", index=True)

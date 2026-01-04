@@ -79,6 +79,22 @@
         <mat-error>Initial prompt must be at least 5 characters</mat-error>
       }
     </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Teaching Objectives</mat-label>
+      <textarea 
+        matInput 
+        formControlName="teaching_objectives" 
+        rows="3"
+        placeholder="Teaching objectives for the scenario"
+      ></textarea>
+      @if (editForm.get('teaching_objectives')?.hasError('required')) {
+        <mat-error>Teaching objectives are required</mat-error>
+      }
+      @if (editForm.get('teaching_objectives')?.hasError('minlength')) {
+        <mat-error>Teaching objectives must be at least 5 characters</mat-error>
+      }
+    </mat-form-field>
   </form>
 </mat-dialog-content>
 

@@ -1003,6 +1003,7 @@ async def list_scenarios(request: Request, admin_user: User = Depends(get_curren
                 overview=s.overview,
                 system_instructions=s.system_instructions,
                 initial_prompt=s.initial_prompt,
+                teaching_objectives=s.teaching_objectives or "",
                 created_at=s.created_at,
             )
             for s in scenarios
@@ -1037,6 +1038,7 @@ async def get_scenario(request: Request, scenario_id: int, admin_user: User = De
             overview=scenario.overview,
             system_instructions=scenario.system_instructions,
             initial_prompt=scenario.initial_prompt,
+            teaching_objectives=scenario.teaching_objectives or "",
             created_at=scenario.created_at,
         )
     except HTTPException:
@@ -1075,6 +1077,7 @@ async def create_scenario(
             overview=scenario_data.overview,
             system_instructions=scenario_data.system_instructions,
             initial_prompt=scenario_data.initial_prompt,
+            teaching_objectives=scenario_data.teaching_objectives,
         )
 
         logger.info("admin_created_scenario", admin_id=admin_user.id, scenario_id=scenario.id, name=name)
@@ -1086,6 +1089,7 @@ async def create_scenario(
             overview=scenario.overview,
             system_instructions=scenario.system_instructions,
             initial_prompt=scenario.initial_prompt,
+            teaching_objectives=scenario.teaching_objectives or "",
             created_at=scenario.created_at,
         )
     except HTTPException:
@@ -1135,6 +1139,7 @@ async def update_scenario(
             overview=scenario_data.overview,
             system_instructions=scenario_data.system_instructions,
             initial_prompt=scenario_data.initial_prompt,
+            teaching_objectives=scenario_data.teaching_objectives,
         )
 
         logger.info("admin_updated_scenario", admin_id=admin_user.id, scenario_id=scenario_id)
@@ -1146,6 +1151,7 @@ async def update_scenario(
             overview=updated_scenario.overview,
             system_instructions=updated_scenario.system_instructions,
             initial_prompt=updated_scenario.initial_prompt,
+            teaching_objectives=updated_scenario.teaching_objectives or "",
             created_at=updated_scenario.created_at,
         )
     except HTTPException:

@@ -57,12 +57,14 @@ class ScenarioCreateRequest(BaseModel):
         overview: Overview of the scenario
         system_instructions: System instructions for the scenario
         initial_prompt: Initial prompt for the scenario
+        teaching_objectives: Teaching objectives for the scenario
     """
     name: str = Field(..., description="Name of the scenario", min_length=2)
     description: str = Field(..., description="Description of the scenario", min_length=10)
     overview: str = Field(..., description="Overview of the scenario", min_length=10)
     system_instructions: str = Field(..., description="System instructions for the scenario", min_length=10)
     initial_prompt: str = Field(..., description="Initial prompt for the scenario", min_length=5)
+    teaching_objectives: str = Field(..., description="Teaching objectives for the scenario", min_length=5)
 
 
 class ScenarioUpdateRequest(BaseModel):
@@ -74,12 +76,14 @@ class ScenarioUpdateRequest(BaseModel):
         overview: Optional new overview
         system_instructions: Optional new system instructions
         initial_prompt: Optional new initial prompt
+        teaching_objectives: Optional new teaching objectives
     """
     name: Optional[str] = Field(None, description="Name of the scenario", min_length=2)
     description: Optional[str] = Field(None, description="Description of the scenario", min_length=10)
     overview: Optional[str] = Field(None, description="Overview of the scenario", min_length=10)
     system_instructions: Optional[str] = Field(None, description="System instructions for the scenario", min_length=10)
     initial_prompt: Optional[str] = Field(None, description="Initial prompt for the scenario", min_length=5)
+    teaching_objectives: Optional[str] = Field(None, description="Teaching objectives for the scenario", min_length=5)
 
 
 class ScenarioAdminResponse(BaseModel):
@@ -92,6 +96,7 @@ class ScenarioAdminResponse(BaseModel):
         overview: Overview of the scenario
         system_instructions: System instructions for the scenario
         initial_prompt: Initial prompt for the scenario
+        teaching_objectives: Teaching objectives for the scenario
         created_at: When the scenario was created
         owner_id: Owner user ID (None means global)
         is_global: Whether this is a global scenario
@@ -102,6 +107,7 @@ class ScenarioAdminResponse(BaseModel):
     overview: str = Field(..., description="Overview of the scenario")
     system_instructions: str = Field(..., description="System instructions for the scenario")
     initial_prompt: str = Field(..., description="Initial prompt for the scenario")
+    teaching_objectives: str = Field(..., description="Teaching objectives for the scenario")
     created_at: datetime = Field(..., description="When the scenario was created")
     owner_id: Optional[int] = Field(None, description="Owner user ID (None means global)")
     is_global: bool = Field(default=True, description="Whether this is a global scenario")
@@ -117,6 +123,7 @@ class ScenarioWithOwnerResponse(BaseModel):
         overview: Overview of the scenario
         system_instructions: System instructions for the scenario
         initial_prompt: Initial prompt for the scenario
+        teaching_objectives: Teaching objectives for the scenario
         created_at: When the scenario was created
         owner_id: Owner user ID (None means global)
         is_global: Whether this is a global scenario
@@ -127,6 +134,7 @@ class ScenarioWithOwnerResponse(BaseModel):
     overview: str = Field(..., description="Overview of the scenario")
     system_instructions: str = Field(..., description="System instructions for the scenario")
     initial_prompt: str = Field(..., description="Initial prompt for the scenario")
+    teaching_objectives: str = Field(..., description="Teaching objectives for the scenario")
     created_at: Optional[datetime] = Field(None, description="When the scenario was created")
     owner_id: Optional[int] = Field(None, description="Owner user ID (None means global)")
     is_global: bool = Field(default=True, description="Whether this is a global scenario")

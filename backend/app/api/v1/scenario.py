@@ -122,6 +122,7 @@ async def get_all_scenarios(
                 overview=s.overview,
                 system_instructions=s.system_instructions,
                 initial_prompt=s.initial_prompt,
+                teaching_objectives=s.teaching_objectives or "",
                 created_at=s.created_at,
                 owner_id=s.owner_id,
                 is_global=s.owner_id is None,

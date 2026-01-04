@@ -24,7 +24,7 @@ jobs:
 
       - name: Install libpq-dev
         run: |
-          apt update && apt install -y libpq-dev
+          sudo apt update && sudo apt install -y libpq-dev
 
       - name: Install UV
         uses: astral-sh/setup-uv@v7

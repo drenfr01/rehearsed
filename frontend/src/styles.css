@@ -45,6 +45,20 @@ h2[mat-dialog-title] mat-icon {
   color: #1976d2;
 }
 
+/* Scenario Feedback Dialog Panel */
+.scenario-feedback-dialog-panel {
+  padding: 0 !important;
+}
+
+.scenario-feedback-dialog-panel .mat-mdc-dialog-container {
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.scenario-feedback-dialog-panel .mat-mdc-dialog-surface {
+  overflow: hidden;
+}
+
 /* ========================================
    Auth Page Common Styles
    Reusable styles for login/register pages

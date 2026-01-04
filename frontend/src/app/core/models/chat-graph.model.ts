@@ -36,6 +36,16 @@ export interface StudentResponse {
     audio_base64: string;
 }
 
+export interface SummaryFeedbackResponse {
+    lesson_summary: string;
+    key_moments: string;
+    overall_feedback: string;
+    your_strengths: string;
+    areas_for_growth: string;
+    next_steps: string;
+    celebration: string;
+}
+
 export interface ChatResponse {
     messages: Message[];
     interrupt_task: string;
@@ -43,7 +53,7 @@ export interface ChatResponse {
     interrupt_value_type: 'text' | 'image' | 'audio' | 'video';
     student_responses: StudentResponse[];
     inline_feedback: string[];
-    summary_feedback: string;
+    summary_feedback: SummaryFeedbackResponse | string;
     summary: string;
     answering_student: number;
     appropriate_response: boolean;

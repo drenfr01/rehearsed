@@ -1,12 +1,57 @@
 <div class="scenario-feedback-container">
   <mat-card class="scenario-feedback-card">
-    <mat-card-header>
-      <mat-card-title>Scenario Summary Feedback</mat-card-title>
-    </mat-card-header>
     <mat-card-content>
-      <div class="feedback-content">
-        <div class="markdown-content" [innerHTML]="summaryFeedbackHtml()"></div>
-      </div>
+      @if (isStructuredFeedback()) {
+        @if (structuredFeedback(); as feedback) {
+          <div class="feedback-content structured-feedback">
+            <!-- Lesson Summary -->
+            <section class="feedback-section">
+              <h2 class="section-title">Lesson Summary</h2>
+              <div class="markdown-content" [innerHTML]="markdownToHtml(feedback.lesson_summary)"></div>
+            </section>
+
+            <!-- Key Moments -->
+            <section class="feedback-section highlight-section">
+              <h2 class="section-title">Key Moments</h2>
+              <div class="markdown-content" [innerHTML]="markdownToHtml(feedback.key_moments)"></div>
+            </section>
+
+            <!-- Overall Feedback -->
+            <section class="feedback-section">
+              <h2 class="section-title">Overall Feedback</h2>
+              <div class="markdown-content" [innerHTML]="markdownToHtml(feedback.overall_feedback)"></div>
+            </section>
+
+            <!-- Your Strengths -->
+            <section class="feedback-section strengths-section">
+              <h2 class="section-title">Your Strengths</h2>
+              <div class="markdown-content" [innerHTML]="markdownToHtml(feedback.your_strengths)"></div>
+            </section>
+
+            <!-- Areas for Growth -->
+            <section class="feedback-section growth-section">
+              <h2 class="section-title">Areas for Growth</h2>
+              <div class="markdown-content" [innerHTML]="markdownToHtml(feedback.areas_for_growth)"></div>
+            </section>
+
+            <!-- Next Steps -->
+            <section class="feedback-section">
+              <h2 class="section-title">Next Steps</h2>
+              <div class="markdown-content" [innerHTML]="markdownToHtml(feedback.next_steps)"></div>
+            </section>
+
+            <!-- Celebration -->
+            <section class="feedback-section celebration-section">
+              <h2 class="section-title">Celebration</h2>
+              <div class="markdown-content" [innerHTML]="markdownToHtml(feedback.celebration)"></div>
+            </section>
+          </div>
+        }
+      } @else {
+        <div class="feedback-content">
+          <div class="markdown-content" [innerHTML]="summaryFeedbackHtml()"></div>
+        </div>
+      }
     </mat-card-content>
   </mat-card>
 </div>

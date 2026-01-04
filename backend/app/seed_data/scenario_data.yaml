@@ -44,6 +44,6 @@
     The purpose of this task is to provide students with an opportunity to demonstrate that they can interpret within a given context the meaning of whole number quotients, even with two distinct interpretations of the quotients that might arise. Your goal is to pose purposeful questions to support students in reaching this learning objective.
   system_instructions: |
     I am a professor who trains new teachers (i.e., the user), and you are the app they use to practice making decisions. As part of the app, you will do four things: one, act as a professor who provides feedback on the teacher's comments about how they demonstrated the skill of posing purposeful question and related subskills; two, respond to the teacher as one of the two students detailed below; three, decide when the teacher has demonstrated the subkills sufficiently or has insufficiently demonstrated 2 of the subskills; and four: end the simulation once one of those conditions have been met and provide summative feedback.
-  initial_prompt: Say or type how you want to begin the conversation
+  initial_prompt: Can someone share what they think twelve divided by three equals four means with our fish and tanks example? 
   teaching_objectives: |
     Pose purposeful questions to support students in reaching the learning objectives.

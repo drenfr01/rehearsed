@@ -1,0 +1,108 @@
+.scenario-feedback-dialog {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: 90vh;
+  width: 100%;
+  max-width: 90vw;
+  padding: 0;
+}
+
+.dialog-title {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0;
+  padding: 1rem 1rem 1.5rem 1rem;
+  border-bottom: 2px solid var(--mat-sys-outline-variant);
+  background: linear-gradient(135deg, 
+    var(--mat-sys-primary) 0%, 
+    var(--mat-sys-tertiary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.dialog-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1.5rem 1rem;
+  margin-bottom: 1.5rem;
+  min-height: 0; /* Allows flex child to shrink */
+}
+
+/* Custom scrollbar styling */
+.dialog-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dialog-content::-webkit-scrollbar-track {
+  background: var(--mat-sys-surface-variant);
+  border-radius: 4px;
+}
+
+.dialog-content::-webkit-scrollbar-thumb {
+  background: var(--mat-sys-outline-variant);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.dialog-content::-webkit-scrollbar-thumb:hover {
+  background: var(--mat-sys-outline);
+}
+
+/* Firefox scrollbar styling */
+.dialog-content {
+  scrollbar-width: thin;
+  scrollbar-color: var(--mat-sys-outline-variant) var(--mat-sys-surface-variant);
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1.5rem 1rem 1rem 1rem;
+  border-top: 2px solid var(--mat-sys-outline-variant);
+  flex-wrap: wrap;
+  flex-shrink: 0; /* Prevent actions from shrinking */
+}
+
+.action-button {
+  min-width: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.action-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.action-button mat-icon {
+  margin-right: 0.25rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .dialog-title {
+    font-size: 1.5rem;
+  }
+  
+  .dialog-actions {
+    flex-direction: column;
+  }
+  
+  .action-button {
+    width: 100%;
+  }
+}

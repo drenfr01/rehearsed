@@ -1,0 +1,38 @@
+<div class="scenario-feedback-dialog">
+  <h1 class="dialog-title">Session Summary</h1>
+  
+  <div class="dialog-content">
+    <app-scenario-feedback></app-scenario-feedback>
+  </div>
+  
+  <div class="dialog-actions">
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="onDownloadSession()"
+      class="action-button"
+    >
+      <mat-icon>download</mat-icon>
+      Download Session
+    </button>
+    
+    <button
+      mat-raised-button
+      color="accent"
+      (click)="onNewSession()"
+      class="action-button"
+    >
+      <mat-icon>refresh</mat-icon>
+      New Session
+    </button>
+    
+    <button
+      mat-raised-button
+      (click)="onReturnHome()"
+      class="action-button"
+    >
+      <mat-icon>home</mat-icon>
+      Return to Home Page
+    </button>
+  </div>
+</div>

@@ -44,8 +44,8 @@ mat-card-content {
 
 /* Feedback content styling */
 .feedback-content {
-  background-color: var(--mat-sys-surface-variant);
-  color: var(--mat-sys-on-surface-variant);
+  background-color: white;
+  color: var(--mat-sys-on-surface);
   padding: 1.5rem;
   border-radius: 8px;
   line-height: 1.8;
@@ -64,9 +64,14 @@ mat-card-content {
 .feedback-section {
   padding: 1.5rem;
   border-radius: 12px;
-  background-color: var(--mat-sys-surface-container);
+  background-color: white;
   border: 1px solid var(--mat-sys-outline-variant);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  margin-bottom: 1.5rem;
+}
+
+.feedback-section:last-child {
+  margin-bottom: 0;
 }
 
 .feedback-section:hover {
@@ -77,8 +82,9 @@ mat-card-content {
 .section-title {
   font-size: 1.5rem;
   font-weight: 600;
-  margin-bottom: 1rem;
-  padding-bottom: 0.75rem;
+  line-height: 1.3;
+  margin: 0 0 1rem 0;
+  padding: 0.5rem 0 0.75rem 0;
   border-bottom: 2px solid var(--mat-sys-outline-variant);
   color: var(--mat-sys-primary);
   background: linear-gradient(135deg, 
@@ -87,34 +93,28 @@ mat-card-content {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .highlight-section {
-  background: linear-gradient(135deg, 
-    var(--mat-sys-primary-container) 0%, 
-    var(--mat-sys-secondary-container) 100%);
-  border-color: var(--mat-sys-primary);
+  background-color: white;
+  border: 1px solid var(--mat-sys-outline-variant);
 }
 
 .strengths-section {
-  background: linear-gradient(135deg, 
-    rgba(var(--mat-sys-success-rgb, 76, 175, 80), 0.1) 0%, 
-    rgba(var(--mat-sys-success-rgb, 76, 175, 80), 0.05) 100%);
-  border-left: 4px solid var(--mat-sys-success, #4caf50);
+  background-color: white;
+  border: 1px solid var(--mat-sys-outline-variant);
 }
 
 .growth-section {
-  background: linear-gradient(135deg, 
-    rgba(var(--mat-sys-warning-rgb, 255, 152, 0), 0.1) 0%, 
-    rgba(var(--mat-sys-warning-rgb, 255, 152, 0), 0.05) 100%);
-  border-left: 4px solid var(--mat-sys-warning, #ff9800);
+  background-color: white;
+  border: 1px solid var(--mat-sys-outline-variant);
 }
 
 .celebration-section {
-  background: linear-gradient(135deg, 
-    rgba(var(--mat-sys-tertiary-rgb, 121, 85, 72), 0.15) 0%, 
-    rgba(var(--mat-sys-tertiary-rgb, 121, 85, 72), 0.08) 100%);
-  border-left: 4px solid var(--mat-sys-tertiary);
+  background-color: white;
+  border: 1px solid var(--mat-sys-outline-variant);
   position: relative;
   overflow: hidden;
 }
@@ -154,6 +154,11 @@ mat-card-content {
   font-size: 1rem;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  line-height: 1.6;
+}
+
+.markdown-content p:first-child {
+  margin-top: 0;
 }
 
 .markdown-content h1,

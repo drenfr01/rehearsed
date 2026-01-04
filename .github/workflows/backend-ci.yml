@@ -35,7 +35,7 @@ jobs:
       - name: Install dependencies
         working-directory: backend
         run: |
-          uv sync
+          uv sync --extra dev --group test
 
       - name: Run linter with ruff
         working-directory: backend

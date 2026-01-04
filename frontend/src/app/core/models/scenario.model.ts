@@ -5,6 +5,7 @@ export interface Scenario {
     overview: string;
     system_instructions: string;
     initial_prompt: string;
+    teaching_objectives: string;
     created_at?: string;
     owner_id?: number | null;
     is_global?: boolean;
@@ -16,6 +17,7 @@ export interface ScenarioCreate {
     overview: string;
     system_instructions: string;
     initial_prompt: string;
+    teaching_objectives: string;
 }
 
 export interface ScenarioUpdate {
@@ -24,4 +26,5 @@ export interface ScenarioUpdate {
     overview?: string;
     system_instructions?: string;
     initial_prompt?: string;
+    teaching_objectives?: string;
 }

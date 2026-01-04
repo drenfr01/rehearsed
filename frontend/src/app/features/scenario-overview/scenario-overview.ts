@@ -42,6 +42,7 @@ export class ScenarioOverview implements OnInit {
       this.scenario.set(currentScenario);
       this.loadAgents(currentScenario.id);
     }
+    console.log(this.scenario());
   }
 
   private loadAgents(scenarioId: number) {

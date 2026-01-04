@@ -635,6 +635,7 @@ class DatabaseService:
         overview: str,
         system_instructions: str,
         initial_prompt: str,
+        teaching_objectives: str,
     ) -> Scenario:
         """Create a new scenario.
 
@@ -644,6 +645,7 @@ class DatabaseService:
             overview: Overview of the scenario
             system_instructions: System instructions for the scenario
             initial_prompt: Initial prompt for the scenario
+            teaching_objectives: Teaching objectives for the scenario
 
         Returns:
             Scenario: The created scenario
@@ -655,6 +657,7 @@ class DatabaseService:
                 overview=overview,
                 system_instructions=system_instructions,
                 initial_prompt=initial_prompt,
+                teaching_objectives=teaching_objectives,
             )
             session.add(scenario)
             session.commit()
@@ -683,6 +686,7 @@ class DatabaseService:
         overview: Optional[str] = None,
         system_instructions: Optional[str] = None,
         initial_prompt: Optional[str] = None,
+        teaching_objectives: Optional[str] = None,
     ) -> Scenario:
         """Update a scenario's attributes.
 
@@ -693,6 +697,7 @@ class DatabaseService:
             overview: Optional new overview
             system_instructions: Optional new system instructions
             initial_prompt: Optional new initial prompt
+            teaching_objectives: Optional new teaching objectives
 
         Returns:
             Scenario: The updated scenario
@@ -715,6 +720,8 @@ class DatabaseService:
                 scenario.system_instructions = system_instructions
             if initial_prompt is not None:
                 scenario.initial_prompt = initial_prompt
+            if teaching_objectives is not None:
+                scenario.teaching_objectives = teaching_objectives
 
             session.add(scenario)
             session.commit()
@@ -1371,6 +1378,7 @@ class DatabaseService:
         overview: str,
         system_instructions: str,
         initial_prompt: str,
+        teaching_objectives: str,
     ) -> Scenario:
         """Create a new user-local scenario.
 
@@ -1381,6 +1389,7 @@ class DatabaseService:
             overview: Overview of the scenario
             system_instructions: System instructions for the scenario
             initial_prompt: Initial prompt for the scenario
+            teaching_objectives: Teaching objectives for the scenario
 
         Returns:
             Scenario: The created scenario
@@ -1392,6 +1401,7 @@ class DatabaseService:
                 overview=overview,
                 system_instructions=system_instructions,
                 initial_prompt=initial_prompt,
+                teaching_objectives=teaching_objectives,
                 owner_id=user_id,
             )
             session.add(scenario)
@@ -1409,6 +1419,7 @@ class DatabaseService:
         overview: Optional[str] = None,
         system_instructions: Optional[str] = None,
         initial_prompt: Optional[str] = None,
+        teaching_objectives: Optional[str] = None,
     ) -> Scenario:
         """Update a user's local scenario (with ownership check).
 
@@ -1420,6 +1431,7 @@ class DatabaseService:
             overview: Optional new overview
             system_instructions: Optional new system instructions
             initial_prompt: Optional new initial prompt
+            teaching_objectives: Optional new teaching objectives
 
         Returns:
             Scenario: The updated scenario
@@ -1444,6 +1456,8 @@ class DatabaseService:
                 scenario.system_instructions = system_instructions
             if initial_prompt is not None:
                 scenario.initial_prompt = initial_prompt
+            if teaching_objectives is not None:
+                scenario.teaching_objectives = teaching_objectives
 
             session.add(scenario)
             session.commit()

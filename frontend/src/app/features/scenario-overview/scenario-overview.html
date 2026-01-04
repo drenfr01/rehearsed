@@ -26,6 +26,19 @@
         </div>
       </mat-card>
 
+      <!-- Teaching Objectives Section -->
+      @if (scenario()!.teaching_objectives) {
+        <mat-card class="overview-card">
+          <div class="overview-content">
+            <mat-icon class="section-icon">school</mat-icon>
+            <div class="overview-text">
+              <h3 class="section-heading">Teaching Objectives</h3>
+              <p class="section-description">{{ scenario()!.teaching_objectives }}</p>
+            </div>
+          </div>
+        </mat-card>
+      }
+
       <!-- Student Profiles -->
       @if (agents().length > 0) {
         <mat-card class="student-profiles-card">

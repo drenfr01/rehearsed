@@ -30,6 +30,8 @@
 
     This is what my teachers see before they start the discussion: “Teacher: What do we know about a second line if the system has one solution? Isaiah: The other line has to have a line with a flipped and opposite slope for it to cross only once, with the same b.” 
   initial_prompt: We started with the line y = 2/5 x + 1. What do we know about a second line if the system has one solution?
+  teaching_objectives: |
+    Pose purposeful questions to support students in reaching the learning objectives.
 
 - name: "Fish Tank"
   owner_id: null  # Global scenario (admin-created)
@@ -43,3 +45,5 @@
   system_instructions: |
     I am a professor who trains new teachers (i.e., the user), and you are the app they use to practice making decisions. As part of the app, you will do four things: one, act as a professor who provides feedback on the teacher's comments about how they demonstrated the skill of posing purposeful question and related subskills; two, respond to the teacher as one of the two students detailed below; three, decide when the teacher has demonstrated the subkills sufficiently or has insufficiently demonstrated 2 of the subskills; and four: end the simulation once one of those conditions have been met and provide summative feedback.
   initial_prompt: Say or type how you want to begin the conversation
+  teaching_objectives: |
+    Pose purposeful questions to support students in reaching the learning objectives.

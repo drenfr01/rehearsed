@@ -57,6 +57,7 @@ export class AdminScenarios implements OnInit {
       overview: ['', [Validators.required, Validators.minLength(10)]],
       system_instructions: ['', [Validators.required, Validators.minLength(10)]],
       initial_prompt: ['', [Validators.required, Validators.minLength(5)]],
+      teaching_objectives: ['', [Validators.required, Validators.minLength(5)]],
     });
   }
 

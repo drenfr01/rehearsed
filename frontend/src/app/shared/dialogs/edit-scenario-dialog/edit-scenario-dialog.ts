@@ -18,6 +18,7 @@ export interface EditScenarioDialogResult {
   overview: string;
   system_instructions: string;
   initial_prompt: string;
+  teaching_objectives: string;
 }
 
 @Component({
@@ -47,6 +48,7 @@ export class EditScenarioDialog {
       overview: [this.data.scenario.overview, [Validators.required, Validators.minLength(10)]],
       system_instructions: [this.data.scenario.system_instructions, [Validators.required, Validators.minLength(10)]],
       initial_prompt: [this.data.scenario.initial_prompt, [Validators.required, Validators.minLength(5)]],
+      teaching_objectives: [this.data.scenario.teaching_objectives || '', [Validators.required, Validators.minLength(5)]],
     });
   }
 

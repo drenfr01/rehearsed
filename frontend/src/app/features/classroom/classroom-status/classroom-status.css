@@ -93,7 +93,7 @@
   transition: transform 0.2s ease;
   cursor: default;
   position: relative;
-  max-width: 120px;
+  max-width: 140px;
 }
 
 .student-card:hover {
@@ -102,11 +102,11 @@
 
 /* Student Avatar */
 .student-avatar-img {
-  width: 48px;
-  height: 48px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid #e5e7eb;
+  border: 3px solid #e5e7eb;
   flex-shrink: 0;
 }
 
@@ -114,17 +114,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
   background-color: #e5e7eb;
   flex-shrink: 0;
 }
 
 .student-icon {
-  font-size: 24px;
-  width: 24px;
-  height: 24px;
+  font-size: 40px;
+  width: 40px;
+  height: 40px;
   color: #6b7280;
 }
 
@@ -134,13 +134,13 @@
   align-items: center;
   justify-content: center;
   position: absolute;
-  top: -4px;
-  right: -4px;
+  top: -2px;
+  right: -2px;
   background: #0d9488;
   border-radius: 50%;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 4px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 5px;
 }
 
 .counter-value {
@@ -230,8 +230,14 @@
   
   .student-avatar-img,
   .student-avatar-placeholder {
-    width: 40px;
-    height: 40px;
+    width: 64px;
+    height: 64px;
+  }
+  
+  .student-icon {
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
   }
 }
 
@@ -242,14 +248,14 @@
   
   .student-avatar-img,
   .student-avatar-placeholder {
-    width: 36px;
-    height: 36px;
+    width: 56px;
+    height: 56px;
   }
   
   .student-icon {
-    font-size: 20px;
-    width: 20px;
-    height: 20px;
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
   }
 }
 

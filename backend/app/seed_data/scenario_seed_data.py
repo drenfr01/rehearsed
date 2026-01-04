@@ -29,6 +29,7 @@ def load_scenario_data() -> list[Scenario]:
             overview=scenario_data["overview"],
             system_instructions=scenario_data["system_instructions"],
             initial_prompt=scenario_data["initial_prompt"],
+            teaching_objectives=scenario_data.get("teaching_objectives", ""),
             owner_id=scenario_data.get("owner_id"),  # None for global scenarios
         )
         scenarios.append(scenario)

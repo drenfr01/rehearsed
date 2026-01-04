@@ -1,0 +1,53 @@
+name: Backend Pipeline
+
+on: 
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/**'
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python version 3.13
+        uses: actions/setup-python@v4
+        with:
+          python-version-file: "backend/.python-version"
+
+      - name: Install libq
+        run: |
+          apt update && apt install -y libpq-dev
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.9.18"
+          enable-cache: true
+      
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          uv sync
+
+      - name: Run linter with ruff
+        working-directory: backend
+        run: |
+          uv run ruff check .
+
+      - name: Byte compile python to check for syntax errors
+        working-directory: backend
+        run: |
+          python -m compileall -q .
+
+      - name: Run tests
+        working-directory: backend
+        run: |
+          uv run pytest -q

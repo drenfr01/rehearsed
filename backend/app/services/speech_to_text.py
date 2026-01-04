@@ -1,11 +1,15 @@
+"""Speech-to-text service using Google Cloud Speech API."""
+
 from typing import Optional
 
 from google.cloud import speech
 
 
 class SpeechToTextService:
+    """Service for transcribing audio using Google Cloud Speech-to-Text."""
+
     def __init__(self):
-        # Initialize the Speech-to-Text client
+        """Initialize the Speech-to-Text client."""
         self.client = speech.SpeechClient()
 
     async def transcribe_audio(self, audio_content: bytes) -> Optional[str]:

@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from app.models.user import User
 
 class Scenario(BaseModel, table=True):
+    """Database model for scenario configurations."""
     id: int = Field(default=None, primary_key=True, unique=True)
     name: str = Field(default=None)
     description: str = Field(default=None)

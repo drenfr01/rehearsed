@@ -50,7 +50,15 @@ from app.schemas.graph import (
 
 
 class LangGraphBuilder:
+    """Builder class for constructing LangGraph workflows."""
+
     def __init__(self, llm: BaseChatModel, connection_pool: AsyncConnectionPool):
+        """Initialize the LangGraph builder.
+
+        Args:
+            llm: The language model to use for the graph.
+            connection_pool: The async connection pool for database operations.
+        """
         self.llm = llm
         self._connection_pool = connection_pool
         self._agents: List[Agent] = []
@@ -227,20 +235,7 @@ class LangGraphBuilder:
         return handler
 
     async def _check_appropriate_response(self, state: GraphState) -> GraphState:
-        """This node is used to check if the human response is appropriate for a teacher."""
-        # last_message = state.messages[-1]
-
-        # if not isinstance(last_message, HumanMessage):
-        #     raise ValueError("last message should be the human message input")
-
-        # # print("Last message: ", last_message)
-        # messages = [
-        #     SystemMessage(content=APPROPRIATE_RESPONSE_INSTRUCTIONS),
-        #     HumanMessage(content=last_message.content),
-        # ]
-
-        # structured_llm = self.llm.with_structured_output(AppropriateResponse)
-        # response = structured_llm.invoke(messages)
+        """Check if the human response is appropriate for a teacher."""
         return {
             "appropriate_response": True,
             "appropriate_explanation": "",

@@ -102,6 +102,90 @@ mat-card-content {
   animation: slideIn 0.4s ease-out 0.2s backwards;
 }
 
+/* Structured feedback styling */
+.structured-feedback {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.feedback-section {
+  padding: 1.5rem;
+  border-radius: 12px;
+  background-color: var(--mat-sys-surface-container);
+  border: 1px solid var(--mat-sys-outline-variant);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.feedback-section:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid var(--mat-sys-outline-variant);
+  color: var(--mat-sys-primary);
+  background: linear-gradient(135deg, 
+    var(--mat-sys-primary) 0%, 
+    var(--mat-sys-tertiary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.highlight-section {
+  background: linear-gradient(135deg, 
+    var(--mat-sys-primary-container) 0%, 
+    var(--mat-sys-secondary-container) 100%);
+  border-color: var(--mat-sys-primary);
+}
+
+.strengths-section {
+  background: linear-gradient(135deg, 
+    rgba(var(--mat-sys-success-rgb, 76, 175, 80), 0.1) 0%, 
+    rgba(var(--mat-sys-success-rgb, 76, 175, 80), 0.05) 100%);
+  border-left: 4px solid var(--mat-sys-success, #4caf50);
+}
+
+.growth-section {
+  background: linear-gradient(135deg, 
+    rgba(var(--mat-sys-warning-rgb, 255, 152, 0), 0.1) 0%, 
+    rgba(var(--mat-sys-warning-rgb, 255, 152, 0), 0.05) 100%);
+  border-left: 4px solid var(--mat-sys-warning, #ff9800);
+}
+
+.celebration-section {
+  background: linear-gradient(135deg, 
+    rgba(var(--mat-sys-tertiary-rgb, 121, 85, 72), 0.15) 0%, 
+    rgba(var(--mat-sys-tertiary-rgb, 121, 85, 72), 0.08) 100%);
+  border-left: 4px solid var(--mat-sys-tertiary);
+  position: relative;
+  overflow: hidden;
+}
+
+.celebration-section::before {
+  content: '🎉';
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  font-size: 2rem;
+  opacity: 0.2;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
 @keyframes slideIn {
   from {
     opacity: 0;

@@ -1,5 +1,5 @@
 import { inject,  Injectable, signal, effect } from '@angular/core';
-import { Message } from '../models/chat-graph.model';
+import { Message, SummaryFeedbackResponse } from '../models/chat-graph.model';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { ChatRequest, ChatResponse } from '../models/chat-graph.model';
@@ -17,7 +17,7 @@ export class ChatGraphService {
 
   private interruptionContent = signal<string>('')
   private interruptionType = signal<string>('')
-  private summaryFeedback = signal<string>('')
+  private summaryFeedback = signal<SummaryFeedbackResponse | string>('')
   // TODO: make this not an array? 
   private inlineFeedback = signal<string[]>(this.loadInlineFeedbackFromStorage());
   private studentResponses = signal<ChatResponse['student_responses']>([]);

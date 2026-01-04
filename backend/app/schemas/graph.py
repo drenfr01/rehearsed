@@ -3,7 +3,7 @@
 import operator
 import re
 import uuid
-from typing import Annotated
+from typing import Annotated, Union
 
 from langgraph.graph.message import add_messages
 from pydantic import (
@@ -37,7 +37,7 @@ class GraphState(BaseModel):
     inline_feedback: Annotated[list[str], operator.add] = Field(
         default_factory=list, description="The inline feedback for the student responses"
     )
-    summary_feedback: str = Field(default="", description="The summary feedback for the student responses")
+    summary_feedback: Union["SummaryFeedbackResponse", str] = Field(default="", description="The summary feedback for the student responses")
     summary: str = Field(default="", description="The summary of the student responses")
     answering_student: int = Field(default=0, description="The student number that is answering")
     appropriate_response: bool = Field(default=False, description="Whether the response is appropriate")

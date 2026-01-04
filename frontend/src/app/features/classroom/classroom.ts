@@ -2,7 +2,7 @@ import { Component, DestroyRef, inject, signal, effect, ElementRef, ViewChild, O
 import { Router } from '@angular/router';
 import { ChatGraphService } from '../../core/services/chat-graph.service';
 import { ScenarioService } from '../../core/services/scenario.service';
-import { ChatRequest } from '../../core/models/chat-graph.model';
+import { ChatRequest, SummaryFeedbackResponse } from '../../core/models/chat-graph.model';
 import { Agent } from '../../core/models/agent.model';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -80,8 +80,14 @@ export class Classroom implements OnInit {
     // Watch for summary feedback and navigate when available
     effect(() => {
       const summaryFeedback = this.chatGraphService.loadedSummaryFeedback();
-      if (summaryFeedback && summaryFeedback.trim().length > 0) {
-        this.router.navigate(['/app/scenario-feedback']);
+      if (summaryFeedback) {
+        // Check if it's a string (non-empty) or a SummaryFeedbackResponse object
+        const hasFeedback = typeof summaryFeedback === 'string' 
+          ? summaryFeedback.trim().length > 0
+          : summaryFeedback !== null;
+        if (hasFeedback) {
+          this.router.navigate(['/app/scenario-feedback']);
+        }
       }
     });
     

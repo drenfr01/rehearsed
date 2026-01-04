@@ -2,7 +2,6 @@ import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { AuthService } from '../../core/services/auth.service';
 import { Router, RouterLink } from '@angular/router';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
-import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,7 +13,6 @@ import { CommonModule } from '@angular/common';
   selector: 'app-register',
   imports: [
     ReactiveFormsModule,
-    MatCardModule,
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,

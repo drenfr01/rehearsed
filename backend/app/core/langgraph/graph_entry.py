@@ -178,7 +178,7 @@ class LangGraphAgent:
 
                 # In production, we might want to fall back to a more reliable model
                 if settings.ENVIRONMENT == Environment.PRODUCTION and attempt == max_retries - 2:
-                    fallback_model = "models/gemini-2.5-flash"
+                    fallback_model = "models/gemini-3-flash-preview"
                     logger.warning(
                         "using_fallback_model", model=fallback_model, environment=settings.ENVIRONMENT.value
                     )

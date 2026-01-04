@@ -1,40 +1,42 @@
-<div class="register-container">
-  <mat-card class="register-card">
-    @if (success()) {
-      <mat-card-content class="success-content">
-        <div class="success-message">
-          <mat-icon class="success-icon">check_circle</mat-icon>
-          <h2>Registration Successful!</h2>
-          <p>Your account has been created and is pending admin approval.</p>
-          <p class="subtext">You'll be able to log in once an administrator approves your account.</p>
-          <a mat-raised-button color="primary" routerLink="/" class="back-button">
-            Back to Login
-          </a>
+<div class="auth-page-container">
+  <div class="auth-background">
+    <div class="auth-card">
+      @if (success()) {
+        <div class="success-content">
+          <div class="success-message">
+            <mat-icon class="success-icon">check_circle</mat-icon>
+            <h2>Registration Successful!</h2>
+            <p>Your account has been created and is pending admin approval.</p>
+            <p class="subtext">You'll be able to log in once an administrator approves your account.</p>
+            <a mat-raised-button routerLink="/" class="back-button">
+              Back to Login
+            </a>
+          </div>
         </div>
-      </mat-card-content>
-    } @else {
-      <mat-card-header>
-        <mat-card-title>Create Account</mat-card-title>
-        <mat-card-subtitle>Register for a new account</mat-card-subtitle>
-      </mat-card-header>
-      <mat-card-content>
-        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="register-form">
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Email</mat-label>
-            <input matInput type="email" formControlName="email" placeholder="Enter your email" />
-            <mat-icon matPrefix>email</mat-icon>
+      } @else {
+        <div class="auth-header">
+          <img src="/rehearsed-logo.png" alt="Rehearsed Logo" class="brand-logo" />
+          <p class="tagline-text">Rehearse Today. Inspire Tomorrow.</p>
+        </div>
+
+        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="auth-form">
+          <div class="auth-field-group">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Email</mat-label>
+              <input matInput type="email" formControlName="email" placeholder="teacher@example.com" />
             @if (form.get('email')?.hasError('required') && form.get('email')?.touched) {
               <mat-error>Email is required</mat-error>
             }
             @if (form.get('email')?.hasError('email') && form.get('email')?.touched) {
               <mat-error>Please enter a valid email</mat-error>
             }
-          </mat-form-field>
+            </mat-form-field>
+          </div>
 
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Password</mat-label>
-            <input matInput type="password" formControlName="password" placeholder="Create a password" />
-            <mat-icon matPrefix>lock</mat-icon>
+          <div class="auth-field-group">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Password</mat-label>
+              <input matInput type="password" formControlName="password" placeholder="••••••••" />
             @if (form.get('password')?.hasError('required') && form.get('password')?.touched) {
               <mat-error>Password is required</mat-error>
             }
@@ -44,19 +46,21 @@
             @if (form.get('password')?.errors && !form.get('password')?.hasError('required') && !form.get('password')?.hasError('minlength') && form.get('password')?.touched) {
               <mat-error>Password must include uppercase, lowercase, number, and special character</mat-error>
             }
-          </mat-form-field>
+            </mat-form-field>
+          </div>
 
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Confirm Password</mat-label>
-            <input matInput type="password" formControlName="confirmPassword" placeholder="Confirm your password" />
-            <mat-icon matPrefix>lock_outline</mat-icon>
+          <div class="confirm-password-field-group">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Confirm Password</mat-label>
+              <input matInput type="password" formControlName="confirmPassword" placeholder="••••••••" />
             @if (form.get('confirmPassword')?.hasError('required') && form.get('confirmPassword')?.touched) {
               <mat-error>Please confirm your password</mat-error>
             }
             @if (form.get('confirmPassword')?.touched && !passwordsMatch && !form.get('confirmPassword')?.hasError('required')) {
               <mat-error>Passwords do not match</mat-error>
             }
-          </mat-form-field>
+            </mat-form-field>
+          </div>
 
           <div class="password-requirements">
             <p class="requirements-title">Password must contain:</p>
@@ -85,9 +89,8 @@
 
           <button
             mat-raised-button
-            color="primary"
             type="submit"
-            class="full-width submit-button"
+            class="full-width auth-submit-button"
             [disabled]="form.invalid || isLoading() || !passwordsMatch"
           >
             @if (isLoading()) {
@@ -99,11 +102,11 @@
           </button>
         </form>
 
-        <p class="login-link">
-          Already have an account? <a routerLink="/">Login</a>
+        <p class="auth-link">
+          Already have an account? <a routerLink="/" class="auth-link-anchor">Login</a>
         </p>
-      </mat-card-content>
-    }
-  </mat-card>
+      }
+    </div>
+  </div>
 </div>
 

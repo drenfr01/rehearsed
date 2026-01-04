@@ -1,8 +1,8 @@
-import { Component, DestroyRef, inject, signal, effect, ElementRef, ViewChild, OnInit, NgZone } from '@angular/core';
+import { Component, DestroyRef, inject, signal, ElementRef, ViewChild, OnInit, NgZone } from '@angular/core';
 import { Router } from '@angular/router';
 import { ChatGraphService } from '../../core/services/chat-graph.service';
 import { ScenarioService } from '../../core/services/scenario.service';
-import { ChatRequest, SummaryFeedbackResponse } from '../../core/models/chat-graph.model';
+import { ChatRequest } from '../../core/models/chat-graph.model';
 import { Agent } from '../../core/models/agent.model';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -11,11 +11,13 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog } from '@angular/material/dialog';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LoadingSpinner } from '../../shared/loading-spinner/loading-spinner';
 import { ClassroomStatus } from './classroom-status/classroom-status';
 import { gcsUriToHttpUrl } from '../../core/utils/gcs-uri.util';
+import { ScenarioFeedbackDialog } from '../../shared/dialogs/scenario-feedback-dialog/scenario-feedback-dialog';
 
 @Component({
   selector: 'app-classroom',
@@ -44,6 +46,7 @@ export class Classroom implements OnInit {
   private destroyRef = inject(DestroyRef);
   private router = inject(Router);
   private ngZone = inject(NgZone);
+  private dialog = inject(MatDialog);
   
   // Map of agent name to their display_text_color
   private agentColorMap = signal<Map<string, string>>(new Map());
@@ -77,20 +80,6 @@ export class Classroom implements OnInit {
   protected transcribedText = this.chatGraphService.loadedTranscribedText;
 
   constructor() {
-    // Watch for summary feedback and navigate when available
-    effect(() => {
-      const summaryFeedback = this.chatGraphService.loadedSummaryFeedback();
-      if (summaryFeedback) {
-        // Check if it's a string (non-empty) or a SummaryFeedbackResponse object
-        const hasFeedback = typeof summaryFeedback === 'string' 
-          ? summaryFeedback.trim().length > 0
-          : summaryFeedback !== null;
-        if (hasFeedback) {
-          this.router.navigate(['/app/scenario-feedback']);
-        }
-      }
-    });
-    
     // Cleanup audio element on destroy
     this.destroyRef.onDestroy(() => {
       this.cleanupAllAudio();
@@ -430,6 +419,20 @@ export class Classroom implements OnInit {
       messages: [],
     }
     const subscription = this.chatGraphService.sendGraphRequest(endScenarioRequest, false).subscribe({
+      next: () => {
+        // Wait a bit for summary feedback to be set, then check and open dialog
+        setTimeout(() => {
+          const summaryFeedback = this.chatGraphService.loadedSummaryFeedback();
+          if (summaryFeedback) {
+            const hasFeedback = typeof summaryFeedback === 'string' 
+              ? summaryFeedback.trim().length > 0
+              : summaryFeedback !== null;
+            if (hasFeedback) {
+              this.openFeedbackDialog();
+            }
+          }
+        }, 500);
+      },
       error: (error: Error) => {
         this.error.set(error.message);
         this.isLoading.set(false);
@@ -441,6 +444,17 @@ export class Classroom implements OnInit {
 
     this.destroyRef.onDestroy(() => {
       subscription.unsubscribe();
+    });
+  }
+
+  private openFeedbackDialog() {
+    this.dialog.open(ScenarioFeedbackDialog, {
+      width: '90vw',
+      maxWidth: '1200px',
+      height: '90vh',
+      maxHeight: '800px',
+      disableClose: false,
+      panelClass: 'scenario-feedback-dialog-panel',
     });
   }
 }

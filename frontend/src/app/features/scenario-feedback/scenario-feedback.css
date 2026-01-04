@@ -1,58 +1,19 @@
 .scenario-feedback-container {
   display: flex;
   justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  padding: 1rem;
-  background: linear-gradient(135deg, 
-    var(--mat-sys-primary-container) 0%, 
-    var(--mat-sys-secondary-container) 50%,
-    var(--mat-sys-tertiary-container) 100%);
-  position: relative;
-  overflow: hidden;
-}
-
-/* Animated background effect */
-.scenario-feedback-container::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, 
-    rgba(255, 255, 255, 0.1) 0%, 
-    transparent 70%);
-  animation: rotate 20s linear infinite;
-}
-
-@keyframes rotate {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+  align-items: flex-start;
+  padding: 0;
+  width: 100%;
 }
 
 .scenario-feedback-card {
   width: 100%;
-  max-width: 75vw;
   padding: 0;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1),
-              0 16px 64px rgba(0, 0, 0, 0.08);
-  border-radius: 16px !important;
-  backdrop-filter: blur(10px);
+  box-shadow: none;
+  border-radius: 0;
   position: relative;
   z-index: 1;
   animation: fadeInUp 0.6s ease-out;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.scenario-feedback-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15),
-              0 20px 80px rgba(0, 0, 0, 0.12);
 }
 
 @keyframes fadeInUp {
@@ -67,27 +28,18 @@
 }
 
 mat-card-header {
-  padding: 2rem 2rem 1rem;
-  background: linear-gradient(180deg, 
-    var(--mat-sys-surface-container) 0%, 
-    transparent 100%);
-  border-radius: 16px 16px 0 0;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  display: none; /* Hide header in dialog, title is in dialog */
 }
 
 mat-card-title {
-  font-size: 1.75rem;
-  font-weight: 600;
-  background: linear-gradient(135deg, 
-    var(--mat-sys-primary) 0%, 
-    var(--mat-sys-tertiary) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  letter-spacing: 0.5px;
+  display: none; /* Hide title in dialog */
 }
 
 mat-card-content {
-  padding: 1rem 2rem 2rem;
+  padding: 0;
 }
 
 /* Feedback content styling */
@@ -323,7 +275,7 @@ mat-card-content {
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .scenario-feedback-card {
-    max-width: 90vw;
+    max-width: 100%;
   }
 }
 

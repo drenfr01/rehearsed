@@ -17,6 +17,7 @@ from fastapi import (
 from fastapi.responses import StreamingResponse
 
 from app.api.v1.auth import get_current_session
+from app.api.v1.deps import get_database_service
 from app.core.config import settings
 from app.core.langgraph.graph_entry import LangGraphAgent
 from app.core.limiter import limiter
@@ -28,8 +29,7 @@ from app.schemas.chat import (
     ChatResponse,
     StreamResponse,
 )
-# TODO: potentially inject this in lifespan
-from app.services.database import database_service
+from app.services.database.base import DatabaseService
 from app.services.speech_to_text import SpeechToTextService
 
 router = APIRouter()
@@ -43,6 +43,7 @@ async def chat(
     request: Request,
     chat_request: ChatRequest,
     session: Session = Depends(get_current_session),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Process a chat request using LangGraph.
 
@@ -130,6 +131,7 @@ async def chat_stream(
     request: Request,
     chat_request: ChatRequest,
     session: Session = Depends(get_current_session),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Process a chat request using LangGraph with streaming response.
 

@@ -17,11 +17,12 @@ from fastapi.security import (
     HTTPBearer,
 )
 
+from app.api.v1.deps import get_database_service
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.logging import logger
 from app.models.user import User
-from app.services.database import DatabaseService
+from app.services.database.base import DatabaseService
 from app.schemas.scenario import (
     ScenarioRequest,
     ScenarioResponse,
@@ -33,7 +34,6 @@ from app.schemas.agent import AgentResponse, AgentPersonalityResponse
 from app.models.scenario import Scenario
 from app.utils.auth import verify_token
 from app.utils.sanitization import sanitize_string
-from app.services.database import database_service
 
 router = APIRouter()
 security = HTTPBearer(auto_error=False)  # auto_error=False allows unauthenticated requests
@@ -41,6 +41,7 @@ security = HTTPBearer(auto_error=False)  # auto_error=False allows unauthenticat
 
 async def get_optional_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    database_service: DatabaseService = Depends(get_database_service),
 ) -> Optional[User]:
     """Get the current user from the token if provided, otherwise return None.
 
@@ -85,6 +86,7 @@ async def get_optional_user(
 async def get_all_scenarios(
     request: Request,
     user: Optional[User] = Depends(get_optional_user),
+    database_service: DatabaseService = Depends(get_database_service),
 ) -> List[ScenarioWithOwnerResponse]:
     """Return a list of all scenarios available to the user.
     
@@ -140,6 +142,7 @@ async def get_all_scenarios(
 async def get_scenario_by_id(
     request: Request,
     scenario_id: int,
+    database_service: DatabaseService = Depends(get_database_service),
 ) -> Scenario:
     """Return a scenario by its ID.
 
@@ -169,6 +172,7 @@ async def get_scenario_by_id(
 async def set_current_scenario_by_id(
     request: Request,
     scenario_request: ScenarioRequest,
+    database_service: DatabaseService = Depends(get_database_service),
 ) -> Scenario:
     """Return a scenario by its ID.
 
@@ -200,6 +204,7 @@ async def get_scenario_agents(
     request: Request,
     scenario_id: int,
     user: Optional[User] = Depends(get_optional_user),
+    database_service: DatabaseService = Depends(get_database_service),
 ) -> List[AgentResponse]:
     """Get all agents for a specific scenario.
 

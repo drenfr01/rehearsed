@@ -18,6 +18,7 @@ from fastapi.security import (
 )
 
 from app.api.v1.chatbot import agent as langgraph_agent
+from app.api.v1.deps import get_database_service
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.logging import logger
@@ -49,7 +50,7 @@ from app.schemas.feedback import (
     FeedbackResponse,
     DeleteFeedbackResponse,
 )
-from app.services.database import database_service
+from app.services.database.base import DatabaseService
 from app.utils.auth import (
     create_access_token,
     verify_token,
@@ -66,6 +67,7 @@ security = HTTPBearer()
 
 async def get_current_admin_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
+    database_service: DatabaseService = Depends(get_database_service),
 ) -> User:
     """Get the current admin user from the token.
 
@@ -157,7 +159,11 @@ async def get_current_admin_user(
 
 @router.get("/users", response_model=List[UserResponse])
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_all_users"][0])
-async def list_users(request: Request, admin_user: User = Depends(get_current_admin_user)):
+async def list_users(
+    request: Request,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """List all users in the system.
 
     Args:
@@ -186,7 +192,11 @@ async def list_users(request: Request, admin_user: User = Depends(get_current_ad
 
 @router.get("/users/pending", response_model=List[UserResponse])
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_pending_users"][0])
-async def list_pending_users(request: Request, admin_user: User = Depends(get_current_admin_user)):
+async def list_pending_users(
+    request: Request,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """List all users pending approval.
 
     Args:
@@ -215,7 +225,12 @@ async def list_pending_users(request: Request, admin_user: User = Depends(get_cu
 
 @router.get("/users/{user_id}", response_model=UserResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_user_by_id"][0])
-async def get_user(request: Request, user_id: int, admin_user: User = Depends(get_current_admin_user)):
+async def get_user(
+    request: Request,
+    user_id: int,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Get a specific user by ID.
 
     Args:
@@ -248,7 +263,10 @@ async def get_user(request: Request, user_id: int, admin_user: User = Depends(ge
 @router.post("/users", response_model=UserResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["create_user"][0])
 async def create_user(
-    request: Request, user_data: UserCreate, admin_user: User = Depends(get_current_admin_user)
+    request: Request,
+    user_data: UserCreate,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
 ) -> UserResponse:
     """Create a new user (admin only).
 
@@ -304,7 +322,12 @@ async def create_user(
 @router.put("/users/{user_id}", response_model=UserResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["update_user"][0])
 async def update_user(
-    request: Request, user_id: int, email: str = None, is_admin: bool = None, admin_user: User = Depends(get_current_admin_user)
+    request: Request,
+    user_id: int,
+    email: str = None,
+    is_admin: bool = None,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
 ) -> UserResponse:
     """Update a user (admin only).
 
@@ -364,7 +387,12 @@ async def update_user(
 
 @router.post("/users/{user_id}/approve", response_model=UserResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["approve_user"][0])
-async def approve_user(request: Request, user_id: int, admin_user: User = Depends(get_current_admin_user)):
+async def approve_user(
+    request: Request,
+    user_id: int,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Approve a pending user account (admin only).
 
     Args:
@@ -403,7 +431,12 @@ async def approve_user(request: Request, user_id: int, admin_user: User = Depend
 
 @router.post("/users/{user_id}/reject", response_model=DeleteUserResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["reject_user"][0])
-async def reject_user(request: Request, user_id: int, admin_user: User = Depends(get_current_admin_user)):
+async def reject_user(
+    request: Request,
+    user_id: int,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Reject and delete a pending user account (admin only).
 
     Args:
@@ -439,7 +472,12 @@ async def reject_user(request: Request, user_id: int, admin_user: User = Depends
 
 @router.delete("/users/{user_id}" , response_model=DeleteUserResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["delete_user"][0])
-async def delete_user(request: Request, user_id: int, admin_user: User = Depends(get_current_admin_user)):
+async def delete_user(
+    request: Request,
+    user_id: int,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Delete a user and all their sessions (admin only).
 
     This endpoint first deletes all sessions associated with the user,
@@ -466,7 +504,7 @@ async def delete_user(request: Request, user_id: int, admin_user: User = Depends
         user_sessions = await database_service.users.get_user_sessions(user_id)
         sessions_deleted = 0
         for session in user_sessions:
-            await database_service.delete_session(session.id)
+            await database_service.sessions.delete_session(session.id)
             sessions_deleted += 1
 
         logger.info("admin_deleted_user_sessions", admin_id=admin_user.id, user_id=user_id, sessions_deleted=sessions_deleted)
@@ -490,7 +528,11 @@ async def delete_user(request: Request, user_id: int, admin_user: User = Depends
 
 @router.get("/agent-personalities", response_model=List[AgentPersonalityResponse])
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_all_agent_personalities"][0])
-async def list_agent_personalities(request: Request, admin_user: User = Depends(get_current_admin_user)):
+async def list_agent_personalities(
+    request: Request,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """List all agent personalities in the system.
 
     Args:
@@ -519,7 +561,10 @@ async def list_agent_personalities(request: Request, admin_user: User = Depends(
 @router.get("/agent-personalities/{personality_id}", response_model=AgentPersonalityResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_agent_personality_by_id"][0])
 async def get_agent_personality(
-    request: Request, personality_id: int, admin_user: User = Depends(get_current_admin_user)
+    request: Request,
+    personality_id: int,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Get a specific agent personality by ID.
 
@@ -552,7 +597,10 @@ async def get_agent_personality(
 @router.post("/agent-personalities", response_model=AgentPersonalityResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["create_agent_personality"][0])
 async def create_agent_personality(
-    request: Request, personality_data: AgentPersonalityCreate, admin_user: User = Depends(get_current_admin_user)
+    request: Request,
+    personality_data: AgentPersonalityCreate,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Create a new agent personality (admin only).
 
@@ -599,6 +647,7 @@ async def update_agent_personality(
     personality_id: int,
     personality_data: AgentPersonalityUpdate,
     admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Update an agent personality (admin only).
 
@@ -646,7 +695,10 @@ async def update_agent_personality(
 @router.delete("/agent-personalities/{personality_id}", response_model=DeleteAgentPersonalityResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["delete_agent_personality"][0])
 async def delete_agent_personality(
-    request: Request, personality_id: int, admin_user: User = Depends(get_current_admin_user)
+    request: Request,
+    personality_id: int,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Delete an agent personality (admin only).
 
@@ -681,7 +733,11 @@ async def delete_agent_personality(
 
 @router.get("/agents", response_model=List[AgentResponse])
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_all_agents"][0])
-async def list_agents(request: Request, admin_user: User = Depends(get_current_admin_user)):
+async def list_agents(
+    request: Request,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """List all agents in the system.
 
     Args:
@@ -716,7 +772,12 @@ async def list_agents(request: Request, admin_user: User = Depends(get_current_a
 
 @router.get("/agents/{agent_id}", response_model=AgentResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_agent_by_id"][0])
-async def get_agent(request: Request, agent_id: str, admin_user: User = Depends(get_current_admin_user)):
+async def get_agent(
+    request: Request,
+    agent_id: str,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Get a specific agent by ID.
 
     Args:
@@ -755,7 +816,10 @@ async def get_agent(request: Request, agent_id: str, admin_user: User = Depends(
 @router.post("/agents", response_model=AgentResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["create_agent"][0])
 async def create_agent(
-    request: Request, agent_data: AgentCreate, admin_user: User = Depends(get_current_admin_user)
+    request: Request,
+    agent_data: AgentCreate,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Create a new agent (admin only).
 
@@ -843,6 +907,7 @@ async def update_agent(
     agent_id: str,
     agent_data: AgentUpdate,
     admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Update an agent (admin only).
 
@@ -944,7 +1009,12 @@ async def update_agent(
 
 @router.delete("/agents/{agent_id}", response_model=DeleteAgentResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["delete_agent"][0])
-async def delete_agent(request: Request, agent_id: str, admin_user: User = Depends(get_current_admin_user)):
+async def delete_agent(
+    request: Request,
+    agent_id: str,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Delete an agent (admin only).
 
     Args:
@@ -983,7 +1053,11 @@ async def delete_agent(request: Request, agent_id: str, admin_user: User = Depen
 
 @router.get("/scenarios", response_model=List[ScenarioAdminResponse])
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_all_scenarios"][0])
-async def list_scenarios(request: Request, admin_user: User = Depends(get_current_admin_user)):
+async def list_scenarios(
+    request: Request,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """List all scenarios in the system.
 
     Args:
@@ -1015,7 +1089,12 @@ async def list_scenarios(request: Request, admin_user: User = Depends(get_curren
 
 @router.get("/scenarios/{scenario_id}", response_model=ScenarioAdminResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_scenario_by_id"][0])
-async def get_scenario(request: Request, scenario_id: int, admin_user: User = Depends(get_current_admin_user)):
+async def get_scenario(
+    request: Request,
+    scenario_id: int,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Get a specific scenario by ID.
 
     Args:
@@ -1051,7 +1130,10 @@ async def get_scenario(request: Request, scenario_id: int, admin_user: User = De
 @router.post("/scenarios", response_model=ScenarioAdminResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["create_scenario"][0])
 async def create_scenario(
-    request: Request, scenario_data: ScenarioCreateRequest, admin_user: User = Depends(get_current_admin_user)
+    request: Request,
+    scenario_data: ScenarioCreateRequest,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Create a new scenario (admin only).
 
@@ -1109,6 +1191,7 @@ async def update_scenario(
     scenario_id: int,
     scenario_data: ScenarioUpdateRequest,
     admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Update a scenario (admin only).
 
@@ -1166,7 +1249,12 @@ async def update_scenario(
 
 @router.delete("/scenarios/{scenario_id}", response_model=DeleteScenarioResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["delete_scenario"][0])
-async def delete_scenario(request: Request, scenario_id: int, admin_user: User = Depends(get_current_admin_user)):
+async def delete_scenario(
+    request: Request,
+    scenario_id: int,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Delete a scenario (admin only).
 
     Args:
@@ -1200,7 +1288,11 @@ async def delete_scenario(request: Request, scenario_id: int, admin_user: User =
 
 @router.get("/feedback", response_model=List[FeedbackResponse])
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_all_feedback"][0])
-async def list_feedback(request: Request, admin_user: User = Depends(get_current_admin_user)):
+async def list_feedback(
+    request: Request,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """List all feedback in the system.
 
     Args:
@@ -1233,7 +1325,12 @@ async def list_feedback(request: Request, admin_user: User = Depends(get_current
 
 @router.get("/feedback/{feedback_id}", response_model=FeedbackResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_feedback_by_id"][0])
-async def get_feedback(request: Request, feedback_id: int, admin_user: User = Depends(get_current_admin_user)):
+async def get_feedback(
+    request: Request,
+    feedback_id: int,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Get a specific feedback by ID.
 
     Args:
@@ -1270,7 +1367,10 @@ async def get_feedback(request: Request, feedback_id: int, admin_user: User = De
 @router.post("/feedback", response_model=FeedbackResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["create_feedback"][0])
 async def create_feedback(
-    request: Request, feedback_data: FeedbackCreate, admin_user: User = Depends(get_current_admin_user)
+    request: Request,
+    feedback_data: FeedbackCreate,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Create a new feedback (admin only).
 
@@ -1328,6 +1428,7 @@ async def update_feedback(
     feedback_id: int,
     feedback_data: FeedbackUpdate,
     admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Update a feedback (admin only).
 
@@ -1385,7 +1486,12 @@ async def update_feedback(
 
 @router.delete("/feedback/{feedback_id}", response_model=DeleteFeedbackResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["delete_feedback"][0])
-async def delete_feedback(request: Request, feedback_id: int, admin_user: User = Depends(get_current_admin_user)):
+async def delete_feedback(
+    request: Request,
+    feedback_id: int,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Delete a feedback (admin only).
 
     Args:

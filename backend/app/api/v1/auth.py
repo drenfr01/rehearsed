@@ -19,6 +19,7 @@ from fastapi.security import (
     HTTPBearer,
 )
 
+from app.api.v1.deps import get_database_service
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.logging import logger
@@ -31,7 +32,7 @@ from app.schemas.auth import (
     UserCreate,
     UserResponse,
 )
-from app.services.database import database_service
+from app.services.database.base import DatabaseService
 from app.utils.auth import (
     create_access_token,
     verify_token,
@@ -48,6 +49,7 @@ security = HTTPBearer()
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
+    database_service: DatabaseService = Depends(get_database_service),
 ) -> User:
     """Get the current user ID from the token.
 
@@ -97,6 +99,7 @@ async def get_current_user(
 
 async def get_current_session(
     credentials: HTTPAuthorizationCredentials = Depends(security),
+    database_service: DatabaseService = Depends(get_database_service),
 ) -> Session:
     """Get the current session ID from the token.
 
@@ -147,7 +150,11 @@ async def get_current_session(
 
 @router.post("/register", response_model=RegistrationResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["register"][0])
-async def register(request: Request, user_data: UserCreate):
+async def register(
+    request: Request,
+    user_data: UserCreate,
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Register a new user account (requires admin approval).
 
     Creates an unapproved user account that must be approved by an admin
@@ -201,7 +208,11 @@ async def register(request: Request, user_data: UserCreate):
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["login"][0])
 async def login(
-    request: Request, username: str = Form(...), password: str = Form(...), grant_type: str = Form(default="password")
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    grant_type: str = Form(default="password"),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Login a user.
 
@@ -255,7 +266,10 @@ async def login(
 
 
 @router.post("/session", response_model=SessionResponse)
-async def create_session(user: User = Depends(get_current_user)):
+async def create_session(
+    user: User = Depends(get_current_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Create a new chat session for the authenticated user.
 
     Args:
@@ -290,7 +304,10 @@ async def create_session(user: User = Depends(get_current_user)):
 
 @router.patch("/session/{session_id}/name", response_model=SessionResponse)
 async def update_session_name(
-    session_id: str, name: str = Form(...), current_session: Session = Depends(get_current_session)
+    session_id: str,
+    name: str = Form(...),
+    current_session: Session = Depends(get_current_session),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Update a session's name.
 
@@ -325,7 +342,11 @@ async def update_session_name(
 
 
 @router.delete("/session/{session_id}")
-async def delete_session(session_id: str, current_session: Session = Depends(get_current_session)):
+async def delete_session(
+    session_id: str,
+    current_session: Session = Depends(get_current_session),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Delete a session for the authenticated user.
 
     Args:
@@ -354,7 +375,10 @@ async def delete_session(session_id: str, current_session: Session = Depends(get
 
 
 @router.get("/sessions", response_model=List[SessionResponse])
-async def get_user_sessions(user: User = Depends(get_current_user)):
+async def get_user_sessions(
+    user: User = Depends(get_current_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Get all session IDs for the authenticated user.
 
     Args:

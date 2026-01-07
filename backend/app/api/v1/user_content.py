@@ -18,6 +18,7 @@ from fastapi.security import (
 )
 
 from app.api.v1.chatbot import agent as langgraph_agent
+from app.api.v1.deps import get_database_service
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.logging import logger
@@ -45,7 +46,7 @@ from app.schemas.feedback import (
     FeedbackResponse,
     DeleteFeedbackResponse,
 )
-from app.services.database import database_service
+from app.services.database.base import DatabaseService
 from app.utils.auth import verify_token
 from app.utils.sanitization import sanitize_string
 
@@ -55,6 +56,7 @@ security = HTTPBearer()
 
 async def get_current_user_from_session(
     credentials: HTTPAuthorizationCredentials = Depends(security),
+    database_service: DatabaseService = Depends(get_database_service),
 ) -> User:
     """Get the current user from the token (supports both session and user tokens).
 
@@ -137,7 +139,11 @@ async def get_current_user_from_session(
 
 @router.get("/agent-voices", response_model=List[AgentVoiceResponse], tags=["agents"])
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS.get("get_all_agent_voices", ["10 per minute"])[0])
-async def get_agent_voices(request: Request, user: User = Depends(get_current_user_from_session)):
+async def get_agent_voices(
+    request: Request,
+    user: User = Depends(get_current_user_from_session),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Get all available agent voices.
 
     This endpoint returns all voice options that can be assigned to agents.
@@ -163,7 +169,11 @@ async def get_agent_voices(request: Request, user: User = Depends(get_current_us
 
 @router.get("/scenarios", response_model=List[ScenarioAdminResponse])
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS.get("get_all_scenarios", ["10 per minute"])[0])
-async def list_my_scenarios(request: Request, user: User = Depends(get_current_user_from_session)):
+async def list_my_scenarios(
+    request: Request,
+    user: User = Depends(get_current_user_from_session),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """List user's local scenarios only.
 
     Args:
@@ -196,7 +206,10 @@ async def list_my_scenarios(request: Request, user: User = Depends(get_current_u
 @router.post("/scenarios", response_model=ScenarioAdminResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS.get("create_scenario", ["10 per minute"])[0])
 async def create_scenario(
-    request: Request, scenario_data: ScenarioCreateRequest, user: User = Depends(get_current_user_from_session)
+    request: Request,
+    scenario_data: ScenarioCreateRequest,
+    user: User = Depends(get_current_user_from_session),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Create a new user-local scenario.
 
@@ -250,6 +263,7 @@ async def update_scenario(
     scenario_id: int,
     scenario_data: ScenarioUpdateRequest,
     user: User = Depends(get_current_user_from_session),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Update a user's local scenario.
 
@@ -300,7 +314,12 @@ async def update_scenario(
 
 @router.delete("/scenarios/{scenario_id}", response_model=DeleteScenarioResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS.get("delete_scenario", ["10 per minute"])[0])
-async def delete_scenario(request: Request, scenario_id: int, user: User = Depends(get_current_user_from_session)):
+async def delete_scenario(
+    request: Request,
+    scenario_id: int,
+    user: User = Depends(get_current_user_from_session),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Delete a user's local scenario.
 
     Args:
@@ -325,7 +344,10 @@ async def delete_scenario(request: Request, scenario_id: int, user: User = Depen
 @router.post("/scenarios/{scenario_id}/copy", response_model=ScenarioAdminResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS.get("create_scenario", ["10 per minute"])[0])
 async def copy_scenario_to_local(
-    request: Request, scenario_id: int, user: User = Depends(get_current_user_from_session)
+    request: Request,
+    scenario_id: int,
+    user: User = Depends(get_current_user_from_session),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Copy a global scenario to user's local scenarios.
 
@@ -362,7 +384,11 @@ async def copy_scenario_to_local(
 
 @router.get("/agent-personalities", response_model=List[AgentPersonalityResponse])
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS.get("get_all_agent_personalities", ["10 per minute"])[0])
-async def list_my_agent_personalities(request: Request, user: User = Depends(get_current_user_from_session)):
+async def list_my_agent_personalities(
+    request: Request,
+    user: User = Depends(get_current_user_from_session),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """List user's local agent personalities only.
 
     Args:
@@ -391,7 +417,10 @@ async def list_my_agent_personalities(request: Request, user: User = Depends(get
 @router.post("/agent-personalities", response_model=AgentPersonalityResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS.get("create_agent_personality", ["10 per minute"])[0])
 async def create_agent_personality(
-    request: Request, personality_data: AgentPersonalityCreate, user: User = Depends(get_current_user_from_session)
+    request: Request,
+    personality_data: AgentPersonalityCreate,
+    user: User = Depends(get_current_user_from_session),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Create a new user-local agent personality.
 
@@ -438,6 +467,7 @@ async def update_agent_personality(
     personality_id: int,
     personality_data: AgentPersonalityUpdate,
     user: User = Depends(get_current_user_from_session),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Update a user's local agent personality.
 
@@ -482,7 +512,10 @@ async def update_agent_personality(
 @router.delete("/agent-personalities/{personality_id}", response_model=DeleteAgentPersonalityResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS.get("delete_agent_personality", ["10 per minute"])[0])
 async def delete_agent_personality(
-    request: Request, personality_id: int, user: User = Depends(get_current_user_from_session)
+    request: Request,
+    personality_id: int,
+    user: User = Depends(get_current_user_from_session),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Delete a user's local agent personality.
 
@@ -508,7 +541,10 @@ async def delete_agent_personality(
 @router.post("/agent-personalities/{personality_id}/copy", response_model=AgentPersonalityResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS.get("create_agent_personality", ["10 per minute"])[0])
 async def copy_agent_personality_to_local(
-    request: Request, personality_id: int, user: User = Depends(get_current_user_from_session)
+    request: Request,
+    personality_id: int,
+    user: User = Depends(get_current_user_from_session),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Copy a global agent personality to user's local personalities.
 
@@ -542,7 +578,11 @@ async def copy_agent_personality_to_local(
 
 @router.get("/agents", response_model=List[AgentResponse])
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS.get("get_all_agents", ["10 per minute"])[0])
-async def list_my_agents(request: Request, user: User = Depends(get_current_user_from_session)):
+async def list_my_agents(
+    request: Request,
+    user: User = Depends(get_current_user_from_session),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """List user's local agents only.
 
     Args:
@@ -578,7 +618,10 @@ async def list_my_agents(request: Request, user: User = Depends(get_current_user
 @router.post("/agents", response_model=AgentResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS.get("create_agent", ["10 per minute"])[0])
 async def create_agent(
-    request: Request, agent_data: AgentCreate, user: User = Depends(get_current_user_from_session)
+    request: Request,
+    agent_data: AgentCreate,
+    user: User = Depends(get_current_user_from_session),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Create a new user-local agent.
 
@@ -666,6 +709,7 @@ async def update_agent(
     agent_id: str,
     agent_data: AgentUpdate,
     user: User = Depends(get_current_user_from_session),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Update a user's local agent.
 
@@ -761,7 +805,12 @@ async def update_agent(
 
 @router.delete("/agents/{agent_id}", response_model=DeleteAgentResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS.get("delete_agent", ["10 per minute"])[0])
-async def delete_agent(request: Request, agent_id: str, user: User = Depends(get_current_user_from_session)):
+async def delete_agent(
+    request: Request,
+    agent_id: str,
+    user: User = Depends(get_current_user_from_session),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Delete a user's local agent.
 
     Args:
@@ -793,7 +842,11 @@ async def delete_agent(request: Request, agent_id: str, user: User = Depends(get
 @router.post("/agents/{agent_id}/copy", response_model=AgentResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS.get("create_agent", ["10 per minute"])[0])
 async def copy_agent_to_local(
-    request: Request, agent_id: str, target_scenario_id: int, user: User = Depends(get_current_user_from_session)
+    request: Request,
+    agent_id: str,
+    target_scenario_id: int,
+    user: User = Depends(get_current_user_from_session),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Copy a global agent to user's local agents.
 
@@ -843,7 +896,11 @@ async def copy_agent_to_local(
 
 @router.get("/feedback", response_model=List[FeedbackResponse])
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS.get("get_all_feedback", ["10 per minute"])[0])
-async def list_my_feedback(request: Request, user: User = Depends(get_current_user_from_session)):
+async def list_my_feedback(
+    request: Request,
+    user: User = Depends(get_current_user_from_session),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """List user's local feedback only.
 
     Args:
@@ -877,7 +934,10 @@ async def list_my_feedback(request: Request, user: User = Depends(get_current_us
 @router.post("/feedback", response_model=FeedbackResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS.get("create_feedback", ["10 per minute"])[0])
 async def create_feedback(
-    request: Request, feedback_data: FeedbackCreate, user: User = Depends(get_current_user_from_session)
+    request: Request,
+    feedback_data: FeedbackCreate,
+    user: User = Depends(get_current_user_from_session),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Create a new user-local feedback.
 
@@ -931,6 +991,7 @@ async def update_feedback(
     feedback_id: int,
     feedback_data: FeedbackUpdate,
     user: User = Depends(get_current_user_from_session),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Update a user's local feedback.
 
@@ -981,7 +1042,12 @@ async def update_feedback(
 
 @router.delete("/feedback/{feedback_id}", response_model=DeleteFeedbackResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS.get("delete_feedback", ["10 per minute"])[0])
-async def delete_feedback(request: Request, feedback_id: int, user: User = Depends(get_current_user_from_session)):
+async def delete_feedback(
+    request: Request,
+    feedback_id: int,
+    user: User = Depends(get_current_user_from_session),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Delete a user's local feedback.
 
     Args:
@@ -1006,7 +1072,10 @@ async def delete_feedback(request: Request, feedback_id: int, user: User = Depen
 @router.post("/feedback/{feedback_id}/copy", response_model=FeedbackResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS.get("create_feedback", ["10 per minute"])[0])
 async def copy_feedback_to_local(
-    request: Request, feedback_id: int, user: User = Depends(get_current_user_from_session)
+    request: Request,
+    feedback_id: int,
+    user: User = Depends(get_current_user_from_session),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Copy a global feedback to user's local feedback.
 

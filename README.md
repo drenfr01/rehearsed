@@ -288,7 +288,7 @@ Deploy the Angular frontend to Firebase Hosting:
 
 We gratefully acknowledge the following key contributors:
 - [Leticia De Bortoli](https://www.linkedin.com/in/leticiadebortoli/): Lead Designer. Contributed UI/UX concepts, design assets, and frontend conceptualization.
-- [Megan De Bortoli Zinka](https://www.linkedin.com/in/megandbz/) Lead Developer, contributer architectural ideas and 
+- [Megan De Bortoli Zinka](https://www.linkedin.com/in/megandbz/) Lead Developer, contributed architectural ideas and backend conceptualization
 
 
 ## License

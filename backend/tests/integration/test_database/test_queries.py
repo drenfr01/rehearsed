@@ -4,7 +4,6 @@ import pytest
 from sqlmodel import Session
 
 from app.models.user import User
-from app.services.database import DatabaseService
 
 
 @pytest.mark.integration
@@ -12,12 +11,13 @@ from app.services.database import DatabaseService
 class TestDatabaseService:
     """Test database service methods."""
 
-    async def test_create_user(self, db_session: Session):
+    async def test_create_user(self, db_session: Session, test_engine):
         """Test creating a user via database service."""
-        service = DatabaseService()
-        service.engine = db_session.bind
+        # Set engine before creating service for lazy loading
+        from app.services.database import database_service
+        database_service.engine = test_engine
 
-        user = await service.create_user(
+        user = await database_service.users.create_user(
             email="dbservice@example.com",
             password=User.hash_password("password123"),
             is_approved=True,
@@ -26,35 +26,38 @@ class TestDatabaseService:
         assert user.email == "dbservice@example.com"
         assert user.is_approved is True
 
-    async def test_get_user_by_email(self, db_session: Session, test_user: User):
+    async def test_get_user_by_email(self, db_session: Session, test_user: User, test_engine):
         """Test getting a user by email."""
-        service = DatabaseService()
-        service.engine = db_session.bind
+        # Set engine before creating service for lazy loading
+        from app.services.database import database_service
+        database_service.engine = test_engine
 
-        user = await service.get_user_by_email(test_user.email)
+        user = await database_service.users.get_user_by_email(test_user.email)
 
         assert user is not None
         assert user.email == test_user.email
         assert user.id == test_user.id
 
-    async def test_get_user_by_email_nonexistent(self, db_session: Session):
+    async def test_get_user_by_email_nonexistent(self, db_session: Session, test_engine):
         """Test getting a non-existent user by email."""
-        service = DatabaseService()
-        service.engine = db_session.bind
+        # Set engine before creating service for lazy loading
+        from app.services.database import database_service
+        database_service.engine = test_engine
 
-        user = await service.get_user_by_email("nonexistent@example.com")
+        user = await database_service.users.get_user_by_email("nonexistent@example.com")
 
         assert user is None
 
-    async def test_delete_user(self, db_session: Session, test_user: User):
+    async def test_delete_user(self, db_session: Session, test_user: User, test_engine):
         """Test deleting a user."""
-        service = DatabaseService()
-        service.engine = db_session.bind
+        # Set engine before creating service for lazy loading
+        from app.services.database import database_service
+        database_service.engine = test_engine
 
-        result = await service.delete_user(test_user.id)
+        result = await database_service.users.delete_user(test_user.id)
 
         assert result is True
 
         # Verify user is deleted
-        deleted_user = await service.get_user(test_user.id)
+        deleted_user = await database_service.users.get_user(test_user.id)
         assert deleted_user is None

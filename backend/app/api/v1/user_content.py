@@ -82,10 +82,10 @@ async def get_current_user_from_session(
         token_subject = sanitize_string(token_subject)
 
         # Try to get it as a session first
-        session = await database_service.get_session(token_subject)
+        session = await database_service.sessions.get_session(token_subject)
         
         if session:
-            user = await database_service.get_user(session.user_id)
+            user = await database_service.users.get_user(session.user_id)
             if user is None:
                 logger.error("user_not_found_from_session", session_id=token_subject)
                 raise HTTPException(
@@ -97,7 +97,7 @@ async def get_current_user_from_session(
             # Token might be a user token
             try:
                 user_id = int(token_subject)
-                user = await database_service.get_user(user_id)
+                user = await database_service.users.get_user(user_id)
                 if user is None:
                     logger.error("user_not_found", user_id=user_id)
                     raise HTTPException(
@@ -149,7 +149,7 @@ async def get_agent_voices(request: Request, user: User = Depends(get_current_us
     Returns:
         List[AgentVoiceResponse]: List of all available agent voices.
     """
-    voices = await database_service.get_all_agent_voices()
+    voices = await database_service.agents.get_all_agent_voices()
     return [
         AgentVoiceResponse(
             id=v.id,
@@ -174,7 +174,7 @@ async def list_my_scenarios(request: Request, user: User = Depends(get_current_u
         List of user's local scenarios.
     """
     try:
-        scenarios = await database_service.get_user_local_scenarios(user.id)
+        scenarios = await database_service.users.get_user_local_scenarios(user.id)
         return [
             ScenarioAdminResponse(
                 id=s.id,
@@ -211,7 +211,7 @@ async def create_scenario(
     try:
         name = sanitize_string(scenario_data.name)
 
-        scenario = await database_service.create_user_scenario(
+        scenario = await database_service.scenarios.create_user_scenario(
             user_id=user.id,
             name=name,
             description=scenario_data.description,
@@ -265,7 +265,7 @@ async def update_scenario(
     try:
         name = sanitize_string(scenario_data.name) if scenario_data.name else None
 
-        updated_scenario = await database_service.update_user_scenario(
+        updated_scenario = await database_service.scenarios.update_user_scenario(
             scenario_id=scenario_id,
             user_id=user.id,
             name=name,
@@ -312,7 +312,7 @@ async def delete_scenario(request: Request, scenario_id: int, user: User = Depen
         Success message.
     """
     try:
-        await database_service.delete_user_scenario(scenario_id, user.id)
+        await database_service.scenarios.delete_user_scenario(scenario_id, user.id)
         logger.info("user_deleted_scenario", user_id=user.id, scenario_id=scenario_id)
         return DeleteScenarioResponse(message="Scenario deleted successfully")
     except HTTPException:
@@ -338,7 +338,7 @@ async def copy_scenario_to_local(
         The new local copy of the scenario.
     """
     try:
-        new_scenario = await database_service.copy_scenario_to_user(scenario_id, user.id, copy_agents=True)
+        new_scenario = await database_service.scenarios.copy_scenario_to_user(scenario_id, user.id, copy_agents=True)
         
         logger.info("user_copied_scenario", user_id=user.id, original_id=scenario_id, new_id=new_scenario.id)
 
@@ -373,7 +373,7 @@ async def list_my_agent_personalities(request: Request, user: User = Depends(get
         List of user's local agent personalities.
     """
     try:
-        personalities = await database_service.get_user_local_agent_personalities(user.id)
+        personalities = await database_service.users.get_user_local_agent_personalities(user.id)
         return [
             AgentPersonalityResponse(
                 id=p.id,
@@ -407,7 +407,7 @@ async def create_agent_personality(
         name = sanitize_string(personality_data.name)
         description = sanitize_string(personality_data.personality_description)
 
-        personality = await database_service.create_user_agent_personality(
+        personality = await database_service.agents.create_user_agent_personality(
             user_id=user.id,
             name=name,
             personality_description=description,
@@ -454,7 +454,7 @@ async def update_agent_personality(
         name = sanitize_string(personality_data.name) if personality_data.name else None
         description = sanitize_string(personality_data.personality_description) if personality_data.personality_description else None
 
-        updated_personality = await database_service.update_user_agent_personality(
+        updated_personality = await database_service.agents.update_user_agent_personality(
             personality_id=personality_id,
             user_id=user.id,
             name=name,
@@ -495,7 +495,7 @@ async def delete_agent_personality(
         Success message.
     """
     try:
-        await database_service.delete_user_agent_personality(personality_id, user.id)
+        await database_service.agents.delete_user_agent_personality(personality_id, user.id)
         logger.info("user_deleted_agent_personality", user_id=user.id, personality_id=personality_id)
         return DeleteAgentPersonalityResponse(message="Agent personality deleted successfully")
     except HTTPException:
@@ -521,7 +521,7 @@ async def copy_agent_personality_to_local(
         The new local copy of the agent personality.
     """
     try:
-        new_personality = await database_service.copy_agent_personality_to_user(personality_id, user.id)
+        new_personality = await database_service.agents.copy_agent_personality_to_user(personality_id, user.id)
         
         logger.info("user_copied_agent_personality", user_id=user.id, original_id=personality_id, new_id=new_personality.id)
 
@@ -553,7 +553,7 @@ async def list_my_agents(request: Request, user: User = Depends(get_current_user
         List of user's local agents.
     """
     try:
-        agents = await database_service.get_user_local_agents(user.id)
+        agents = await database_service.users.get_user_local_agents(user.id)
         return [
             AgentResponse(
                 id=a.id,
@@ -597,14 +597,14 @@ async def create_agent(
         display_text_color = sanitize_string(agent_data.display_text_color) if agent_data.display_text_color else ""
 
         # Verify scenario exists and user has access
-        scenario = await database_service.get_scenario(agent_data.scenario_id)
+        scenario = await database_service.scenarios.get_scenario(agent_data.scenario_id)
         if not scenario:
             raise HTTPException(status_code=404, detail="Scenario not found")
         if scenario.owner_id is not None and scenario.owner_id != user.id:
             raise HTTPException(status_code=403, detail="You don't have access to this scenario")
 
         # Verify personality exists and user has access
-        personality = await database_service.get_agent_personality(agent_data.agent_personality_id)
+        personality = await database_service.agents.get_agent_personality(agent_data.agent_personality_id)
         if not personality:
             raise HTTPException(status_code=404, detail="Agent personality not found")
         if personality.owner_id is not None and personality.owner_id != user.id:
@@ -613,12 +613,12 @@ async def create_agent(
         # Look up voice_id from voice name if provided
         voice_id = None
         if voice_name:
-            voice = await database_service.get_agent_voice_by_name(voice_name)
+            voice = await database_service.agents.get_agent_voice_by_name(voice_name)
             if not voice:
                 raise HTTPException(status_code=404, detail=f"Voice '{voice_name}' not found")
             voice_id = voice.id
 
-        agent = await database_service.create_user_agent(
+        agent = await database_service.agents.create_user_agent(
             user_id=user.id,
             agent_id=agent_id,
             name=name,
@@ -681,14 +681,14 @@ async def update_agent(
     try:
         # Verify scenario and personality exist if provided
         if agent_data.scenario_id is not None:
-            scenario = await database_service.get_scenario(agent_data.scenario_id)
+            scenario = await database_service.scenarios.get_scenario(agent_data.scenario_id)
             if not scenario:
                 raise HTTPException(status_code=404, detail="Scenario not found")
             if scenario.owner_id is not None and scenario.owner_id != user.id:
                 raise HTTPException(status_code=403, detail="You don't have access to this scenario")
 
         if agent_data.agent_personality_id is not None:
-            personality = await database_service.get_agent_personality(agent_data.agent_personality_id)
+            personality = await database_service.agents.get_agent_personality(agent_data.agent_personality_id)
             if not personality:
                 raise HTTPException(status_code=404, detail="Agent personality not found")
             if personality.owner_id is not None and personality.owner_id != user.id:
@@ -702,7 +702,7 @@ async def update_agent(
         voice_id = None
         clear_voice = False
         if voice_name:
-            voice_obj = await database_service.get_agent_voice_by_name(voice_name)
+            voice_obj = await database_service.agents.get_agent_voice_by_name(voice_name)
             if not voice_obj:
                 raise HTTPException(status_code=404, detail=f"Voice '{voice_name}' not found")
             voice_id = voice_obj.id
@@ -711,10 +711,10 @@ async def update_agent(
             clear_voice = True
 
         # Get old scenario_id for graph invalidation
-        old_agent = await database_service.get_agent(agent_id)
+        old_agent = await database_service.agents.get_agent(agent_id)
         old_scenario_id = old_agent.scenario_id if old_agent else None
 
-        updated_agent = await database_service.update_user_agent(
+        updated_agent = await database_service.agents.update_user_agent(
             agent_id=agent_id,
             user_id=user.id,
             name=name,
@@ -773,10 +773,10 @@ async def delete_agent(request: Request, agent_id: str, user: User = Depends(get
         Success message.
     """
     try:
-        agent = await database_service.get_agent(agent_id)
+        agent = await database_service.agents.get_agent(agent_id)
         scenario_id = agent.scenario_id if agent else None
 
-        await database_service.delete_user_agent(agent_id, user.id)
+        await database_service.agents.delete_user_agent(agent_id, user.id)
 
         if scenario_id:
             await langgraph_agent.invalidate_graph(scenario_id)
@@ -808,13 +808,13 @@ async def copy_agent_to_local(
     """
     try:
         # Verify target scenario exists and user has access
-        scenario = await database_service.get_scenario(target_scenario_id)
+        scenario = await database_service.scenarios.get_scenario(target_scenario_id)
         if not scenario:
             raise HTTPException(status_code=404, detail="Target scenario not found")
         if scenario.owner_id is not None and scenario.owner_id != user.id:
             raise HTTPException(status_code=403, detail="You don't have access to the target scenario")
 
-        new_agent = await database_service.copy_agent_to_user(agent_id, user.id, target_scenario_id)
+        new_agent = await database_service.agents.copy_agent_to_user(agent_id, user.id, target_scenario_id)
         
         await langgraph_agent.invalidate_graph(target_scenario_id)
         logger.info("user_copied_agent", user_id=user.id, original_id=agent_id, new_id=new_agent.id)
@@ -854,7 +854,7 @@ async def list_my_feedback(request: Request, user: User = Depends(get_current_us
         List of user's local feedback.
     """
     try:
-        feedbacks = await database_service.get_user_local_feedback(user.id)
+        feedbacks = await database_service.users.get_user_local_feedback(user.id)
         return [
             FeedbackResponse(
                 id=f.id,
@@ -890,7 +890,7 @@ async def create_feedback(
         Created feedback information.
     """
     try:
-        feedback = await database_service.create_user_feedback(
+        feedback = await database_service.feedback.create_user_feedback(
             user_id=user.id,
             feedback_type=feedback_data.feedback_type,
             scenario_id=feedback_data.scenario_id,
@@ -944,7 +944,7 @@ async def update_feedback(
         Updated feedback information.
     """
     try:
-        updated_feedback = await database_service.update_user_feedback(
+        updated_feedback = await database_service.feedback.update_user_feedback(
             feedback_id=feedback_id,
             user_id=user.id,
             feedback_type=feedback_data.feedback_type,
@@ -993,7 +993,7 @@ async def delete_feedback(request: Request, feedback_id: int, user: User = Depen
         Success message.
     """
     try:
-        await database_service.delete_user_feedback(feedback_id, user.id)
+        await database_service.feedback.delete_user_feedback(feedback_id, user.id)
         logger.info("user_deleted_feedback", user_id=user.id, feedback_id=feedback_id)
         return DeleteFeedbackResponse(message="Feedback deleted successfully")
     except HTTPException:
@@ -1019,7 +1019,7 @@ async def copy_feedback_to_local(
         The new local copy of the feedback.
     """
     try:
-        new_feedback = await database_service.copy_feedback_to_user(feedback_id, user.id)
+        new_feedback = await database_service.feedback.copy_feedback_to_user(feedback_id, user.id)
         
         logger.info("user_copied_feedback", user_id=user.id, original_id=feedback_id, new_id=new_feedback.id)
 

@@ -63,16 +63,16 @@ async def get_optional_user(
         token_subject = sanitize_string(token_subject)
 
         # Try to get it as a session first
-        session = await database_service.get_session(token_subject)
+        session = await database_service.sessions.get_session(token_subject)
         
         if session:
-            user = await database_service.get_user(session.user_id)
+            user = await database_service.users.get_user(session.user_id)
             return user
         else:
             # Token might be a user token
             try:
                 user_id = int(token_subject)
-                user = await database_service.get_user(user_id)
+                user = await database_service.users.get_user(user_id)
                 return user
             except ValueError:
                 return None
@@ -109,10 +109,10 @@ async def get_all_scenarios(
 
         if user:
             # Return global + user's local scenarios
-            scenarios = await database_service.get_scenarios_for_user(user.id)
+            scenarios = await database_service.scenarios.get_scenarios_for_user(user.id)
         else:
             # Return only global scenarios
-            scenarios = await database_service.get_all_scenarios()
+            scenarios = await database_service.scenarios.get_all_scenarios()
         
         return [
             ScenarioWithOwnerResponse(
@@ -158,7 +158,7 @@ async def get_scenario_by_id(
             "get_scenario_by_id_request_received",
         )
 
-        return database_service.get_scenario_by_id(scenario_id)
+        return await database_service.scenarios.get_scenario(scenario_id)
         
     except Exception as e:
         logger.error("get_scenario_by_id_request_failed", error=str(e), exc_info=True)
@@ -187,7 +187,7 @@ async def set_current_scenario_by_id(
             "set_current_scenario_by_id_request_received",
         )
 
-        return database_service.set_scenario(scenario_request.scenario_id)
+        return database_service.scenarios.set_scenario(scenario_request.scenario_id)
         
     except Exception as e:
         logger.error("set_current_scenario_by_id_request_failed", error=str(e), exc_info=True)
@@ -222,7 +222,7 @@ async def get_scenario_agents(
         )
 
         # Verify scenario exists
-        scenario = await database_service.get_scenario(scenario_id)
+        scenario = await database_service.scenarios.get_scenario(scenario_id)
         if not scenario:
             raise HTTPException(status_code=404, detail="Scenario not found")
 
@@ -231,7 +231,7 @@ async def get_scenario_agents(
             if user is None or scenario.owner_id != user.id:
                 raise HTTPException(status_code=403, detail="Access denied to this scenario")
 
-        agents = await database_service.get_agents_by_scenario(scenario_id)
+        agents = await database_service.agents.get_agents_by_scenario(scenario_id)
         
         return [
             AgentResponse(

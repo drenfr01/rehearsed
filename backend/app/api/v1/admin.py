@@ -101,11 +101,11 @@ async def get_current_admin_user(
         token_subject = sanitize_string(token_subject)
 
         # Try to get it as a session first (most common case after login)
-        session = await database_service.get_session(token_subject)
+        session = await database_service.sessions.get_session(token_subject)
         
         if session:
             # Token is a session token - get user from session
-            user = await database_service.get_user(session.user_id)
+            user = await database_service.users.get_user(session.user_id)
             if user is None:
                 logger.error("user_not_found_from_session", session_id=token_subject, user_id=session.user_id)
                 raise HTTPException(
@@ -118,7 +118,7 @@ async def get_current_admin_user(
             # Try to parse it as a user_id
             try:
                 user_id = int(token_subject)
-                user = await database_service.get_user(user_id)
+                user = await database_service.users.get_user(user_id)
                 if user is None:
                     logger.error("user_not_found", user_id=user_id)
                     raise HTTPException(
@@ -168,7 +168,7 @@ async def list_users(request: Request, admin_user: User = Depends(get_current_ad
         List of user information (without passwords).
     """
     try:
-        users = await database_service.get_all_users()
+        users = await database_service.users.get_all_users()
         return [
             UserResponse(
                 id=user.id,
@@ -197,7 +197,7 @@ async def list_pending_users(request: Request, admin_user: User = Depends(get_cu
         List of pending user information (without passwords).
     """
     try:
-        users = await database_service.get_pending_users()
+        users = await database_service.users.get_pending_users()
         return [
             UserResponse(
                 id=user.id,
@@ -227,7 +227,7 @@ async def get_user(request: Request, user_id: int, admin_user: User = Depends(ge
         User information (without password).
     """
     try:
-        user = await database_service.get_user(user_id)
+        user = await database_service.users.get_user(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -271,11 +271,11 @@ async def create_user(
         validate_password_strength(password)
 
         # Check if user exists
-        if await database_service.get_user_by_email(sanitized_email):
+        if await database_service.users.get_user_by_email(sanitized_email):
             raise HTTPException(status_code=400, detail="Email already registered")
 
         # Create user - admin-created users are automatically approved
-        user = await database_service.create_user(
+        user = await database_service.users.create_user(
             email=sanitized_email,
             password=User.hash_password(password),
             is_approved=True,
@@ -319,7 +319,7 @@ async def update_user(
         Updated user information.
     """
     try:
-        user = await database_service.get_user(user_id)
+        user = await database_service.users.get_user(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -332,14 +332,14 @@ async def update_user(
         if email is not None and email != user.email:
             sanitized_email = sanitize_email(email)
             # Check if new email is already taken
-            existing_user = await database_service.get_user_by_email(sanitized_email)
+            existing_user = await database_service.users.get_user_by_email(sanitized_email)
             if existing_user and existing_user.id != user_id:
                 raise HTTPException(status_code=400, detail="Email already in use")
-            user = await database_service.update_user_email(user_id, sanitized_email)
+            user = await database_service.users.update_user_email(user_id, sanitized_email)
             updated = True
 
         if is_admin is not None and is_admin != user.is_admin:
-            user = await database_service.update_user_admin_status(user_id, is_admin)
+            user = await database_service.users.update_user_admin_status(user_id, is_admin)
             updated = True
 
         if updated:
@@ -376,14 +376,14 @@ async def approve_user(request: Request, user_id: int, admin_user: User = Depend
         Approved user information.
     """
     try:
-        user = await database_service.get_user(user_id)
+        user = await database_service.users.get_user(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
         if user.is_approved:
             raise HTTPException(status_code=400, detail="User is already approved")
 
-        user = await database_service.approve_user(user_id)
+        user = await database_service.users.approve_user(user_id)
 
         logger.info("admin_approved_user", admin_id=admin_user.id, approved_user_id=user_id, email=user.email)
 
@@ -415,7 +415,7 @@ async def reject_user(request: Request, user_id: int, admin_user: User = Depends
         Success message.
     """
     try:
-        user = await database_service.get_user(user_id)
+        user = await database_service.users.get_user(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -423,7 +423,7 @@ async def reject_user(request: Request, user_id: int, admin_user: User = Depends
             raise HTTPException(status_code=400, detail="Cannot reject an already approved user. Use delete instead.")
 
         # Delete the pending user
-        success = await database_service.delete_user(user_id)
+        success = await database_service.users.delete_user(user_id)
         if not success:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -458,12 +458,12 @@ async def delete_user(request: Request, user_id: int, admin_user: User = Depends
         if user_id == admin_user.id:
             raise HTTPException(status_code=400, detail="Cannot delete your own account")
 
-        user = await database_service.get_user(user_id)
+        user = await database_service.users.get_user(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
         # First, delete all sessions associated with this user
-        user_sessions = await database_service.get_user_sessions(user_id)
+        user_sessions = await database_service.users.get_user_sessions(user_id)
         sessions_deleted = 0
         for session in user_sessions:
             await database_service.delete_session(session.id)
@@ -472,7 +472,7 @@ async def delete_user(request: Request, user_id: int, admin_user: User = Depends
         logger.info("admin_deleted_user_sessions", admin_id=admin_user.id, user_id=user_id, sessions_deleted=sessions_deleted)
 
         # Then delete the user
-        success = await database_service.delete_user(user_id)
+        success = await database_service.users.delete_user(user_id)
         if not success:
             raise HTTPException(status_code=404, detail="User not found")
 

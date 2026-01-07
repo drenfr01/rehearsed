@@ -100,14 +100,14 @@ async def chat(
                 resumption_text, 
                 session.id, 
                 user_id=session.user_id, 
-                scenario_id=database_service.get_current_scenario().id
+                scenario_id=database_service.scenarios.get_current_scenario().id
                 )
         else:
             result: ChatResponse = await agent.get_response(
                 chat_request.messages, 
                 session.id, 
                 user_id=session.user_id, 
-                scenario_id=database_service.get_current_scenario().id
+                scenario_id=database_service.scenarios.get_current_scenario().id
                 )
         
         # Include transcribed text in response if audio was provided

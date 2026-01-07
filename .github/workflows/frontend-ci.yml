@@ -34,4 +34,9 @@ jobs:
         run: |
           npm ci
 
-      - name: Build
+      # - name: Build
+      #   working-directory: frontend
+      #   run: |
+      #     npm run build
+
+

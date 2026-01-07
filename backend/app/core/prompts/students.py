@@ -1,3 +1,4 @@
+"""Student profile templates and instructions for the chatbot system."""
 # TODO: load these up from database
 APPROPRIATE_RESPONSE_INSTRUCTIONS = """Decide if the human response is appropriate for a middle school teacher. Return a json object with a boolean field of whether it's appropriate or not and a string field of an explanation"""
 

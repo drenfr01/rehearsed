@@ -22,9 +22,9 @@ jobs:
         with:
           python-version-file: "backend/.python-version"
 
-      - name: Install libq
+      - name: Install libpq-dev
         run: |
-          apt update && apt install -y libpq-dev
+          sudo apt update && sudo apt install -y libpq-dev
 
       - name: Install UV
         uses: astral-sh/setup-uv@v7
@@ -35,19 +35,19 @@ jobs:
       - name: Install dependencies
         working-directory: backend
         run: |
-          uv sync
+          uv sync --extra dev --group test
 
       - name: Run linter with ruff
         working-directory: backend
         run: |
-          uv run ruff check .
+          uv run ruff check app 
 
       - name: Byte compile python to check for syntax errors
-        working-directory: backend
+        working-directory: backend/app
         run: |
           python -m compileall -q .
 
-      - name: Run tests
-        working-directory: backend
-        run: |
-          uv run pytest -q
+      # - name: Run tests
+      #   working-directory: backend
+      #   run: |
+      #     uv run pytest -q

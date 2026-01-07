@@ -1,3 +1,5 @@
+"""Feedback-related database models."""
+
 from enum import Enum
 from typing import (
     TYPE_CHECKING,
@@ -21,11 +23,13 @@ if TYPE_CHECKING:
 
 
 class FeedbackType(str, Enum):
+    """Enumeration of feedback types."""
     INLINE = "inline"
     SUMMARY = "summary"
 
 
 class Feedback(BaseModel, table=True):
+    """Database model for feedback configurations."""
     id: int = Field(default=None, primary_key=True, unique=True)
 
     feedback_type: FeedbackType = Field(..., description="Whether the feedback is inline or summary feedback")

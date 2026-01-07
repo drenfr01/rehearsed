@@ -18,7 +18,7 @@ def seed_agent_personality_data():
         # Only check for global personalities (owner_id is None)
         # User-created personalities should not prevent seeding global ones
         global_personalities_exist = session.exec(
-            select(AgentPersonality).where(AgentPersonality.owner_id == None)
+            select(AgentPersonality).where(AgentPersonality.owner_id.is_(None))
         ).first()
         if global_personalities_exist:
             return

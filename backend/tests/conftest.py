@@ -1,0 +1,258 @@
+"""Shared pytest configuration and fixtures."""
+
+import os
+from typing import (
+    AsyncGenerator,
+    Generator,
+)
+from unittest.mock import (
+    AsyncMock,
+    MagicMock,
+    patch,
+)
+
+import pytest
+from httpx import (
+    ASGITransport,
+    AsyncClient,
+)
+from sqlmodel import (
+    Session,
+    SQLModel,
+    create_engine,
+)
+
+from app.core.config import (
+    Environment,
+    settings,
+)
+from app.main import app
+from app.models.agent import Agent, AgentPersonality, AgentVoice
+from app.models.feedback import Feedback
+from app.models.scenario import Scenario
+from app.models.session import Session as ChatSession
+from app.models.user import User
+from app.services.database import DatabaseService
+
+
+# Set test environment
+os.environ["APP_ENV"] = "test"
+
+
+@pytest.fixture(scope="session")
+def test_engine():
+    """Create a test database engine.
+
+    For unit tests, this can use an in-memory SQLite database.
+    For integration tests, this should use a test PostgreSQL database.
+    """
+    # Use in-memory SQLite for fast unit tests
+    # For integration tests, you may want to use a separate test PostgreSQL database
+    test_db_url = os.getenv("TEST_DATABASE_URL", "sqlite:///:memory:")
+    engine = create_engine(test_db_url, connect_args={"check_same_thread": False} if "sqlite" in test_db_url else {})
+
+    # Create all tables
+    SQLModel.metadata.create_all(engine)
+    yield engine
+    SQLModel.metadata.drop_all(engine)
+    engine.dispose()
+
+
+@pytest.fixture
+def db_session(test_engine) -> Generator[Session, None, None]:
+    """Create a database session for testing."""
+    with Session(test_engine) as session:
+        yield session
+        session.rollback()
+
+
+@pytest.fixture
+async def async_client() -> AsyncGenerator[AsyncClient, None]:
+    """Create an async HTTP client for testing FastAPI endpoints."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        yield client
+
+
+@pytest.fixture
+def test_user(db_session: Session) -> User:
+    """Create a test user."""
+    from app.models.user import User
+
+    user = User(
+        email="test@example.com",
+        hashed_password=User.hash_password("testpassword123"),
+        is_approved=True,
+        is_admin=False,
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
+
+
+@pytest.fixture
+def test_admin_user(db_session: Session) -> User:
+    """Create a test admin user."""
+    from app.models.user import User
+
+    user = User(
+        email="admin@example.com",
+        hashed_password=User.hash_password("adminpassword123"),
+        is_approved=True,
+        is_admin=True,
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
+
+
+@pytest.fixture
+def test_unauthorized_user(db_session: Session) -> User:
+    """Create a test user that is not approved."""
+    from app.models.user import User
+
+    user = User(
+        email="unauthorized@example.com",
+        hashed_password=User.hash_password("testpassword123"),
+        is_approved=False,
+        is_admin=False,
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
+
+
+@pytest.fixture
+def auth_token(test_user: User) -> str:
+    """Create a JWT token for a test user."""
+    from app.utils.auth import create_access_token
+
+    token = create_access_token(str(test_user.id))
+    return token.access_token
+
+
+@pytest.fixture
+def admin_token(test_admin_user: User) -> str:
+    """Create a JWT token for a test admin user."""
+    from app.utils.auth import create_access_token
+
+    token = create_access_token(str(test_admin_user.id))
+    return token.access_token
+
+
+@pytest.fixture
+def authenticated_headers(auth_token: str) -> dict:
+    """Create authenticated request headers."""
+    return {"Authorization": f"Bearer {auth_token}"}
+
+
+@pytest.fixture
+def admin_headers(admin_token: str) -> dict:
+    """Create authenticated request headers for admin user."""
+    return {"Authorization": f"Bearer {admin_token}"}
+
+
+@pytest.fixture
+def mock_langfuse():
+    """Mock Langfuse client."""
+    with patch("app.main.langfuse") as mock:
+        mock.capture = MagicMock()
+        mock.score = MagicMock()
+        yield mock
+
+
+@pytest.fixture
+def mock_google_cloud_text_to_speech():
+    """Mock Google Cloud Text-to-Speech client."""
+    with patch("app.services.gemini_text_to_speech.TextToSpeechClient") as mock:
+        mock_instance = AsyncMock()
+        mock.return_value = mock_instance
+        mock_instance.synthesize_speech = AsyncMock(return_value=MagicMock(audio_content=b"fake audio"))
+        yield mock_instance
+
+
+@pytest.fixture
+def mock_google_cloud_speech():
+    """Mock Google Cloud Speech client."""
+    with patch("app.services.speech_to_text.SpeechClient") as mock:
+        mock_instance = AsyncMock()
+        mock.return_value = mock_instance
+        mock_instance.recognize = AsyncMock(return_value=MagicMock(results=[]))
+        yield mock_instance
+
+
+@pytest.fixture
+def test_scenario(db_session: Session) -> Scenario:
+    """Create a test scenario."""
+    scenario = Scenario(
+        name="Test Scenario",
+        description="Test scenario description",
+        overview="Test overview",
+        system_instructions="Test system instructions",
+        initial_prompt="Test initial prompt",
+        teaching_objectives="Test teaching objectives",
+    )
+    db_session.add(scenario)
+    db_session.commit()
+    db_session.refresh(scenario)
+    return scenario
+
+
+@pytest.fixture
+def test_agent_personality(db_session: Session) -> AgentPersonality:
+    """Create a test agent personality."""
+    personality = AgentPersonality(
+        name="Test Personality",
+        personality_description="Test personality description",
+    )
+    db_session.add(personality)
+    db_session.commit()
+    db_session.refresh(personality)
+    return personality
+
+
+@pytest.fixture
+def test_agent(db_session: Session, test_scenario: Scenario, test_agent_personality: AgentPersonality) -> Agent:
+    """Create a test agent."""
+    import uuid
+
+    agent = Agent(
+        id=str(uuid.uuid4()),
+        name="Test Agent",
+        scenario_id=test_scenario.id,
+        agent_personality_id=test_agent_personality.id,
+        objective="Test objective",
+        instructions="Test instructions",
+        constraints="Test constraints",
+        context="Test context",
+    )
+    db_session.add(agent)
+    db_session.commit()
+    db_session.refresh(agent)
+    return agent
+
+
+@pytest.fixture
+def test_chat_session(db_session: Session, test_user: User) -> ChatSession:
+    """Create a test chat session."""
+    import uuid
+
+    session = ChatSession(id=str(uuid.uuid4()), user_id=test_user.id, name="Test Session")
+    db_session.add(session)
+    db_session.commit()
+    db_session.refresh(session)
+    return session
+
+
+@pytest.fixture(autouse=True)
+def reset_settings():
+    """Reset settings to test environment before each test."""
+    original_env = os.environ.get("APP_ENV")
+    os.environ["APP_ENV"] = "test"
+    yield
+    if original_env:
+        os.environ["APP_ENV"] = original_env
+    elif "APP_ENV" in os.environ:
+        del os.environ["APP_ENV"]

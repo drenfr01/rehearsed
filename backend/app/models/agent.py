@@ -1,3 +1,4 @@
+"""Agent-related database models."""
 
 from typing import (
     TYPE_CHECKING,
@@ -17,6 +18,7 @@ if TYPE_CHECKING:
     from app.models.scenario import Scenario
 
 class AgentVoice(BaseModel, table=True):
+    """Database model for agent voice configurations."""
     __tablename__ = "agent_voice"
     
     id: int = Field(default=None, primary_key=True, unique=True)
@@ -24,6 +26,7 @@ class AgentVoice(BaseModel, table=True):
     
 
 class AgentPersonality(BaseModel, table=True):
+    """Database model for agent personality configurations."""
     __tablename__ = "agent_personality"
     
     id: int = Field(default=None, primary_key=True, unique=True)

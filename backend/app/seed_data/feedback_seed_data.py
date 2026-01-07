@@ -62,7 +62,7 @@ def seed_feedback_data():
         # Only check for global feedback (owner_id is None)
         # User-created feedback should not prevent seeding global ones
         global_feedback_exists = session.exec(
-            select(Feedback).where(Feedback.owner_id == None)
+            select(Feedback).where(Feedback.owner_id.is_(None))
         ).first()
         if global_feedback_exists:
             return

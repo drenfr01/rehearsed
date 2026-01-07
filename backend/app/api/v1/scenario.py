@@ -145,7 +145,8 @@ async def get_scenario_by_id(
 
     Args:
         request: The FastAPI request object for rate limiting.
-        scenario_id: The ID of the scenario to get .
+        scenario_id: The ID of the scenario to get.
+
     Returns:
         Scenario: The scenario with the given ID.
 
@@ -174,6 +175,7 @@ async def set_current_scenario_by_id(
     Args:
         request: The FastAPI request object for rate limiting.
         scenario_request: The request object containing the scenario ID.
+
     Returns:
         Scenario: The scenario that was set.
 

@@ -70,7 +70,7 @@ def seed_agent_data():
         # Only check for global agents (owner_id is None)
         # User-created agents should not prevent seeding global ones
         global_agents_exist = session.exec(
-            select(Agent).where(Agent.owner_id == None)
+            select(Agent).where(Agent.owner_id.is_(None))
         ).first()
         if global_agents_exist:
             return

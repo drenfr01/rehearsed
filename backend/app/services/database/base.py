@@ -8,13 +8,11 @@ from sqlmodel import SQLModel, create_engine, Engine
 from app.core.config import Environment, settings
 from app.core.logging import logger
 
-# Import all models here so they are registered with SQLModel.metadata
-from app.models.user import User
-from app.models.session import Session as ChatSession
-from app.models.scenario import Scenario
-from app.models.agent import Agent, AgentPersonality, AgentVoice
-from app.models.feedback import Feedback
-
+from app.services.database.user import UserRepository
+from app.services.database.session import SessionRepository
+from app.services.database.scenario import ScenarioRepository
+from app.services.database.agent import AgentRepository
+from app.services.database.feedback import FeedbackRepository
 
 class DatabaseService:
     """Database service with connection pool management and model registry.
@@ -29,24 +27,12 @@ class DatabaseService:
         """Initialize database service with repositories."""
         self._engine: Optional[Engine] = None
         
-        # Initialize repositories with None engine initially
-        # They will be properly initialized when engine is first accessed
-        from app.services.database.user import UserRepository
-        from app.services.database.session import SessionRepository
-        from app.services.database.scenario import ScenarioRepository
-        from app.services.database.agent import AgentRepository
-        from app.services.database.feedback import FeedbackRepository
-        
-        # Create a dummy engine for initial repository creation
-        # This will be replaced when engine is actually accessed
-        dummy_engine = create_engine("sqlite:///:memory:")
-        
         # Attach repositories as instance variables
-        self._users = UserRepository(dummy_engine)
-        self._sessions = SessionRepository(dummy_engine)
-        self._scenarios = ScenarioRepository(dummy_engine)
-        self._agents = AgentRepository(dummy_engine)
-        self._feedback = FeedbackRepository(dummy_engine)
+        self._users = None
+        self._sessions = None
+        self._scenarios = None
+        self._agents = None
+        self._feedback = None
         
         logger.info("database_service_initialized", repositories=["users", "sessions", "scenarios", "agents", "feedback"])
     
@@ -91,13 +77,6 @@ class DatabaseService:
             # Create tables for all registered models
             SQLModel.metadata.create_all(self._engine)
             
-            # Update all repositories with the initialized engine
-            from app.services.database.user import UserRepository
-            from app.services.database.session import SessionRepository
-            from app.services.database.scenario import ScenarioRepository
-            from app.services.database.agent import AgentRepository
-            from app.services.database.feedback import FeedbackRepository
-            
             self._users = UserRepository(self._engine)
             self._sessions = SessionRepository(self._engine)
             self._scenarios = ScenarioRepository(self._engine)
@@ -112,24 +91,8 @@ class DatabaseService:
             )
         except SQLAlchemyError as e:
             logger.error("database_initialization_error", error=str(e), environment=settings.ENVIRONMENT.value)
-            if settings.ENVIRONMENT != Environment.PRODUCTION:
-                raise
-            # In production, create a dummy engine that will fail on first use
-            # This allows the app to start even if DB is temporarily unavailable
-            self._engine = create_engine("sqlite:///:memory:")
-            # Update repositories with dummy engine
-            from app.services.database.user import UserRepository
-            from app.services.database.session import SessionRepository
-            from app.services.database.scenario import ScenarioRepository
-            from app.services.database.agent import AgentRepository
-            from app.services.database.feedback import FeedbackRepository
-            
-            self._users = UserRepository(self._engine)
-            self._sessions = SessionRepository(self._engine)
-            self._scenarios = ScenarioRepository(self._engine)
-            self._agents = AgentRepository(self._engine)
-            self._feedback = FeedbackRepository(self._engine)
-    
+            raise SQLAlchemyError(f"Database initialization error: {str(e)}")
+
     @property
     def engine(self) -> Engine:
         """Get or create the database engine (lazy loading).
@@ -150,12 +113,12 @@ class DatabaseService:
         self._engine = engine
         
         # Update all repositories with the new engine
-        if engine is not None:
-            self._users = self._users.__class__(engine)
-            self._sessions = self._sessions.__class__(engine)
-            self._scenarios = self._scenarios.__class__(engine)
-            self._agents = self._agents.__class__(engine)
-            self._feedback = self._feedback.__class__(engine)
+        if engine:
+            self._users = UserRepository(engine)
+            self._sessions = SessionRepository(engine)
+            self._scenarios = ScenarioRepository(engine)
+            self._agents = AgentRepository(engine)
+            self._feedback = FeedbackRepository(engine)
     
     def reset_engine(self) -> None:
         """Reset the engine to None, forcing recreation on next access."""

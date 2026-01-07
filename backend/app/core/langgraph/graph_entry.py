@@ -35,6 +35,7 @@ from app.schemas import (
     GraphState,
     Message,
 )
+from app.services.gemini_text_to_speech import GeminiTextToSpeech
 from app.utils import (
     dump_messages,
     prepare_messages,
@@ -233,11 +234,12 @@ class LangGraphAgent:
         else:
             return "continue"
 
-    async def create_graph(self, scenario_id: int) -> Optional[CompiledStateGraph]:
+    async def create_graph(self, scenario_id: int, tts_service: GeminiTextToSpeech) -> Optional[CompiledStateGraph]:
         """Create and configure the LangGraph workflow for a specific scenario.
 
         Args:
             scenario_id: The ID of the scenario to create the graph for.
+            tts_service: The text-to-speech service instance.
 
         Returns:
             Optional[CompiledStateGraph]: The configured LangGraph instance or None if init fails
@@ -250,7 +252,7 @@ class LangGraphAgent:
         
         # Build a new graph for this scenario
         connection_pool = await self._get_connection_pool()
-        langgraph_builder = LangGraphBuilder(self.llm, connection_pool)
+        langgraph_builder = LangGraphBuilder(self.llm, connection_pool, tts_service)
         graph = await langgraph_builder.build_graph(scenario_id)
         
         # Cache the graph
@@ -259,7 +261,7 @@ class LangGraphAgent:
         
         return graph
     
-    async def rebuild_graph(self, scenario_id: int) -> Optional[CompiledStateGraph]:
+    async def rebuild_graph(self, scenario_id: int, tts_service: GeminiTextToSpeech) -> Optional[CompiledStateGraph]:
         """Rebuild the graph for a specific scenario.
         
         This should be called when agents are added, updated, or deleted
@@ -267,6 +269,7 @@ class LangGraphAgent:
 
         Args:
             scenario_id: The ID of the scenario to rebuild the graph for.
+            tts_service: The text-to-speech service instance.
 
         Returns:
             Optional[CompiledStateGraph]: The rebuilt LangGraph instance or None if build fails
@@ -278,7 +281,7 @@ class LangGraphAgent:
         
         # Rebuild the graph
         connection_pool = await self._get_connection_pool()
-        langgraph_builder = LangGraphBuilder(self.llm, connection_pool)
+        langgraph_builder = LangGraphBuilder(self.llm, connection_pool, tts_service)
         graph = await langgraph_builder.build_graph(scenario_id)
         
         # Cache the new graph
@@ -324,6 +327,7 @@ class LangGraphAgent:
         session_id: str,
         user_id: str,
         scenario_id: int,
+        tts_service: GeminiTextToSpeech,
     ) -> ChatResponse:
         """Get a resumption response from the LLM.
         
@@ -332,11 +336,12 @@ class LangGraphAgent:
             session_id: The session ID for Langfuse tracking.
             user_id: The user ID for Langfuse tracking.
             scenario_id: The scenario ID to use for the graph.
+            tts_service: The text-to-speech service instance.
             
         Returns:
             ChatResponse: The response from the LLM.
         """
-        graph = await self.create_graph(scenario_id)
+        graph = await self.create_graph(scenario_id, tts_service)
         if graph is None:
             raise Exception("Failed to create graph")
             
@@ -368,6 +373,7 @@ class LangGraphAgent:
         session_id: str,
         user_id: str,
         scenario_id: int,
+        tts_service: GeminiTextToSpeech,
     ) -> ChatResponse:
         """Get a response from the LLM.
 
@@ -376,11 +382,12 @@ class LangGraphAgent:
             session_id (str): The session ID for Langfuse tracking.
             user_id (str): The user ID for Langfuse tracking.
             scenario_id (int): The scenario ID to use for the graph.
+            tts_service: The text-to-speech service instance.
 
         Returns:
             ChatResponse: The response from the LLM.
         """
-        graph = await self.create_graph(scenario_id)
+        graph = await self.create_graph(scenario_id, tts_service)
         if graph is None:
             raise Exception("Failed to create graph")
             
@@ -410,6 +417,7 @@ class LangGraphAgent:
         session_id: str, 
         user_id: Optional[str] = None,
         scenario_id: Optional[int] = None,
+        tts_service: Optional[GeminiTextToSpeech] = None,
     ) -> AsyncGenerator[str, None]:
         """Get a stream response from the LLM.
 
@@ -418,6 +426,7 @@ class LangGraphAgent:
             session_id (str): The session ID for the conversation.
             user_id (Optional[str]): The user ID for the conversation.
             scenario_id (Optional[int]): The scenario ID to use for the graph.
+            tts_service: The text-to-speech service instance.
 
         Yields:
             str: Tokens of the LLM response.
@@ -430,7 +439,9 @@ class LangGraphAgent:
                 )
             ],
         }
-        graph = await self.create_graph(scenario_id)
+        if scenario_id is None or tts_service is None:
+            raise ValueError("scenario_id and tts_service are required for get_stream_response")
+        graph = await self.create_graph(scenario_id, tts_service)
         if graph is None:
             raise Exception("Failed to create graph")
 

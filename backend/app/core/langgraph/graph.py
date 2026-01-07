@@ -52,18 +52,19 @@ from app.schemas.graph import (
 class LangGraphBuilder:
     """Builder class for constructing LangGraph workflows."""
 
-    def __init__(self, llm: BaseChatModel, connection_pool: AsyncConnectionPool):
+    def __init__(self, llm: BaseChatModel, connection_pool: AsyncConnectionPool, tts_service: GeminiTextToSpeech):
         """Initialize the LangGraph builder.
 
         Args:
             llm: The language model to use for the graph.
             connection_pool: The async connection pool for database operations.
+            tts_service: The text-to-speech service instance.
         """
         self.llm = llm
         self._connection_pool = connection_pool
         self._agents: List[Agent] = []
         self._scenario_id: int = 0
-        self._tts_service = GeminiTextToSpeech()
+        self._tts_service = tts_service
 
     async def build_graph(self, scenario_id: int) -> CompiledStateGraph:
         """Build the LangGraph workflow for a specific scenario.

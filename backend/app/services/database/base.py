@@ -2,8 +2,9 @@
 
 from typing import Optional
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.engine import Engine
 from sqlalchemy.pool import QueuePool
-from sqlmodel import SQLModel, create_engine, Engine
+from sqlmodel import SQLModel, create_engine
 
 from app.core.config import Environment, settings
 from app.core.logging import logger

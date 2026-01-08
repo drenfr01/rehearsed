@@ -4,7 +4,8 @@ from typing import List, Optional
 from fastapi import HTTPException
 from sqlalchemy.orm import selectinload
 from sqlalchemy import or_
-from sqlmodel import Session, select, Engine
+from sqlalchemy.engine import Engine
+from sqlmodel import Session, select
 
 from app.core.logging import logger
 from app.models.agent import Agent, AgentPersonality, AgentVoice

@@ -2,7 +2,8 @@
 
 from typing import List, Optional
 from fastapi import HTTPException
-from sqlmodel import Session, select, Engine
+from sqlalchemy.engine import Engine
+from sqlmodel import Session, select
 
 from app.core.logging import logger
 from app.models.user import User

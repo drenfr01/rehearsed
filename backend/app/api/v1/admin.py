@@ -543,7 +543,7 @@ async def list_agent_personalities(
         List of agent personalities.
     """
     try:
-        personalities = await database_service.get_all_agent_personalities()
+        personalities = await database_service.agents.get_all_agent_personalities()
         return [
             AgentPersonalityResponse(
                 id=p.id,
@@ -577,7 +577,7 @@ async def get_agent_personality(
         Agent personality information.
     """
     try:
-        personality = await database_service.get_agent_personality(personality_id)
+        personality = await database_service.agents.get_agent_personality(personality_id)
         if not personality:
             raise HTTPException(status_code=404, detail="Agent personality not found")
 
@@ -617,7 +617,7 @@ async def create_agent_personality(
         name = sanitize_string(personality_data.name)
 
         # Create personality
-        personality = await database_service.create_agent_personality(
+        personality = await database_service.agents.create_agent_personality(
             name=name,
             personality_description=personality_data.personality_description,
         )
@@ -661,14 +661,14 @@ async def update_agent_personality(
         Updated agent personality information.
     """
     try:
-        personality = await database_service.get_agent_personality(personality_id)
+        personality = await database_service.agents.get_agent_personality(personality_id)
         if not personality:
             raise HTTPException(status_code=404, detail="Agent personality not found")
 
         # Update fields with sanitized values
         name = sanitize_string(personality_data.name) if personality_data.name else None
 
-        updated_personality = await database_service.update_agent_personality(
+        updated_personality = await database_service.agents.update_agent_personality(
             personality_id=personality_id,
             name=name,
             personality_description=personality_data.personality_description,
@@ -711,11 +711,11 @@ async def delete_agent_personality(
         Success message.
     """
     try:
-        personality = await database_service.get_agent_personality(personality_id)
+        personality = await database_service.agents.get_agent_personality(personality_id)
         if not personality:
             raise HTTPException(status_code=404, detail="Agent personality not found")
 
-        success = await database_service.delete_agent_personality(personality_id)
+        success = await database_service.agents.delete_agent_personality(personality_id)
         if not success:
             raise HTTPException(status_code=404, detail="Agent personality not found")
 
@@ -748,7 +748,7 @@ async def list_agents(
         List of agents.
     """
     try:
-        agents = await database_service.get_all_agents()
+        agents = await database_service.agents.get_all_agents()
         return [
             AgentResponse(
                 id=a.id,
@@ -789,7 +789,7 @@ async def get_agent(
         Agent information.
     """
     try:
-        agent = await database_service.get_agent(agent_id)
+        agent = await database_service.agents.get_agent(agent_id)
         if not agent:
             raise HTTPException(status_code=404, detail="Agent not found")
 
@@ -843,24 +843,24 @@ async def create_agent(
         # HTML escaping would corrupt apostrophes, quotes, and other valid characters.
 
         # Verify scenario and personality exist
-        scenario = await database_service.get_scenario(agent_data.scenario_id)
+        scenario = await database_service.scenarios.get_scenario(agent_data.scenario_id)
         if not scenario:
             raise HTTPException(status_code=404, detail="Scenario not found")
 
-        personality = await database_service.get_agent_personality(agent_data.agent_personality_id)
+        personality = await database_service.agents.get_agent_personality(agent_data.agent_personality_id)
         if not personality:
             raise HTTPException(status_code=404, detail="Agent personality not found")
 
         # Look up voice_id from voice name if provided
         voice_id = None
         if voice_name:
-            voice = await database_service.get_agent_voice_by_name(voice_name)
+            voice = await database_service.agents.get_agent_voice_by_name(voice_name)
             if not voice:
                 raise HTTPException(status_code=404, detail=f"Voice '{voice_name}' not found")
             voice_id = voice.id
 
         # Create agent
-        agent = await database_service.create_agent(
+        agent = await database_service.agents.create_agent(
             agent_id=agent_id,
             name=name,
             scenario_id=agent_data.scenario_id,
@@ -921,18 +921,18 @@ async def update_agent(
         Updated agent information.
     """
     try:
-        agent = await database_service.get_agent(agent_id)
+        agent = await database_service.agents.get_agent(agent_id)
         if not agent:
             raise HTTPException(status_code=404, detail="Agent not found")
 
         # Verify scenario and personality exist if provided
         if agent_data.scenario_id is not None:
-            scenario = await database_service.get_scenario(agent_data.scenario_id)
+            scenario = await database_service.scenarios.get_scenario(agent_data.scenario_id)
             if not scenario:
                 raise HTTPException(status_code=404, detail="Scenario not found")
 
         if agent_data.agent_personality_id is not None:
-            personality = await database_service.get_agent_personality(agent_data.agent_personality_id)
+            personality = await database_service.agents.get_agent_personality(agent_data.agent_personality_id)
             if not personality:
                 raise HTTPException(status_code=404, detail="Agent personality not found")
 
@@ -949,7 +949,7 @@ async def update_agent(
         voice_id = None
         clear_voice = False
         if voice_name:
-            voice_obj = await database_service.get_agent_voice_by_name(voice_name)
+            voice_obj = await database_service.agents.get_agent_voice_by_name(voice_name)
             if not voice_obj:
                 raise HTTPException(status_code=404, detail=f"Voice '{voice_name}' not found")
             voice_id = voice_obj.id
@@ -960,7 +960,7 @@ async def update_agent(
         # Remember old scenario_id for graph invalidation
         old_scenario_id = agent.scenario_id
         
-        updated_agent = await database_service.update_agent(
+        updated_agent = await database_service.agents.update_agent(
             agent_id=agent_id,
             name=name,
             voice_id=voice_id,
@@ -1026,14 +1026,14 @@ async def delete_agent(
         Success message.
     """
     try:
-        agent = await database_service.get_agent(agent_id)
+        agent = await database_service.agents.get_agent(agent_id)
         if not agent:
             raise HTTPException(status_code=404, detail="Agent not found")
 
         # Remember scenario_id before deletion for graph invalidation
         scenario_id = agent.scenario_id
         
-        success = await database_service.delete_agent(agent_id)
+        success = await database_service.agents.delete_agent(agent_id)
         if not success:
             raise HTTPException(status_code=404, detail="Agent not found")
 
@@ -1068,7 +1068,7 @@ async def list_scenarios(
         List of scenarios.
     """
     try:
-        scenarios = await database_service.get_all_scenarios()
+        scenarios = await database_service.scenarios.get_all_scenarios()
         return [
             ScenarioAdminResponse(
                 id=s.id,
@@ -1106,7 +1106,7 @@ async def get_scenario(
         Scenario information.
     """
     try:
-        scenario = await database_service.get_scenario(scenario_id)
+        scenario = await database_service.scenarios.get_scenario(scenario_id)
         if not scenario:
             raise HTTPException(status_code=404, detail="Scenario not found")
 
@@ -1153,7 +1153,7 @@ async def create_scenario(
         # as they may contain LLM prompts. HTML escaping would corrupt apostrophes, quotes, and other valid characters.
 
         # Create scenario
-        scenario = await database_service.create_scenario(
+        scenario = await database_service.scenarios.create_scenario(
             name=name,
             description=scenario_data.description,
             overview=scenario_data.overview,
@@ -1205,7 +1205,7 @@ async def update_scenario(
         Updated scenario information.
     """
     try:
-        scenario = await database_service.get_scenario(scenario_id)
+        scenario = await database_service.scenarios.get_scenario(scenario_id)
         if not scenario:
             raise HTTPException(status_code=404, detail="Scenario not found")
 
@@ -1215,7 +1215,7 @@ async def update_scenario(
         # Note: Not sanitizing content fields (description, overview, system_instructions, initial_prompt)
         # as they may contain LLM prompts. HTML escaping would corrupt apostrophes, quotes, and other valid characters.
 
-        updated_scenario = await database_service.update_scenario(
+        updated_scenario = await database_service.scenarios.update_scenario(
             scenario_id=scenario_id,
             name=name,
             description=scenario_data.description,
@@ -1266,11 +1266,11 @@ async def delete_scenario(
         Success message.
     """
     try:
-        scenario = await database_service.get_scenario(scenario_id)
+        scenario = await database_service.scenarios.get_scenario(scenario_id)
         if not scenario:
             raise HTTPException(status_code=404, detail="Scenario not found")
 
-        success = await database_service.delete_scenario(scenario_id)
+        success = await database_service.scenarios.delete_scenario(scenario_id)
         if not success:
             raise HTTPException(status_code=404, detail="Scenario not found")
 
@@ -1303,7 +1303,7 @@ async def list_feedback(
         List of feedback.
     """
     try:
-        feedbacks = await database_service.get_all_feedback()
+        feedbacks = await database_service.feedback.get_all_feedback()
         return [
             FeedbackResponse(
                 id=f.id,
@@ -1342,7 +1342,7 @@ async def get_feedback(
         Feedback information.
     """
     try:
-        feedback = await database_service.get_feedback(feedback_id)
+        feedback = await database_service.feedback.get_feedback(feedback_id)
         if not feedback:
             raise HTTPException(status_code=404, detail="Feedback not found")
 
@@ -1388,7 +1388,7 @@ async def create_feedback(
         # HTML escaping would corrupt apostrophes, quotes, and other valid characters.
 
         # Create feedback
-        feedback = await database_service.create_feedback(
+        feedback = await database_service.feedback.create_feedback(
             feedback_type=feedback_data.feedback_type,
             scenario_id=feedback_data.scenario_id,
             objective=feedback_data.objective,
@@ -1442,7 +1442,7 @@ async def update_feedback(
         Updated feedback information.
     """
     try:
-        feedback = await database_service.get_feedback(feedback_id)
+        feedback = await database_service.feedback.get_feedback(feedback_id)
         if not feedback:
             raise HTTPException(status_code=404, detail="Feedback not found")
 
@@ -1450,7 +1450,7 @@ async def update_feedback(
         # as they are system prompts for LLMs, not user-facing HTML content.
         # HTML escaping would corrupt apostrophes, quotes, and other valid characters.
 
-        updated_feedback = await database_service.update_feedback(
+        updated_feedback = await database_service.feedback.update_feedback(
             feedback_id=feedback_id,
             feedback_type=feedback_data.feedback_type,
             scenario_id=feedback_data.scenario_id,
@@ -1503,11 +1503,11 @@ async def delete_feedback(
         Success message.
     """
     try:
-        feedback = await database_service.get_feedback(feedback_id)
+        feedback = await database_service.feedback.get_feedback(feedback_id)
         if not feedback:
             raise HTTPException(status_code=404, detail="Feedback not found")
 
-        success = await database_service.delete_feedback(feedback_id)
+        success = await database_service.feedback.delete_feedback(feedback_id)
         if not success:
             raise HTTPException(status_code=404, detail="Feedback not found")
 

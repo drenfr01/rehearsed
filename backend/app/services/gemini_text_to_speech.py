@@ -1,8 +1,6 @@
 """Text-to-speech service using Google Cloud Gemini API."""
 
-import os
 from google.cloud import texttospeech
-from app.core.config import settings
 
 class GeminiTextToSpeech:
     """Service for synthesizing speech using Google Cloud Text-to-Speech."""

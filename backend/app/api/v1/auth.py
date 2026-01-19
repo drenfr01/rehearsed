@@ -19,6 +19,7 @@ from fastapi.security import (
     HTTPBearer,
 )
 
+from app.api.v1.deps import get_database_service
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.logging import logger
@@ -31,7 +32,7 @@ from app.schemas.auth import (
     UserCreate,
     UserResponse,
 )
-from app.services.database import database_service
+from app.services.database.base import DatabaseService
 from app.utils.auth import (
     create_access_token,
     verify_token,
@@ -48,11 +49,13 @@ security = HTTPBearer()
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
+    database_service: DatabaseService = Depends(get_database_service),
 ) -> User:
     """Get the current user ID from the token.
 
     Args:
         credentials: The HTTP authorization credentials containing the JWT token.
+        database_service: The database service instance.
 
     Returns:
         User: The user extracted from the token.
@@ -76,7 +79,7 @@ async def get_current_user(
 
         # Verify user exists in database
         user_id_int = int(user_id)
-        user = await database_service.get_user(user_id_int)
+        user = await database_service.users.get_user(user_id_int)
         if user is None:
             logger.error("user_not_found", user_id=user_id_int)
             raise HTTPException(
@@ -97,11 +100,13 @@ async def get_current_user(
 
 async def get_current_session(
     credentials: HTTPAuthorizationCredentials = Depends(security),
+    database_service: DatabaseService = Depends(get_database_service),
 ) -> Session:
     """Get the current session ID from the token.
 
     Args:
         credentials: The HTTP authorization credentials containing the JWT token.
+        database_service: The database service instance.
 
     Returns:
         Session: The session extracted from the token.
@@ -126,7 +131,7 @@ async def get_current_session(
         session_id = sanitize_string(session_id)
 
         # Verify session exists in database
-        session = await database_service.get_session(session_id)
+        session = await database_service.sessions.get_session(session_id)
         if session is None:
             logger.error("session_not_found", session_id=session_id)
             raise HTTPException(
@@ -147,7 +152,11 @@ async def get_current_session(
 
 @router.post("/register", response_model=RegistrationResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["register"][0])
-async def register(request: Request, user_data: UserCreate):
+async def register(
+    request: Request,
+    user_data: UserCreate,
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Register a new user account (requires admin approval).
 
     Creates an unapproved user account that must be approved by an admin
@@ -156,6 +165,7 @@ async def register(request: Request, user_data: UserCreate):
     Args:
         request: The FastAPI request object for rate limiting.
         user_data: User registration data containing email and password.
+        database_service: The database service instance.
 
     Returns:
         RegistrationResponse: Success message and registered email.
@@ -168,7 +178,7 @@ async def register(request: Request, user_data: UserCreate):
         sanitized_email = sanitize_email(user_data.email)
 
         # Check if user exists
-        if await database_service.get_user_by_email(sanitized_email):
+        if await database_service.users.get_user_by_email(sanitized_email):
             raise HTTPException(status_code=400, detail="Email already registered")
 
         # Extract and validate password
@@ -176,7 +186,7 @@ async def register(request: Request, user_data: UserCreate):
         validate_password_strength(password)
 
         # Create unapproved user
-        user = await database_service.create_user(
+        user = await database_service.users.create_user(
             email=sanitized_email,
             password=User.hash_password(password),
             is_approved=False,
@@ -201,7 +211,11 @@ async def register(request: Request, user_data: UserCreate):
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["login"][0])
 async def login(
-    request: Request, username: str = Form(...), password: str = Form(...), grant_type: str = Form(default="password")
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    grant_type: str = Form(default="password"),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Login a user.
 
@@ -210,6 +224,7 @@ async def login(
         username: User's email
         password: User's password
         grant_type: Must be "password"
+        database_service: The database service instance.
 
     Returns:
         TokenResponse: Access token information
@@ -230,7 +245,7 @@ async def login(
                 detail="Unsupported grant type. Must be 'password'",
             )
 
-        user = await database_service.get_user_by_email(username)
+        user = await database_service.users.get_user_by_email(username)
         if not user or not user.verify_password(password):
             raise HTTPException(
                 status_code=401,
@@ -255,11 +270,15 @@ async def login(
 
 
 @router.post("/session", response_model=SessionResponse)
-async def create_session(user: User = Depends(get_current_user)):
+async def create_session(
+    user: User = Depends(get_current_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Create a new chat session for the authenticated user.
 
     Args:
         user: The authenticated user
+        database_service: The database service instance.
 
     Returns:
         SessionResponse: The session ID, name, and access token
@@ -269,7 +288,7 @@ async def create_session(user: User = Depends(get_current_user)):
         session_id = str(uuid.uuid4())
 
         # Create session in database
-        session = await database_service.create_session(session_id, user.id)
+        session = await database_service.sessions.create_session(session_id, user.id)
 
         # Create access token for the session
         token = create_access_token(session_id)
@@ -290,7 +309,10 @@ async def create_session(user: User = Depends(get_current_user)):
 
 @router.patch("/session/{session_id}/name", response_model=SessionResponse)
 async def update_session_name(
-    session_id: str, name: str = Form(...), current_session: Session = Depends(get_current_session)
+    session_id: str,
+    name: str = Form(...),
+    current_session: Session = Depends(get_current_session),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Update a session's name.
 
@@ -298,6 +320,7 @@ async def update_session_name(
         session_id: The ID of the session to update
         name: The new name for the session
         current_session: The current session from auth
+        database_service: The database service instance.
 
     Returns:
         SessionResponse: The updated session information
@@ -313,7 +336,7 @@ async def update_session_name(
             raise HTTPException(status_code=403, detail="Cannot modify other sessions")
 
         # Update the session name
-        session = await database_service.update_session_name(sanitized_session_id, sanitized_name)
+        session = await database_service.sessions.update_session_name(sanitized_session_id, sanitized_name)
 
         # Create a new token (not strictly necessary but maintains consistency)
         token = create_access_token(sanitized_session_id)
@@ -325,12 +348,17 @@ async def update_session_name(
 
 
 @router.delete("/session/{session_id}")
-async def delete_session(session_id: str, current_session: Session = Depends(get_current_session)):
+async def delete_session(
+    session_id: str,
+    current_session: Session = Depends(get_current_session),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Delete a session for the authenticated user.
 
     Args:
         session_id: The ID of the session to delete
         current_session: The current session from auth
+        database_service: The database service instance.
 
     Returns:
         None
@@ -345,7 +373,7 @@ async def delete_session(session_id: str, current_session: Session = Depends(get
             raise HTTPException(status_code=403, detail="Cannot delete other sessions")
 
         # Delete the session
-        await database_service.delete_session(sanitized_session_id)
+        await database_service.sessions.delete_session(sanitized_session_id)
 
         logger.info("session_deleted", session_id=session_id, user_id=current_session.user_id)
     except ValueError as ve:
@@ -354,17 +382,21 @@ async def delete_session(session_id: str, current_session: Session = Depends(get
 
 
 @router.get("/sessions", response_model=List[SessionResponse])
-async def get_user_sessions(user: User = Depends(get_current_user)):
+async def get_user_sessions(
+    user: User = Depends(get_current_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Get all session IDs for the authenticated user.
 
     Args:
         user: The authenticated user
+        database_service: The database service instance.
 
     Returns:
         List[SessionResponse]: List of session IDs
     """
     try:
-        sessions = await database_service.get_user_sessions(user.id)
+        sessions = await database_service.sessions.get_user_sessions(user.id)
         return [
             SessionResponse(
                 session_id=sanitize_string(session.id),

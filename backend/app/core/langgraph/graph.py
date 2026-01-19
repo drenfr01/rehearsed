@@ -52,18 +52,19 @@ from app.schemas.graph import (
 class LangGraphBuilder:
     """Builder class for constructing LangGraph workflows."""
 
-    def __init__(self, llm: BaseChatModel, connection_pool: AsyncConnectionPool):
+    def __init__(self, llm: BaseChatModel, connection_pool: AsyncConnectionPool, tts_service: GeminiTextToSpeech):
         """Initialize the LangGraph builder.
 
         Args:
             llm: The language model to use for the graph.
             connection_pool: The async connection pool for database operations.
+            tts_service: The text-to-speech service instance.
         """
         self.llm = llm
         self._connection_pool = connection_pool
         self._agents: List[Agent] = []
         self._scenario_id: int = 0
-        self._tts_service = GeminiTextToSpeech()
+        self._tts_service = tts_service
 
     async def build_graph(self, scenario_id: int) -> CompiledStateGraph:
         """Build the LangGraph workflow for a specific scenario.
@@ -79,7 +80,7 @@ class LangGraphBuilder:
             self._scenario_id = scenario_id
             
             # Fetch agents for this scenario from the database
-            self._agents = await database_service.get_agents_by_scenario(scenario_id)
+            self._agents = await database_service.agents.get_agents_by_scenario(scenario_id)
             
             if not self._agents:
                 logger.warning(
@@ -328,7 +329,7 @@ class LangGraphBuilder:
 
     async def _inline_feedback_agent(self, state: GraphState) -> GraphState:
         """This node is used to call the inline feedback agent."""
-        feedback = await database_service.get_feedback_by_type("inline", self._scenario_id)
+        feedback = await database_service.feedback.get_feedback_by_type("inline", self._scenario_id)
         if feedback is None:
             logger.warning("inline_feedback_not_found", scenario_id=self._scenario_id)
             return {"inline_feedback": ["No inline feedback configured for this scenario."]}
@@ -377,7 +378,7 @@ class LangGraphBuilder:
 
     async def _generate_summary_feedback(self, state: GraphState) -> GraphState:
         """Generate summary feedback for the entire conversation."""
-        feedback = await database_service.get_feedback_by_type("summary", self._scenario_id)
+        feedback = await database_service.feedback.get_feedback_by_type("summary", self._scenario_id)
         if feedback is None:
             logger.warning("summary_feedback_not_found", scenario_id=self._scenario_id)
             return {"summary_feedback": "No summary feedback configured for this scenario."}

@@ -17,6 +17,7 @@ from fastapi import (
 from fastapi.responses import StreamingResponse
 
 from app.api.v1.auth import get_current_session
+from app.api.v1.deps import get_database_service, get_text_to_speech_service
 from app.core.config import settings
 from app.core.langgraph.graph_entry import LangGraphAgent
 from app.core.limiter import limiter
@@ -28,8 +29,8 @@ from app.schemas.chat import (
     ChatResponse,
     StreamResponse,
 )
-# TODO: potentially inject this in lifespan
-from app.services.database import database_service
+from app.services.database.base import DatabaseService
+from app.services.gemini_text_to_speech import GeminiTextToSpeech
 from app.services.speech_to_text import SpeechToTextService
 
 router = APIRouter()
@@ -43,6 +44,8 @@ async def chat(
     request: Request,
     chat_request: ChatRequest,
     session: Session = Depends(get_current_session),
+    database_service: DatabaseService = Depends(get_database_service),
+    text_to_speech_service: GeminiTextToSpeech = Depends(get_text_to_speech_service),
 ):
     """Process a chat request using LangGraph.
 
@@ -50,6 +53,8 @@ async def chat(
         request: The FastAPI request object for rate limiting.
         chat_request: The chat request containing messages.
         session: The current session from the auth token.
+        database_service: The database service instance.
+        text_to_speech_service: The text-to-speech service instance.
 
     Returns:
         ChatResponse: The processed chat response.
@@ -100,14 +105,16 @@ async def chat(
                 resumption_text, 
                 session.id, 
                 user_id=session.user_id, 
-                scenario_id=database_service.get_current_scenario().id
+                scenario_id=database_service.scenarios.get_current_scenario().id,
+                tts_service=text_to_speech_service
                 )
         else:
             result: ChatResponse = await agent.get_response(
                 chat_request.messages, 
                 session.id, 
                 user_id=session.user_id, 
-                scenario_id=database_service.get_current_scenario().id
+                scenario_id=database_service.scenarios.get_current_scenario().id,
+                tts_service=text_to_speech_service
                 )
         
         # Include transcribed text in response if audio was provided
@@ -130,6 +137,8 @@ async def chat_stream(
     request: Request,
     chat_request: ChatRequest,
     session: Session = Depends(get_current_session),
+    database_service: DatabaseService = Depends(get_database_service),
+    text_to_speech_service: GeminiTextToSpeech = Depends(get_text_to_speech_service),
 ):
     """Process a chat request using LangGraph with streaming response.
 
@@ -137,6 +146,8 @@ async def chat_stream(
         request: The FastAPI request object for rate limiting.
         chat_request: The chat request containing messages.
         session: The current session from the auth token.
+        database_service: The database service instance.
+        text_to_speech_service: The text-to-speech service instance.
 
     Returns:
         StreamingResponse: A streaming response of the chat completion.
@@ -164,7 +175,7 @@ async def chat_stream(
                 full_response = ""
                 with llm_stream_duration_seconds.labels(model=agent.llm.model_name).time():
                     async for chunk in agent.get_stream_response(
-                        chat_request.messages, session.id, user_id=session.user_id, scenario_id=chat_request.scenario_id
+                        chat_request.messages, session.id, user_id=session.user_id, scenario_id=chat_request.scenario_id, tts_service=text_to_speech_service
                     ):
                         full_response += chunk
                         response = StreamResponse(content=chunk, done=False)

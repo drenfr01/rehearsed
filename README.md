@@ -1,5 +1,10 @@
-# rehearsed
-A Teacher Simulation Platform
+<div align="center">
+  <img src="frontend/public/rehearsed-logo.png" alt="Rehearsed Logo" width="300"/>
+</div>
+<div align="center">
+<b>A Teacher Simuation Platform</b>
+</div>
+
 
 ## Overview
 

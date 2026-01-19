@@ -18,6 +18,7 @@ from fastapi.security import (
 )
 
 from app.api.v1.chatbot import agent as langgraph_agent
+from app.api.v1.deps import get_database_service
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.logging import logger
@@ -49,7 +50,7 @@ from app.schemas.feedback import (
     FeedbackResponse,
     DeleteFeedbackResponse,
 )
-from app.services.database import database_service
+from app.services.database.base import DatabaseService
 from app.utils.auth import (
     create_access_token,
     verify_token,
@@ -66,6 +67,7 @@ security = HTTPBearer()
 
 async def get_current_admin_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
+    database_service: DatabaseService = Depends(get_database_service),
 ) -> User:
     """Get the current admin user from the token.
 
@@ -75,6 +77,7 @@ async def get_current_admin_user(
 
     Args:
         credentials: The HTTP authorization credentials containing the JWT token.
+        database_service: The database service instance.
 
     Returns:
         User: The authenticated admin user.
@@ -101,11 +104,11 @@ async def get_current_admin_user(
         token_subject = sanitize_string(token_subject)
 
         # Try to get it as a session first (most common case after login)
-        session = await database_service.get_session(token_subject)
+        session = await database_service.sessions.get_session(token_subject)
         
         if session:
             # Token is a session token - get user from session
-            user = await database_service.get_user(session.user_id)
+            user = await database_service.users.get_user(session.user_id)
             if user is None:
                 logger.error("user_not_found_from_session", session_id=token_subject, user_id=session.user_id)
                 raise HTTPException(
@@ -118,7 +121,7 @@ async def get_current_admin_user(
             # Try to parse it as a user_id
             try:
                 user_id = int(token_subject)
-                user = await database_service.get_user(user_id)
+                user = await database_service.users.get_user(user_id)
                 if user is None:
                     logger.error("user_not_found", user_id=user_id)
                     raise HTTPException(
@@ -157,18 +160,23 @@ async def get_current_admin_user(
 
 @router.get("/users", response_model=List[UserResponse])
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_all_users"][0])
-async def list_users(request: Request, admin_user: User = Depends(get_current_admin_user)):
+async def list_users(
+    request: Request,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """List all users in the system.
 
     Args:
         request: The FastAPI request object for rate limiting.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         List of user information (without passwords).
     """
     try:
-        users = await database_service.get_all_users()
+        users = await database_service.users.get_all_users()
         return [
             UserResponse(
                 id=user.id,
@@ -186,18 +194,23 @@ async def list_users(request: Request, admin_user: User = Depends(get_current_ad
 
 @router.get("/users/pending", response_model=List[UserResponse])
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_pending_users"][0])
-async def list_pending_users(request: Request, admin_user: User = Depends(get_current_admin_user)):
+async def list_pending_users(
+    request: Request,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """List all users pending approval.
 
     Args:
         request: The FastAPI request object for rate limiting.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         List of pending user information (without passwords).
     """
     try:
-        users = await database_service.get_pending_users()
+        users = await database_service.users.get_pending_users()
         return [
             UserResponse(
                 id=user.id,
@@ -215,19 +228,25 @@ async def list_pending_users(request: Request, admin_user: User = Depends(get_cu
 
 @router.get("/users/{user_id}", response_model=UserResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_user_by_id"][0])
-async def get_user(request: Request, user_id: int, admin_user: User = Depends(get_current_admin_user)):
+async def get_user(
+    request: Request,
+    user_id: int,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Get a specific user by ID.
 
     Args:
         request: The FastAPI request object for rate limiting.
         user_id: The ID of the user to retrieve.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         User information (without password).
     """
     try:
-        user = await database_service.get_user(user_id)
+        user = await database_service.users.get_user(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -248,7 +267,10 @@ async def get_user(request: Request, user_id: int, admin_user: User = Depends(ge
 @router.post("/users", response_model=UserResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["create_user"][0])
 async def create_user(
-    request: Request, user_data: UserCreate, admin_user: User = Depends(get_current_admin_user)
+    request: Request,
+    user_data: UserCreate,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
 ) -> UserResponse:
     """Create a new user (admin only).
 
@@ -258,6 +280,7 @@ async def create_user(
         request: The FastAPI request object for rate limiting.
         user_data: User creation data.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Created user information.
@@ -271,11 +294,11 @@ async def create_user(
         validate_password_strength(password)
 
         # Check if user exists
-        if await database_service.get_user_by_email(sanitized_email):
+        if await database_service.users.get_user_by_email(sanitized_email):
             raise HTTPException(status_code=400, detail="Email already registered")
 
         # Create user - admin-created users are automatically approved
-        user = await database_service.create_user(
+        user = await database_service.users.create_user(
             email=sanitized_email,
             password=User.hash_password(password),
             is_approved=True,
@@ -304,7 +327,12 @@ async def create_user(
 @router.put("/users/{user_id}", response_model=UserResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["update_user"][0])
 async def update_user(
-    request: Request, user_id: int, email: str = None, is_admin: bool = None, admin_user: User = Depends(get_current_admin_user)
+    request: Request,
+    user_id: int,
+    email: str = None,
+    is_admin: bool = None,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
 ) -> UserResponse:
     """Update a user (admin only).
 
@@ -314,12 +342,13 @@ async def update_user(
         email: New email address (optional).
         is_admin: New admin status (optional).
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Updated user information.
     """
     try:
-        user = await database_service.get_user(user_id)
+        user = await database_service.users.get_user(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -332,14 +361,14 @@ async def update_user(
         if email is not None and email != user.email:
             sanitized_email = sanitize_email(email)
             # Check if new email is already taken
-            existing_user = await database_service.get_user_by_email(sanitized_email)
+            existing_user = await database_service.users.get_user_by_email(sanitized_email)
             if existing_user and existing_user.id != user_id:
                 raise HTTPException(status_code=400, detail="Email already in use")
-            user = await database_service.update_user_email(user_id, sanitized_email)
+            user = await database_service.users.update_user_email(user_id, sanitized_email)
             updated = True
 
         if is_admin is not None and is_admin != user.is_admin:
-            user = await database_service.update_user_admin_status(user_id, is_admin)
+            user = await database_service.users.update_user_admin_status(user_id, is_admin)
             updated = True
 
         if updated:
@@ -364,26 +393,32 @@ async def update_user(
 
 @router.post("/users/{user_id}/approve", response_model=UserResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["approve_user"][0])
-async def approve_user(request: Request, user_id: int, admin_user: User = Depends(get_current_admin_user)):
+async def approve_user(
+    request: Request,
+    user_id: int,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Approve a pending user account (admin only).
 
     Args:
         request: The FastAPI request object for rate limiting.
         user_id: The ID of the user to approve.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Approved user information.
     """
     try:
-        user = await database_service.get_user(user_id)
+        user = await database_service.users.get_user(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
         if user.is_approved:
             raise HTTPException(status_code=400, detail="User is already approved")
 
-        user = await database_service.approve_user(user_id)
+        user = await database_service.users.approve_user(user_id)
 
         logger.info("admin_approved_user", admin_id=admin_user.id, approved_user_id=user_id, email=user.email)
 
@@ -403,19 +438,25 @@ async def approve_user(request: Request, user_id: int, admin_user: User = Depend
 
 @router.post("/users/{user_id}/reject", response_model=DeleteUserResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["reject_user"][0])
-async def reject_user(request: Request, user_id: int, admin_user: User = Depends(get_current_admin_user)):
+async def reject_user(
+    request: Request,
+    user_id: int,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Reject and delete a pending user account (admin only).
 
     Args:
         request: The FastAPI request object for rate limiting.
         user_id: The ID of the user to reject.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Success message.
     """
     try:
-        user = await database_service.get_user(user_id)
+        user = await database_service.users.get_user(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -423,7 +464,7 @@ async def reject_user(request: Request, user_id: int, admin_user: User = Depends
             raise HTTPException(status_code=400, detail="Cannot reject an already approved user. Use delete instead.")
 
         # Delete the pending user
-        success = await database_service.delete_user(user_id)
+        success = await database_service.users.delete_user(user_id)
         if not success:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -439,7 +480,12 @@ async def reject_user(request: Request, user_id: int, admin_user: User = Depends
 
 @router.delete("/users/{user_id}" , response_model=DeleteUserResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["delete_user"][0])
-async def delete_user(request: Request, user_id: int, admin_user: User = Depends(get_current_admin_user)):
+async def delete_user(
+    request: Request,
+    user_id: int,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Delete a user and all their sessions (admin only).
 
     This endpoint first deletes all sessions associated with the user,
@@ -449,6 +495,7 @@ async def delete_user(request: Request, user_id: int, admin_user: User = Depends
         request: The FastAPI request object for rate limiting.
         user_id: The ID of the user to delete.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Success message.
@@ -458,21 +505,21 @@ async def delete_user(request: Request, user_id: int, admin_user: User = Depends
         if user_id == admin_user.id:
             raise HTTPException(status_code=400, detail="Cannot delete your own account")
 
-        user = await database_service.get_user(user_id)
+        user = await database_service.users.get_user(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
         # First, delete all sessions associated with this user
-        user_sessions = await database_service.get_user_sessions(user_id)
+        user_sessions = await database_service.users.get_user_sessions(user_id)
         sessions_deleted = 0
         for session in user_sessions:
-            await database_service.delete_session(session.id)
+            await database_service.sessions.delete_session(session.id)
             sessions_deleted += 1
 
         logger.info("admin_deleted_user_sessions", admin_id=admin_user.id, user_id=user_id, sessions_deleted=sessions_deleted)
 
         # Then delete the user
-        success = await database_service.delete_user(user_id)
+        success = await database_service.users.delete_user(user_id)
         if not success:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -490,18 +537,23 @@ async def delete_user(request: Request, user_id: int, admin_user: User = Depends
 
 @router.get("/agent-personalities", response_model=List[AgentPersonalityResponse])
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_all_agent_personalities"][0])
-async def list_agent_personalities(request: Request, admin_user: User = Depends(get_current_admin_user)):
+async def list_agent_personalities(
+    request: Request,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """List all agent personalities in the system.
 
     Args:
         request: The FastAPI request object for rate limiting.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         List of agent personalities.
     """
     try:
-        personalities = await database_service.get_all_agent_personalities()
+        personalities = await database_service.agents.get_all_agent_personalities()
         return [
             AgentPersonalityResponse(
                 id=p.id,
@@ -519,7 +571,10 @@ async def list_agent_personalities(request: Request, admin_user: User = Depends(
 @router.get("/agent-personalities/{personality_id}", response_model=AgentPersonalityResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_agent_personality_by_id"][0])
 async def get_agent_personality(
-    request: Request, personality_id: int, admin_user: User = Depends(get_current_admin_user)
+    request: Request,
+    personality_id: int,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Get a specific agent personality by ID.
 
@@ -527,12 +582,13 @@ async def get_agent_personality(
         request: The FastAPI request object for rate limiting.
         personality_id: The ID of the personality to retrieve.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Agent personality information.
     """
     try:
-        personality = await database_service.get_agent_personality(personality_id)
+        personality = await database_service.agents.get_agent_personality(personality_id)
         if not personality:
             raise HTTPException(status_code=404, detail="Agent personality not found")
 
@@ -552,7 +608,10 @@ async def get_agent_personality(
 @router.post("/agent-personalities", response_model=AgentPersonalityResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["create_agent_personality"][0])
 async def create_agent_personality(
-    request: Request, personality_data: AgentPersonalityCreate, admin_user: User = Depends(get_current_admin_user)
+    request: Request,
+    personality_data: AgentPersonalityCreate,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Create a new agent personality (admin only).
 
@@ -560,6 +619,7 @@ async def create_agent_personality(
         request: The FastAPI request object for rate limiting.
         personality_data: Agent personality creation data.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Created agent personality information.
@@ -569,7 +629,7 @@ async def create_agent_personality(
         name = sanitize_string(personality_data.name)
 
         # Create personality
-        personality = await database_service.create_agent_personality(
+        personality = await database_service.agents.create_agent_personality(
             name=name,
             personality_description=personality_data.personality_description,
         )
@@ -599,6 +659,7 @@ async def update_agent_personality(
     personality_id: int,
     personality_data: AgentPersonalityUpdate,
     admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Update an agent personality (admin only).
 
@@ -607,19 +668,20 @@ async def update_agent_personality(
         personality_id: The ID of the personality to update.
         personality_data: Updated personality data.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Updated agent personality information.
     """
     try:
-        personality = await database_service.get_agent_personality(personality_id)
+        personality = await database_service.agents.get_agent_personality(personality_id)
         if not personality:
             raise HTTPException(status_code=404, detail="Agent personality not found")
 
         # Update fields with sanitized values
         name = sanitize_string(personality_data.name) if personality_data.name else None
 
-        updated_personality = await database_service.update_agent_personality(
+        updated_personality = await database_service.agents.update_agent_personality(
             personality_id=personality_id,
             name=name,
             personality_description=personality_data.personality_description,
@@ -646,7 +708,10 @@ async def update_agent_personality(
 @router.delete("/agent-personalities/{personality_id}", response_model=DeleteAgentPersonalityResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["delete_agent_personality"][0])
 async def delete_agent_personality(
-    request: Request, personality_id: int, admin_user: User = Depends(get_current_admin_user)
+    request: Request,
+    personality_id: int,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Delete an agent personality (admin only).
 
@@ -654,16 +719,17 @@ async def delete_agent_personality(
         request: The FastAPI request object for rate limiting.
         personality_id: The ID of the personality to delete.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Success message.
     """
     try:
-        personality = await database_service.get_agent_personality(personality_id)
+        personality = await database_service.agents.get_agent_personality(personality_id)
         if not personality:
             raise HTTPException(status_code=404, detail="Agent personality not found")
 
-        success = await database_service.delete_agent_personality(personality_id)
+        success = await database_service.agents.delete_agent_personality(personality_id)
         if not success:
             raise HTTPException(status_code=404, detail="Agent personality not found")
 
@@ -681,18 +747,23 @@ async def delete_agent_personality(
 
 @router.get("/agents", response_model=List[AgentResponse])
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_all_agents"][0])
-async def list_agents(request: Request, admin_user: User = Depends(get_current_admin_user)):
+async def list_agents(
+    request: Request,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """List all agents in the system.
 
     Args:
         request: The FastAPI request object for rate limiting.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         List of agents.
     """
     try:
-        agents = await database_service.get_all_agents()
+        agents = await database_service.agents.get_all_agents()
         return [
             AgentResponse(
                 id=a.id,
@@ -716,19 +787,25 @@ async def list_agents(request: Request, admin_user: User = Depends(get_current_a
 
 @router.get("/agents/{agent_id}", response_model=AgentResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_agent_by_id"][0])
-async def get_agent(request: Request, agent_id: str, admin_user: User = Depends(get_current_admin_user)):
+async def get_agent(
+    request: Request,
+    agent_id: str,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Get a specific agent by ID.
 
     Args:
         request: The FastAPI request object for rate limiting.
         agent_id: The ID of the agent to retrieve.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Agent information.
     """
     try:
-        agent = await database_service.get_agent(agent_id)
+        agent = await database_service.agents.get_agent(agent_id)
         if not agent:
             raise HTTPException(status_code=404, detail="Agent not found")
 
@@ -755,7 +832,10 @@ async def get_agent(request: Request, agent_id: str, admin_user: User = Depends(
 @router.post("/agents", response_model=AgentResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["create_agent"][0])
 async def create_agent(
-    request: Request, agent_data: AgentCreate, admin_user: User = Depends(get_current_admin_user)
+    request: Request,
+    agent_data: AgentCreate,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Create a new agent (admin only).
 
@@ -763,6 +843,7 @@ async def create_agent(
         request: The FastAPI request object for rate limiting.
         agent_data: Agent creation data.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Created agent information.
@@ -779,24 +860,24 @@ async def create_agent(
         # HTML escaping would corrupt apostrophes, quotes, and other valid characters.
 
         # Verify scenario and personality exist
-        scenario = await database_service.get_scenario(agent_data.scenario_id)
+        scenario = await database_service.scenarios.get_scenario(agent_data.scenario_id)
         if not scenario:
             raise HTTPException(status_code=404, detail="Scenario not found")
 
-        personality = await database_service.get_agent_personality(agent_data.agent_personality_id)
+        personality = await database_service.agents.get_agent_personality(agent_data.agent_personality_id)
         if not personality:
             raise HTTPException(status_code=404, detail="Agent personality not found")
 
         # Look up voice_id from voice name if provided
         voice_id = None
         if voice_name:
-            voice = await database_service.get_agent_voice_by_name(voice_name)
+            voice = await database_service.agents.get_agent_voice_by_name(voice_name)
             if not voice:
                 raise HTTPException(status_code=404, detail=f"Voice '{voice_name}' not found")
             voice_id = voice.id
 
         # Create agent
-        agent = await database_service.create_agent(
+        agent = await database_service.agents.create_agent(
             agent_id=agent_id,
             name=name,
             scenario_id=agent_data.scenario_id,
@@ -843,6 +924,7 @@ async def update_agent(
     agent_id: str,
     agent_data: AgentUpdate,
     admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Update an agent (admin only).
 
@@ -851,23 +933,24 @@ async def update_agent(
         agent_id: The ID of the agent to update.
         agent_data: Updated agent data.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Updated agent information.
     """
     try:
-        agent = await database_service.get_agent(agent_id)
+        agent = await database_service.agents.get_agent(agent_id)
         if not agent:
             raise HTTPException(status_code=404, detail="Agent not found")
 
         # Verify scenario and personality exist if provided
         if agent_data.scenario_id is not None:
-            scenario = await database_service.get_scenario(agent_data.scenario_id)
+            scenario = await database_service.scenarios.get_scenario(agent_data.scenario_id)
             if not scenario:
                 raise HTTPException(status_code=404, detail="Scenario not found")
 
         if agent_data.agent_personality_id is not None:
-            personality = await database_service.get_agent_personality(agent_data.agent_personality_id)
+            personality = await database_service.agents.get_agent_personality(agent_data.agent_personality_id)
             if not personality:
                 raise HTTPException(status_code=404, detail="Agent personality not found")
 
@@ -884,7 +967,7 @@ async def update_agent(
         voice_id = None
         clear_voice = False
         if voice_name:
-            voice_obj = await database_service.get_agent_voice_by_name(voice_name)
+            voice_obj = await database_service.agents.get_agent_voice_by_name(voice_name)
             if not voice_obj:
                 raise HTTPException(status_code=404, detail=f"Voice '{voice_name}' not found")
             voice_id = voice_obj.id
@@ -895,7 +978,7 @@ async def update_agent(
         # Remember old scenario_id for graph invalidation
         old_scenario_id = agent.scenario_id
         
-        updated_agent = await database_service.update_agent(
+        updated_agent = await database_service.agents.update_agent(
             agent_id=agent_id,
             name=name,
             voice_id=voice_id,
@@ -944,26 +1027,32 @@ async def update_agent(
 
 @router.delete("/agents/{agent_id}", response_model=DeleteAgentResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["delete_agent"][0])
-async def delete_agent(request: Request, agent_id: str, admin_user: User = Depends(get_current_admin_user)):
+async def delete_agent(
+    request: Request,
+    agent_id: str,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Delete an agent (admin only).
 
     Args:
         request: The FastAPI request object for rate limiting.
         agent_id: The ID of the agent to delete.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Success message.
     """
     try:
-        agent = await database_service.get_agent(agent_id)
+        agent = await database_service.agents.get_agent(agent_id)
         if not agent:
             raise HTTPException(status_code=404, detail="Agent not found")
 
         # Remember scenario_id before deletion for graph invalidation
         scenario_id = agent.scenario_id
         
-        success = await database_service.delete_agent(agent_id)
+        success = await database_service.agents.delete_agent(agent_id)
         if not success:
             raise HTTPException(status_code=404, detail="Agent not found")
 
@@ -983,18 +1072,23 @@ async def delete_agent(request: Request, agent_id: str, admin_user: User = Depen
 
 @router.get("/scenarios", response_model=List[ScenarioAdminResponse])
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_all_scenarios"][0])
-async def list_scenarios(request: Request, admin_user: User = Depends(get_current_admin_user)):
+async def list_scenarios(
+    request: Request,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """List all scenarios in the system.
 
     Args:
         request: The FastAPI request object for rate limiting.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         List of scenarios.
     """
     try:
-        scenarios = await database_service.get_all_scenarios()
+        scenarios = await database_service.scenarios.get_all_scenarios()
         return [
             ScenarioAdminResponse(
                 id=s.id,
@@ -1015,19 +1109,25 @@ async def list_scenarios(request: Request, admin_user: User = Depends(get_curren
 
 @router.get("/scenarios/{scenario_id}", response_model=ScenarioAdminResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_scenario_by_id"][0])
-async def get_scenario(request: Request, scenario_id: int, admin_user: User = Depends(get_current_admin_user)):
+async def get_scenario(
+    request: Request,
+    scenario_id: int,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Get a specific scenario by ID.
 
     Args:
         request: The FastAPI request object for rate limiting.
         scenario_id: The ID of the scenario to retrieve.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Scenario information.
     """
     try:
-        scenario = await database_service.get_scenario(scenario_id)
+        scenario = await database_service.scenarios.get_scenario(scenario_id)
         if not scenario:
             raise HTTPException(status_code=404, detail="Scenario not found")
 
@@ -1051,7 +1151,10 @@ async def get_scenario(request: Request, scenario_id: int, admin_user: User = De
 @router.post("/scenarios", response_model=ScenarioAdminResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["create_scenario"][0])
 async def create_scenario(
-    request: Request, scenario_data: ScenarioCreateRequest, admin_user: User = Depends(get_current_admin_user)
+    request: Request,
+    scenario_data: ScenarioCreateRequest,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Create a new scenario (admin only).
 
@@ -1059,6 +1162,7 @@ async def create_scenario(
         request: The FastAPI request object for rate limiting.
         scenario_data: Scenario creation data.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Created scenario information.
@@ -1071,7 +1175,7 @@ async def create_scenario(
         # as they may contain LLM prompts. HTML escaping would corrupt apostrophes, quotes, and other valid characters.
 
         # Create scenario
-        scenario = await database_service.create_scenario(
+        scenario = await database_service.scenarios.create_scenario(
             name=name,
             description=scenario_data.description,
             overview=scenario_data.overview,
@@ -1109,6 +1213,7 @@ async def update_scenario(
     scenario_id: int,
     scenario_data: ScenarioUpdateRequest,
     admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Update a scenario (admin only).
 
@@ -1117,12 +1222,13 @@ async def update_scenario(
         scenario_id: The ID of the scenario to update.
         scenario_data: Updated scenario data.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Updated scenario information.
     """
     try:
-        scenario = await database_service.get_scenario(scenario_id)
+        scenario = await database_service.scenarios.get_scenario(scenario_id)
         if not scenario:
             raise HTTPException(status_code=404, detail="Scenario not found")
 
@@ -1132,7 +1238,7 @@ async def update_scenario(
         # Note: Not sanitizing content fields (description, overview, system_instructions, initial_prompt)
         # as they may contain LLM prompts. HTML escaping would corrupt apostrophes, quotes, and other valid characters.
 
-        updated_scenario = await database_service.update_scenario(
+        updated_scenario = await database_service.scenarios.update_scenario(
             scenario_id=scenario_id,
             name=name,
             description=scenario_data.description,
@@ -1166,23 +1272,29 @@ async def update_scenario(
 
 @router.delete("/scenarios/{scenario_id}", response_model=DeleteScenarioResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["delete_scenario"][0])
-async def delete_scenario(request: Request, scenario_id: int, admin_user: User = Depends(get_current_admin_user)):
+async def delete_scenario(
+    request: Request,
+    scenario_id: int,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Delete a scenario (admin only).
 
     Args:
         request: The FastAPI request object for rate limiting.
         scenario_id: The ID of the scenario to delete.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Success message.
     """
     try:
-        scenario = await database_service.get_scenario(scenario_id)
+        scenario = await database_service.scenarios.get_scenario(scenario_id)
         if not scenario:
             raise HTTPException(status_code=404, detail="Scenario not found")
 
-        success = await database_service.delete_scenario(scenario_id)
+        success = await database_service.scenarios.delete_scenario(scenario_id)
         if not success:
             raise HTTPException(status_code=404, detail="Scenario not found")
 
@@ -1200,18 +1312,23 @@ async def delete_scenario(request: Request, scenario_id: int, admin_user: User =
 
 @router.get("/feedback", response_model=List[FeedbackResponse])
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_all_feedback"][0])
-async def list_feedback(request: Request, admin_user: User = Depends(get_current_admin_user)):
+async def list_feedback(
+    request: Request,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """List all feedback in the system.
 
     Args:
         request: The FastAPI request object for rate limiting.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         List of feedback.
     """
     try:
-        feedbacks = await database_service.get_all_feedback()
+        feedbacks = await database_service.feedback.get_all_feedback()
         return [
             FeedbackResponse(
                 id=f.id,
@@ -1233,19 +1350,25 @@ async def list_feedback(request: Request, admin_user: User = Depends(get_current
 
 @router.get("/feedback/{feedback_id}", response_model=FeedbackResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["get_feedback_by_id"][0])
-async def get_feedback(request: Request, feedback_id: int, admin_user: User = Depends(get_current_admin_user)):
+async def get_feedback(
+    request: Request,
+    feedback_id: int,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Get a specific feedback by ID.
 
     Args:
         request: The FastAPI request object for rate limiting.
         feedback_id: The ID of the feedback to retrieve.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Feedback information.
     """
     try:
-        feedback = await database_service.get_feedback(feedback_id)
+        feedback = await database_service.feedback.get_feedback(feedback_id)
         if not feedback:
             raise HTTPException(status_code=404, detail="Feedback not found")
 
@@ -1270,7 +1393,10 @@ async def get_feedback(request: Request, feedback_id: int, admin_user: User = De
 @router.post("/feedback", response_model=FeedbackResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["create_feedback"][0])
 async def create_feedback(
-    request: Request, feedback_data: FeedbackCreate, admin_user: User = Depends(get_current_admin_user)
+    request: Request,
+    feedback_data: FeedbackCreate,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Create a new feedback (admin only).
 
@@ -1278,6 +1404,7 @@ async def create_feedback(
         request: The FastAPI request object for rate limiting.
         feedback_data: Feedback creation data.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Created feedback information.
@@ -1288,7 +1415,7 @@ async def create_feedback(
         # HTML escaping would corrupt apostrophes, quotes, and other valid characters.
 
         # Create feedback
-        feedback = await database_service.create_feedback(
+        feedback = await database_service.feedback.create_feedback(
             feedback_type=feedback_data.feedback_type,
             scenario_id=feedback_data.scenario_id,
             objective=feedback_data.objective,
@@ -1328,6 +1455,7 @@ async def update_feedback(
     feedback_id: int,
     feedback_data: FeedbackUpdate,
     admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
 ):
     """Update a feedback (admin only).
 
@@ -1336,12 +1464,13 @@ async def update_feedback(
         feedback_id: The ID of the feedback to update.
         feedback_data: Updated feedback data.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Updated feedback information.
     """
     try:
-        feedback = await database_service.get_feedback(feedback_id)
+        feedback = await database_service.feedback.get_feedback(feedback_id)
         if not feedback:
             raise HTTPException(status_code=404, detail="Feedback not found")
 
@@ -1349,7 +1478,7 @@ async def update_feedback(
         # as they are system prompts for LLMs, not user-facing HTML content.
         # HTML escaping would corrupt apostrophes, quotes, and other valid characters.
 
-        updated_feedback = await database_service.update_feedback(
+        updated_feedback = await database_service.feedback.update_feedback(
             feedback_id=feedback_id,
             feedback_type=feedback_data.feedback_type,
             scenario_id=feedback_data.scenario_id,
@@ -1385,23 +1514,29 @@ async def update_feedback(
 
 @router.delete("/feedback/{feedback_id}", response_model=DeleteFeedbackResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["delete_feedback"][0])
-async def delete_feedback(request: Request, feedback_id: int, admin_user: User = Depends(get_current_admin_user)):
+async def delete_feedback(
+    request: Request,
+    feedback_id: int,
+    admin_user: User = Depends(get_current_admin_user),
+    database_service: DatabaseService = Depends(get_database_service),
+):
     """Delete a feedback (admin only).
 
     Args:
         request: The FastAPI request object for rate limiting.
         feedback_id: The ID of the feedback to delete.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Success message.
     """
     try:
-        feedback = await database_service.get_feedback(feedback_id)
+        feedback = await database_service.feedback.get_feedback(feedback_id)
         if not feedback:
             raise HTTPException(status_code=404, detail="Feedback not found")
 
-        success = await database_service.delete_feedback(feedback_id)
+        success = await database_service.feedback.delete_feedback(feedback_id)
         if not success:
             raise HTTPException(status_code=404, detail="Feedback not found")
 

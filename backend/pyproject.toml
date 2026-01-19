@@ -61,6 +61,7 @@ markers = [
 python_files = ["test_*.py", "*_test.py", "tests.py"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+pythonpath = ["."]
 
 [tool.black]
 line-length = 119

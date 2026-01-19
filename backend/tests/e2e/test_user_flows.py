@@ -1,7 +1,15 @@
 """End-to-end tests for complete user workflows."""
 
+import uuid
+
 import pytest
 from httpx import AsyncClient
+
+
+def unique_email(prefix: str = "test") -> str:
+    """Generate a unique email address for testing."""
+    unique_id = str(uuid.uuid4()).replace("-", "")[:8]
+    return f"{prefix}-{unique_id}@example.com"
 
 
 @pytest.mark.e2e
@@ -12,30 +20,48 @@ class TestUserRegistrationFlow:
 
     async def test_user_registration_to_approval_flow(self, async_client: AsyncClient, admin_headers):
         """Test complete flow: register -> admin approval -> login."""
+        email = unique_email("newflow")
         # Step 1: Register new user
         register_response = await async_client.post(
             "/api/v1/auth/register",
             json={
-                "email": "newflow@example.com",
+                "email": email,
                 "password": "SecurePassword123!",
             },
         )
         assert register_response.status_code == 201
         user_data = register_response.json()
-        assert "access_token" in user_data
+        assert user_data["message"] == "Registration successful. Your account is pending admin approval."
+        assert user_data["email"] == email
 
-        # Step 2: User tries to access protected resource (may fail if not approved)
-        # This depends on your authorization logic
+        # Step 2: Admin gets pending users to find the newly registered user
+        pending_users_response = await async_client.get(
+            "/api/v1/admin/users/pending",
+            headers=admin_headers,
+        )
+        assert pending_users_response.status_code == 200
+        pending_users = pending_users_response.json()
+        
+        # Find the user we just registered
+        new_user = next((u for u in pending_users if u["email"] == email), None)
+        assert new_user is not None, f"Newly registered user {email} not found in pending users"
+        user_id = new_user["id"]
 
-        # Step 3: Admin approves user (if you have an approval endpoint)
-        # This would depend on your actual API structure
-        # For now, we'll just verify the registration worked
+        # Step 3: Admin approves user
+        approve_response = await async_client.post(
+            f"/api/v1/admin/users/{user_id}/approve",
+            headers=admin_headers,
+        )
+        assert approve_response.status_code == 200
+        approved_user = approve_response.json()
+        assert approved_user["is_approved"] is True
+        assert approved_user["email"] == email
 
         # Step 4: User logs in after approval
         login_response = await async_client.post(
             "/api/v1/auth/login",
             data={
-                "username": "newflow@example.com",
+                "username": email,
                 "password": "SecurePassword123!",
             },
         )

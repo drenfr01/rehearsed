@@ -1,9 +1,17 @@
 """Integration tests for database queries."""
 
+import uuid
+
 import pytest
 from sqlmodel import Session
 
 from app.models.user import User
+
+
+def unique_email(prefix: str = "test") -> str:
+    """Generate a unique email address for testing."""
+    unique_id = str(uuid.uuid4()).replace("-", "")[:8]
+    return f"{prefix}-{unique_id}@example.com"
 
 
 @pytest.mark.integration
@@ -17,13 +25,14 @@ class TestDatabaseService:
         from app.services.database import database_service
         database_service.engine = test_engine
 
+        email = unique_email("dbservice")
         user = await database_service.users.create_user(
-            email="dbservice@example.com",
+            email=email,
             password=User.hash_password("password123"),
             is_approved=True,
         )
 
-        assert user.email == "dbservice@example.com"
+        assert user.email == email
         assert user.is_approved is True
 
     async def test_get_user_by_email(self, db_session: Session, test_user: User, test_engine):

@@ -47,7 +47,7 @@ jobs:
         run: |
           python -m compileall -q .
 
-      # - name: Run tests
-      #   working-directory: backend
-      #   run: |
-      #     uv run pytest -q
+      - name: Run tests
+        working-directory: backend
+        run: |
+          uv run pytest -q

@@ -1,6 +1,7 @@
 """Shared pytest configuration and fixtures."""
 
 import os
+import uuid
 from typing import (
     AsyncGenerator,
     Generator,
@@ -16,10 +17,12 @@ from httpx import (
     ASGITransport,
     AsyncClient,
 )
+from sqlalchemy import text
 from sqlmodel import (
     Session,
     SQLModel,
     create_engine,
+    select,
 )
 
 from app.core.config import (
@@ -39,6 +42,19 @@ from app.services.database import DatabaseService
 os.environ["APP_ENV"] = "test"
 
 
+def unique_email(prefix: str = "test") -> str:
+    """Generate a unique email address for testing.
+    
+    Args:
+        prefix: Email prefix (default: "test")
+        
+    Returns:
+        str: Unique email address in format {prefix}-{uuid}@example.com
+    """
+    unique_id = str(uuid.uuid4()).replace("-", "")[:8]
+    return f"{prefix}-{unique_id}@example.com"
+
+
 @pytest.fixture(scope="session")
 def test_engine():
     """Create a test database engine.
@@ -53,7 +69,27 @@ def test_engine():
 
     # Create all tables
     SQLModel.metadata.create_all(engine)
+    
+    # Clean up any existing data at the start of the test session
+    with Session(engine) as session:
+        for model in [ChatSession, Agent, AgentVoice, AgentPersonality, Feedback, Scenario, User]:
+            statement = select(model)
+            records = session.exec(statement).all()
+            for record in records:
+                session.delete(record)
+        session.commit()
+    
     yield engine
+    
+    # Clean up all data at the end of the test session
+    with Session(engine) as session:
+        for model in [ChatSession, Agent, AgentVoice, AgentPersonality, Feedback, Scenario, User]:
+            statement = select(model)
+            records = session.exec(statement).all()
+            for record in records:
+                session.delete(record)
+        session.commit()
+    
     SQLModel.metadata.drop_all(engine)
     engine.dispose()
 
@@ -67,8 +103,12 @@ def db_session(test_engine) -> Generator[Session, None, None]:
 
 
 @pytest.fixture
-async def async_client() -> AsyncGenerator[AsyncClient, None]:
+async def async_client(test_engine) -> AsyncGenerator[AsyncClient, None]:
     """Create an async HTTP client for testing FastAPI endpoints."""
+    # Configure database service to use test engine
+    from app.services.database import database_service
+    database_service.engine = test_engine
+    
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         yield client
 
@@ -79,7 +119,7 @@ def test_user(db_session: Session) -> User:
     from app.models.user import User
 
     user = User(
-        email="test@example.com",
+        email=unique_email("test"),
         hashed_password=User.hash_password("testpassword123"),
         is_approved=True,
         is_admin=False,
@@ -96,7 +136,7 @@ def test_admin_user(db_session: Session) -> User:
     from app.models.user import User
 
     user = User(
-        email="admin@example.com",
+        email=unique_email("admin"),
         hashed_password=User.hash_password("adminpassword123"),
         is_approved=True,
         is_admin=True,
@@ -113,7 +153,7 @@ def test_unauthorized_user(db_session: Session) -> User:
     from app.models.user import User
 
     user = User(
-        email="unauthorized@example.com",
+        email=unique_email("unauthorized"),
         hashed_password=User.hash_password("testpassword123"),
         is_approved=False,
         is_admin=False,
@@ -244,7 +284,6 @@ def test_chat_session(db_session: Session, test_user: User) -> ChatSession:
     db_session.commit()
     db_session.refresh(session)
     return session
-
 
 @pytest.fixture(autouse=True)
 def reset_settings():

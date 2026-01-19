@@ -52,20 +52,7 @@ class LangGraphAgent:
 
     def __init__(self):
         """Initialize the LangGraph Agent with necessary components."""
-        # Use environment-specific LLM model
-        # Explicitly set google_api_key=None when using Vertex AI to prevent
-        # the library from falling back to Generative Language API
-        self.llm = ChatGoogleGenerativeAI(
-            model=settings.LLM_MODEL,
-            temperature=settings.DEFAULT_LLM_TEMPERATURE,
-            project=settings.GOOGLE_CLOUD_PROJECT,
-            location=settings.GOOGLE_CLOUD_LOCATION,
-            max_tokens=settings.MAX_TOKENS,
-            vertexai=True,
-            google_api_key=None,  # Explicitly disable API key to force Vertex AI usage
-            **self._get_model_kwargs(),
-        ).bind_tools(tools)
-        print("LLM: ", self.llm)
+        self._llm = None
         self.tools_by_name = {tool.name: tool for tool in tools}
         self._connection_pool: Optional[AsyncConnectionPool] = None
         # Store graphs per scenario_id for dynamic agent support
@@ -73,7 +60,26 @@ class LangGraphAgent:
         # Keep _graph for backwards compatibility (default scenario)
         self._current_scenario_id: Optional[int] = None
 
-        logger.info("llm_initialized", model=settings.LLM_MODEL, environment=settings.ENVIRONMENT.value)
+    @property
+    def llm(self):
+        """Lazy-load the LLM on first access."""
+        if self._llm is None:
+            # Use environment-specific LLM model
+            # Explicitly set google_api_key=None when using Vertex AI to prevent
+            # the library from falling back to Generative Language API
+            self._llm = ChatGoogleGenerativeAI(
+                model=settings.LLM_MODEL,
+                temperature=settings.DEFAULT_LLM_TEMPERATURE,
+                project=settings.GOOGLE_CLOUD_PROJECT,
+                location=settings.GOOGLE_CLOUD_LOCATION,
+                max_tokens=settings.MAX_TOKENS,
+                vertexai=True,
+                google_api_key=None,  # Explicitly disable API key to force Vertex AI usage
+                **self._get_model_kwargs(),
+            ).bind_tools(tools)
+            print("LLM: ", self._llm)
+            logger.info("llm_initialized", model=settings.LLM_MODEL, environment=settings.ENVIRONMENT.value)
+        return self._llm
 
     def _get_model_kwargs(self) -> Dict[str, Any]:
         """Get environment-specific model kwargs.

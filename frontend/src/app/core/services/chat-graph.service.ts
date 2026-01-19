@@ -1,9 +1,15 @@
 import { inject,  Injectable, signal, effect } from '@angular/core';
 import { Message, SummaryFeedbackResponse } from '../models/chat-graph.model';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { EMPTY, Observable, catchError, filter, finalize, map, of, switchMap, take, tap, timer } from 'rxjs';
 import { ChatRequest, ChatResponse } from '../models/chat-graph.model';
 import { environment } from '../../../environments/environment';
+
+type TtsStatus = 'pending' | 'ready' | 'failed';
+interface TtsAudioResponse {
+  status: TtsStatus;
+  audio_base64?: string;
+}
 
 @Injectable({
   providedIn: 'root',
@@ -14,6 +20,7 @@ export class ChatGraphService {
   private readonly INLINE_FEEDBACK_KEY = 'chat_inline_feedback';
   
   private graphMessages = signal<Message[]>(this.loadGraphMessagesFromStorage());
+  private ttsStatusById = signal<Map<string, TtsStatus>>(new Map());
 
   private interruptionContent = signal<string>('')
   private interruptionType = signal<string>('')
@@ -26,6 +33,7 @@ export class ChatGraphService {
   loadedSummaryFeedback = this.summaryFeedback.asReadonly();
   loadedStudentResponses = this.studentResponses.asReadonly();
   loadedTranscribedText = this.transcribedText.asReadonly();
+  loadedTtsStatusById = this.ttsStatusById.asReadonly();
 
   constructor() {
     // Effect to persist graphMessages to localStorage
@@ -65,6 +73,66 @@ export class ChatGraphService {
   loadedInterruptionContent = this.interruptionContent.asReadonly();
   loadedInterruptionType = this.interruptionType.asReadonly();
   loadedInlineFeedback = this.inlineFeedback.asReadonly();
+
+  private getTtsAudio(audioId: string): Observable<TtsAudioResponse> {
+    return this.httpClient.get<TtsAudioResponse>(`${environment.baseUrl}/api/v1/tts/${audioId}`);
+  }
+
+  private patchMessageAudioBase64(audioId: string, audioBase64: string) {
+    const messages = this.graphMessages();
+    const updated = messages.map(m => (
+      m.audio_id === audioId
+        ? { ...m, audio_base64: audioBase64 }
+        : m
+    ));
+    this.graphMessages.set(updated);
+  }
+
+  getTtsStatus(audioId: string | undefined): TtsStatus | undefined {
+    if (!audioId) return undefined;
+    return this.ttsStatusById().get(audioId);
+  }
+
+  private setTtsStatus(audioId: string, status: TtsStatus) {
+    const next = new Map(this.ttsStatusById());
+    next.set(audioId, status);
+    this.ttsStatusById.set(next);
+  }
+
+  /** Ensure audio is fetched and attached to the matching message(s). */
+  ensureTtsAudio(audioId: string): Observable<string> {
+    if (!audioId) return EMPTY;
+
+    const existing = this.graphMessages().find(m => m.audio_id === audioId && !!m.audio_base64)?.audio_base64;
+    if (existing) return of(existing);
+
+    // Poll until ready (short, bounded) so audio becomes available quickly without blocking chat.
+    // While polling, mark status pending. If we time out or error, mark failed (enables retry UX).
+    this.setTtsStatus(audioId, 'pending');
+    let hasAudio = false;
+
+    return timer(0, 750).pipe(
+      take(20),
+      switchMap(() => this.getTtsAudio(audioId)),
+      filter(r => r.status === 'ready' && !!r.audio_base64),
+      map(r => r.audio_base64!),
+      take(1),
+      tap((audioBase64) => {
+        hasAudio = true;
+        this.setTtsStatus(audioId, 'ready');
+        this.patchMessageAudioBase64(audioId, audioBase64);
+      }),
+      catchError((err) => {
+        console.warn('Failed to fetch TTS audio:', err);
+        return EMPTY;
+      }),
+      finalize(() => {
+        if (!hasAudio) {
+          this.setTtsStatus(audioId, 'failed');
+        }
+      }),
+    );
+  }
 
   resetGraphMessages() {
     this.graphMessages.set([]);
@@ -120,11 +188,17 @@ export class ChatGraphService {
             role: 'assistant',
             content: response.interrupt_value,
             student_name: studentResponse.student_details.name,
-            audio_base64: studentResponse.audio_base64 || undefined
+            audio_base64: studentResponse.audio_base64 || undefined,
+            audio_id: studentResponse.audio_id || undefined,
           }
           this.interruptionContent.set(response.interrupt_value);
           this.interruptionType.set(response.interrupt_value_type);
           this.graphMessages.set([...this.graphMessages(), responseMessage]);
+
+          // Start background prefetch so audio becomes available ASAP (lazy, but prewarmed).
+          if (responseMessage.audio_id && !responseMessage.audio_base64) {
+            this.ensureTtsAudio(responseMessage.audio_id).subscribe();
+          }
         } else if (response.interrupt_task) {
           // Handle case where there's an interrupt but no student responses
           const responseMessage: Message = {

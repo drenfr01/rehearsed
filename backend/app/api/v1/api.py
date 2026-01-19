@@ -10,6 +10,7 @@ from app.api.v1.admin import router as admin_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.chatbot import router as chatbot_router
 from app.api.v1.scenario import router as scenario_router
+from app.api.v1.tts import router as tts_router
 from app.api.v1.user_content import router as user_content_router
 from app.core.logging import logger
 
@@ -21,6 +22,7 @@ api_router.include_router(chatbot_router, prefix="/chatbot", tags=["chatbot"])
 api_router.include_router(scenario_router, prefix="/scenario", tags=["scenario"])
 api_router.include_router(admin_router, prefix="/admin", tags=["admin"])
 api_router.include_router(user_content_router, prefix="/user-content", tags=["user-content"])
+api_router.include_router(tts_router, prefix="/tts", tags=["tts"])
 
 
 @api_router.get("/health")

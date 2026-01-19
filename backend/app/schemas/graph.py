@@ -21,6 +21,7 @@ class StudentResponse(BaseModel):
     student_details: "Agent"
     student_personality: "AgentPersonality"
     audio_base64: str = Field(default="", description="Base64-encoded audio bytes for the student response")
+    audio_id: str = Field(default="", description="Identifier for fetching audio lazily")
 
 
 class GraphState(BaseModel):

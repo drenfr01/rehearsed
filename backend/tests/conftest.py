@@ -285,6 +285,7 @@ def mock_text_to_speech_service():
     """Mock GeminiTextToSpeech instance and synthesize method."""
     mock_service = MagicMock()
     mock_service.synthesize = MagicMock(return_value=b"fake audio bytes")
+    mock_service.synthesize_async = AsyncMock(return_value=b"fake audio bytes")
     
     with patch("app.api.v1.deps.text_to_speech_service", mock_service):
         with patch("app.api.v1.deps.get_text_to_speech_service", return_value=mock_service):

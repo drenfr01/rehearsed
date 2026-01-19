@@ -5,6 +5,7 @@ export interface Message {
     content: string;
     student_name?: string;
     audio_base64?: string;
+    audio_id?: string;
 }
 
 export interface Agent {
@@ -34,6 +35,7 @@ export interface StudentResponse {
     student_details: Agent;
     student_personality: AgentPersonality;
     audio_base64: string;
+    audio_id?: string;
 }
 
 export interface SummaryFeedbackResponse {

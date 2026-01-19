@@ -1,5 +1,6 @@
 """User fixture factories for testing."""
 
+import uuid
 from typing import Optional
 
 from sqlmodel import Session
@@ -7,9 +8,15 @@ from sqlmodel import Session
 from app.models.user import User
 
 
+def unique_email(prefix: str = "test") -> str:
+    """Generate a unique email address for testing."""
+    unique_id = str(uuid.uuid4()).replace("-", "")[:8]
+    return f"{prefix}-{unique_id}@example.com"
+
+
 def create_test_user(
     session: Session,
-    email: str = "test@example.com",
+    email: Optional[str] = None,
     password: str = "testpassword123",
     is_approved: bool = True,
     is_admin: bool = False,
@@ -18,7 +25,7 @@ def create_test_user(
 
     Args:
         session: Database session
-        email: User email address
+        email: User email address (if None, generates unique email)
         password: Plain text password (will be hashed)
         is_approved: Whether user is approved
         is_admin: Whether user has admin privileges
@@ -26,6 +33,8 @@ def create_test_user(
     Returns:
         User: Created user instance
     """
+    if email is None:
+        email = unique_email("test")
     user = User(
         email=email,
         hashed_password=User.hash_password(password),
@@ -57,9 +66,11 @@ def create_test_users_batch(
     """
     users = []
     for i in range(1, count + 1):
+        # Generate unique email for each user in batch
+        user_email = unique_email(f"{prefix}{i}")
         user = create_test_user(
             session=session,
-            email=f"{prefix}{i}@example.com",
+            email=user_email,
             password=f"password{i}",
             is_approved=is_approved,
         )

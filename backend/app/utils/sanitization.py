@@ -33,6 +33,9 @@ def sanitize_string(value: str) -> str:
     # Remove null bytes
     value = value.replace("\0", "")
 
+    # Strip leading/trailing whitespace
+    value = value.strip()
+
     return value
 
 

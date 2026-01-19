@@ -22,10 +22,6 @@ jobs:
         with:
           python-version-file: "backend/.python-version"
 
-      - name: Install libpq-dev
-        run: |
-          sudo apt update && sudo apt install -y libpq-dev
-
       - name: Install UV
         uses: astral-sh/setup-uv@v7
         with:
@@ -47,7 +43,9 @@ jobs:
         run: |
           python -m compileall -q .
 
-      # - name: Run tests
-      #   working-directory: backend
-      #   run: |
-      #     uv run pytest -q
+      - name: Run tests
+        working-directory: backend
+        env:
+          TEST_DATABASE_URL: "sqlite:///:memory:"
+        run: |
+          uv run pytest -q

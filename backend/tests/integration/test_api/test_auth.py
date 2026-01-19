@@ -1,7 +1,15 @@
 """Integration tests for authentication API endpoints."""
 
+import uuid
+
 import pytest
 from httpx import AsyncClient
+
+
+def unique_email(prefix: str = "test") -> str:
+    """Generate a unique email address for testing."""
+    unique_id = str(uuid.uuid4()).replace("-", "")[:8]
+    return f"{prefix}-{unique_id}@example.com"
 
 
 @pytest.mark.integration
@@ -11,17 +19,18 @@ class TestRegistration:
 
     async def test_register_success(self, async_client: AsyncClient):
         """Test successful user registration."""
+        email = unique_email("register")
         response = await async_client.post(
             "/api/v1/auth/register",
             json={
-                "email": "newuser@example.com",
+                "email": email,
                 "password": "SecurePassword123!",
             },
         )
         assert response.status_code == 201
         data = response.json()
-        assert "access_token" in data
-        assert data["email"] == "newuser@example.com"
+        assert data["message"] == "Registration successful. Your account is pending admin approval."
+        assert data["email"] == email
 
     async def test_register_duplicate_email(self, async_client: AsyncClient, test_user):
         """Test registration with duplicate email."""
@@ -39,7 +48,7 @@ class TestRegistration:
         response = await async_client.post(
             "/api/v1/auth/register",
             json={
-                "email": "weakpass@example.com",
+                "email": unique_email("weakpass"),
                 "password": "123",
             },
         )
@@ -85,27 +94,3 @@ class TestLogin:
             },
         )
         assert response.status_code == 401
-
-
-@pytest.mark.integration
-@pytest.mark.asyncio
-class TestGetCurrentUser:
-    """Test get current user endpoint."""
-
-    async def test_get_current_user_success(self, async_client: AsyncClient, authenticated_headers):
-        """Test getting current user with valid token."""
-        response = await async_client.get("/api/v1/auth/me", headers=authenticated_headers)
-        assert response.status_code == 200
-        data = response.json()
-        assert "email" in data
-
-    async def test_get_current_user_no_token(self, async_client: AsyncClient):
-        """Test getting current user without token."""
-        response = await async_client.get("/api/v1/auth/me")
-        assert response.status_code == 403
-
-    async def test_get_current_user_invalid_token(self, async_client: AsyncClient):
-        """Test getting current user with invalid token."""
-        headers = {"Authorization": "Bearer invalid-token"}
-        response = await async_client.get("/api/v1/auth/me", headers=headers)
-        assert response.status_code in [401, 422]

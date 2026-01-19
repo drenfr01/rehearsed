@@ -150,7 +150,7 @@ async def get_current_session(
         )
 
 
-@router.post("/register", response_model=RegistrationResponse)
+@router.post("/register", response_model=RegistrationResponse, status_code=201)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["register"][0])
 async def register(
     request: Request,
@@ -208,7 +208,7 @@ async def register(
         raise HTTPException(status_code=500, detail="Registration failed")
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=TokenResponse, status_code=200)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["login"][0])
 async def login(
     request: Request,

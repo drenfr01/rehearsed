@@ -6,8 +6,15 @@ class GeminiTextToSpeech:
     """Service for synthesizing speech using Google Cloud Text-to-Speech."""
 
     def __init__(self):
-        """Initialize the text-to-speech client."""
-        self.client = texttospeech.TextToSpeechClient()
+        """Initialize the text-to-speech service."""
+        self._client = None
+
+    @property
+    def client(self):
+        """Lazy-load the text-to-speech client on first access."""
+        if self._client is None:
+            self._client = texttospeech.TextToSpeechClient()
+        return self._client
 
     def synthesize(self, prompt: str, text: str, voice_name: str, model_name: str = "gemini-2.5-flash-tts") -> bytes:
         """Synthesize speech from the input text and return the audio content as bytes.

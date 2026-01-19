@@ -8,3 +8,5 @@ postgres-data-dev
 postgres-data-staging
 postgres-data-production
 postgres-data-test
+htmlcov
+.coverage

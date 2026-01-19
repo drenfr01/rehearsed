@@ -76,19 +76,4 @@ class TestSessionCreationFlow:
 
     async def test_create_and_use_session(self, async_client: AsyncClient, authenticated_headers, test_user):
         """Test creating a session and using it."""
-        # Step 1: Create a new session
-        # This depends on your actual session creation endpoint
-        # Example structure:
-        # session_response = await async_client.post(
-        #     "/api/v1/chatbot/session",
-        #     headers=authenticated_headers,
-        #     json={"name": "Test Session"},
-        # )
-        # assert session_response.status_code == 201
-        # session_id = session_response.json()["id"]
-
-        # Step 2: Use the session (e.g., send a message)
-        # This depends on your actual API structure
-
-        # For now, this is a placeholder structure
         pass

@@ -165,20 +165,27 @@ def test_unauthorized_user(db_session: Session) -> User:
 
 
 @pytest.fixture
-def auth_token(test_user: User) -> str:
-    """Create a JWT token for a test user."""
+def auth_token(test_chat_session: ChatSession) -> str:
+    """Create a JWT token for a test user using session ID."""
     from app.utils.auth import create_access_token
 
-    token = create_access_token(str(test_user.id))
+    token = create_access_token(str(test_chat_session.id))
     return token.access_token
 
 
 @pytest.fixture
-def admin_token(test_admin_user: User) -> str:
-    """Create a JWT token for a test admin user."""
+def admin_token(test_admin_user: User, db_session: Session) -> str:
+    """Create a JWT token for a test admin user using session ID."""
     from app.utils.auth import create_access_token
+    import uuid
 
-    token = create_access_token(str(test_admin_user.id))
+    # Create a session for the admin user
+    admin_session = ChatSession(id=str(uuid.uuid4()), user_id=test_admin_user.id, name="Admin Session")
+    db_session.add(admin_session)
+    db_session.commit()
+    db_session.refresh(admin_session)
+
+    token = create_access_token(str(admin_session.id))
     return token.access_token
 
 
@@ -221,6 +228,67 @@ def mock_google_cloud_speech():
         mock.return_value = mock_instance
         mock_instance.recognize = AsyncMock(return_value=MagicMock(results=[]))
         yield mock_instance
+
+
+@pytest.fixture
+def mock_langgraph_agent():
+    """Mock LangGraphAgent instance methods."""
+    from app.schemas.chat import ChatResponse, Message
+    
+    mock_agent = AsyncMock()
+    mock_agent.llm = MagicMock()
+    mock_agent.llm.model_name = "test-model"
+    mock_agent.llm.model = "test-model"
+    
+    # Mock get_response to return a ChatResponse
+    mock_agent.get_response = AsyncMock(return_value=ChatResponse(
+        messages=[Message(role="assistant", content="Test response")]
+    ))
+    
+    # Mock get_resumption_response
+    mock_agent.get_resumption_response = AsyncMock(return_value=ChatResponse(
+        messages=[Message(role="assistant", content="Test resumption response")]
+    ))
+    
+    # Mock get_stream_response as an async generator
+    async def mock_stream():
+        yield "Test "
+        yield "stream "
+        yield "response"
+    mock_agent.get_stream_response = mock_stream
+    
+    # Mock get_chat_history
+    mock_agent.get_chat_history = AsyncMock(return_value=[
+        Message(role="user", content="Test message"),
+        Message(role="assistant", content="Test response")
+    ])
+    
+    # Mock clear_chat_history
+    mock_agent.clear_chat_history = AsyncMock(return_value=None)
+    
+    with patch("app.api.v1.chatbot.agent", mock_agent):
+        yield mock_agent
+
+
+@pytest.fixture
+def mock_speech_to_text_service():
+    """Mock SpeechToTextService instance and transcribe_audio method."""
+    mock_service = AsyncMock()
+    mock_service.transcribe_audio = AsyncMock(return_value="transcribed text")
+    
+    with patch("app.api.v1.chatbot.speech_to_text_service", mock_service):
+        yield mock_service
+
+
+@pytest.fixture
+def mock_text_to_speech_service():
+    """Mock GeminiTextToSpeech instance and synthesize method."""
+    mock_service = MagicMock()
+    mock_service.synthesize = MagicMock(return_value=b"fake audio bytes")
+    
+    with patch("app.api.v1.deps.text_to_speech_service", mock_service):
+        with patch("app.api.v1.deps.get_text_to_speech_service", return_value=mock_service):
+            yield mock_service
 
 
 @pytest.fixture

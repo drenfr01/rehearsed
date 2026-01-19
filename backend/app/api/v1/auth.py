@@ -55,6 +55,7 @@ async def get_current_user(
 
     Args:
         credentials: The HTTP authorization credentials containing the JWT token.
+        database_service: The database service instance.
 
     Returns:
         User: The user extracted from the token.
@@ -105,6 +106,7 @@ async def get_current_session(
 
     Args:
         credentials: The HTTP authorization credentials containing the JWT token.
+        database_service: The database service instance.
 
     Returns:
         Session: The session extracted from the token.
@@ -163,6 +165,7 @@ async def register(
     Args:
         request: The FastAPI request object for rate limiting.
         user_data: User registration data containing email and password.
+        database_service: The database service instance.
 
     Returns:
         RegistrationResponse: Success message and registered email.
@@ -221,6 +224,7 @@ async def login(
         username: User's email
         password: User's password
         grant_type: Must be "password"
+        database_service: The database service instance.
 
     Returns:
         TokenResponse: Access token information
@@ -274,6 +278,7 @@ async def create_session(
 
     Args:
         user: The authenticated user
+        database_service: The database service instance.
 
     Returns:
         SessionResponse: The session ID, name, and access token
@@ -315,6 +320,7 @@ async def update_session_name(
         session_id: The ID of the session to update
         name: The new name for the session
         current_session: The current session from auth
+        database_service: The database service instance.
 
     Returns:
         SessionResponse: The updated session information
@@ -352,6 +358,7 @@ async def delete_session(
     Args:
         session_id: The ID of the session to delete
         current_session: The current session from auth
+        database_service: The database service instance.
 
     Returns:
         None
@@ -383,6 +390,7 @@ async def get_user_sessions(
 
     Args:
         user: The authenticated user
+        database_service: The database service instance.
 
     Returns:
         List[SessionResponse]: List of session IDs

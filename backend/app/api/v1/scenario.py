@@ -47,6 +47,7 @@ async def get_optional_user(
 
     Args:
         credentials: The optional HTTP authorization credentials.
+        database_service: The database service instance.
 
     Returns:
         Optional[User]: The authenticated user if token is valid, None otherwise.
@@ -96,6 +97,7 @@ async def get_all_scenarios(
     Args:
         request: The FastAPI request object for rate limiting.
         user: The optional authenticated user.
+        database_service: The database service instance.
 
     Returns:
         List[ScenarioWithOwnerResponse]: A list of scenarios with ownership info.
@@ -149,6 +151,7 @@ async def get_scenario_by_id(
     Args:
         request: The FastAPI request object for rate limiting.
         scenario_id: The ID of the scenario to get.
+        database_service: The database service instance.
 
     Returns:
         Scenario: The scenario with the given ID.
@@ -179,6 +182,7 @@ async def set_current_scenario_by_id(
     Args:
         request: The FastAPI request object for rate limiting.
         scenario_request: The request object containing the scenario ID.
+        database_service: The database service instance.
 
     Returns:
         Scenario: The scenario that was set.
@@ -212,6 +216,7 @@ async def get_scenario_agents(
         request: The FastAPI request object for rate limiting.
         scenario_id: The ID of the scenario to get agents for.
         user: The optional authenticated user.
+        database_service: The database service instance.
 
     Returns:
         List[AgentResponse]: A list of agents belonging to the scenario.

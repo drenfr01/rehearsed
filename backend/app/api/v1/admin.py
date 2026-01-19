@@ -77,6 +77,7 @@ async def get_current_admin_user(
 
     Args:
         credentials: The HTTP authorization credentials containing the JWT token.
+        database_service: The database service instance.
 
     Returns:
         User: The authenticated admin user.
@@ -169,6 +170,7 @@ async def list_users(
     Args:
         request: The FastAPI request object for rate limiting.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         List of user information (without passwords).
@@ -202,6 +204,7 @@ async def list_pending_users(
     Args:
         request: The FastAPI request object for rate limiting.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         List of pending user information (without passwords).
@@ -237,6 +240,7 @@ async def get_user(
         request: The FastAPI request object for rate limiting.
         user_id: The ID of the user to retrieve.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         User information (without password).
@@ -276,6 +280,7 @@ async def create_user(
         request: The FastAPI request object for rate limiting.
         user_data: User creation data.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Created user information.
@@ -337,6 +342,7 @@ async def update_user(
         email: New email address (optional).
         is_admin: New admin status (optional).
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Updated user information.
@@ -399,6 +405,7 @@ async def approve_user(
         request: The FastAPI request object for rate limiting.
         user_id: The ID of the user to approve.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Approved user information.
@@ -443,6 +450,7 @@ async def reject_user(
         request: The FastAPI request object for rate limiting.
         user_id: The ID of the user to reject.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Success message.
@@ -487,6 +495,7 @@ async def delete_user(
         request: The FastAPI request object for rate limiting.
         user_id: The ID of the user to delete.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Success message.
@@ -538,6 +547,7 @@ async def list_agent_personalities(
     Args:
         request: The FastAPI request object for rate limiting.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         List of agent personalities.
@@ -572,6 +582,7 @@ async def get_agent_personality(
         request: The FastAPI request object for rate limiting.
         personality_id: The ID of the personality to retrieve.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Agent personality information.
@@ -608,6 +619,7 @@ async def create_agent_personality(
         request: The FastAPI request object for rate limiting.
         personality_data: Agent personality creation data.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Created agent personality information.
@@ -656,6 +668,7 @@ async def update_agent_personality(
         personality_id: The ID of the personality to update.
         personality_data: Updated personality data.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Updated agent personality information.
@@ -743,6 +756,7 @@ async def list_agents(
     Args:
         request: The FastAPI request object for rate limiting.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         List of agents.
@@ -784,6 +798,7 @@ async def get_agent(
         request: The FastAPI request object for rate limiting.
         agent_id: The ID of the agent to retrieve.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Agent information.
@@ -827,6 +842,7 @@ async def create_agent(
         request: The FastAPI request object for rate limiting.
         agent_data: Agent creation data.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Created agent information.
@@ -916,6 +932,7 @@ async def update_agent(
         agent_id: The ID of the agent to update.
         agent_data: Updated agent data.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Updated agent information.
@@ -1063,6 +1080,7 @@ async def list_scenarios(
     Args:
         request: The FastAPI request object for rate limiting.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         List of scenarios.
@@ -1101,6 +1119,7 @@ async def get_scenario(
         request: The FastAPI request object for rate limiting.
         scenario_id: The ID of the scenario to retrieve.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Scenario information.
@@ -1141,6 +1160,7 @@ async def create_scenario(
         request: The FastAPI request object for rate limiting.
         scenario_data: Scenario creation data.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Created scenario information.
@@ -1200,6 +1220,7 @@ async def update_scenario(
         scenario_id: The ID of the scenario to update.
         scenario_data: Updated scenario data.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Updated scenario information.
@@ -1298,6 +1319,7 @@ async def list_feedback(
     Args:
         request: The FastAPI request object for rate limiting.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         List of feedback.
@@ -1337,6 +1359,7 @@ async def get_feedback(
         request: The FastAPI request object for rate limiting.
         feedback_id: The ID of the feedback to retrieve.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Feedback information.
@@ -1378,6 +1401,7 @@ async def create_feedback(
         request: The FastAPI request object for rate limiting.
         feedback_data: Feedback creation data.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Created feedback information.
@@ -1437,6 +1461,7 @@ async def update_feedback(
         feedback_id: The ID of the feedback to update.
         feedback_data: Updated feedback data.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Updated feedback information.

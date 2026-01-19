@@ -53,6 +53,8 @@ async def chat(
         request: The FastAPI request object for rate limiting.
         chat_request: The chat request containing messages.
         session: The current session from the auth token.
+        database_service: The database service instance.
+        text_to_speech_service: The text-to-speech service instance.
 
     Returns:
         ChatResponse: The processed chat response.
@@ -144,6 +146,8 @@ async def chat_stream(
         request: The FastAPI request object for rate limiting.
         chat_request: The chat request containing messages.
         session: The current session from the auth token.
+        database_service: The database service instance.
+        text_to_speech_service: The text-to-speech service instance.
 
     Returns:
         StreamingResponse: A streaming response of the chat completion.

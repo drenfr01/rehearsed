@@ -62,6 +62,7 @@ async def get_current_user_from_session(
 
     Args:
         credentials: The HTTP authorization credentials containing the JWT token.
+        database_service: The database service instance.
 
     Returns:
         User: The authenticated user.
@@ -151,6 +152,7 @@ async def get_agent_voices(
     Args:
         request: The FastAPI request object for rate limiting.
         user: The authenticated user.
+        database_service: The database service instance.
 
     Returns:
         List[AgentVoiceResponse]: List of all available agent voices.
@@ -217,6 +219,7 @@ async def create_scenario(
         request: The FastAPI request object for rate limiting.
         scenario_data: Scenario creation data.
         user: The authenticated user.
+        database_service: The database service instance.
 
     Returns:
         Created scenario information.
@@ -272,6 +275,7 @@ async def update_scenario(
         scenario_id: The ID of the scenario to update.
         scenario_data: Updated scenario data.
         user: The authenticated user.
+        database_service: The database service instance.
 
     Returns:
         Updated scenario information.
@@ -355,6 +359,7 @@ async def copy_scenario_to_local(
         request: The FastAPI request object for rate limiting.
         scenario_id: The ID of the scenario to copy.
         user: The authenticated user.
+        database_service: The database service instance.
 
     Returns:
         The new local copy of the scenario.
@@ -428,6 +433,7 @@ async def create_agent_personality(
         request: The FastAPI request object for rate limiting.
         personality_data: Agent personality creation data.
         user: The authenticated user.
+        database_service: The database service instance.
 
     Returns:
         Created agent personality information.
@@ -476,6 +482,7 @@ async def update_agent_personality(
         personality_id: The ID of the personality to update.
         personality_data: Updated personality data.
         user: The authenticated user.
+        database_service: The database service instance.
 
     Returns:
         Updated agent personality information.
@@ -552,6 +559,7 @@ async def copy_agent_personality_to_local(
         request: The FastAPI request object for rate limiting.
         personality_id: The ID of the personality to copy.
         user: The authenticated user.
+        database_service: The database service instance.
 
     Returns:
         The new local copy of the agent personality.
@@ -629,6 +637,7 @@ async def create_agent(
         request: The FastAPI request object for rate limiting.
         agent_data: Agent creation data.
         user: The authenticated user.
+        database_service: The database service instance.
 
     Returns:
         Created agent information.
@@ -718,6 +727,7 @@ async def update_agent(
         agent_id: The ID of the agent to update.
         agent_data: Updated agent data.
         user: The authenticated user.
+        database_service: The database service instance.
 
     Returns:
         Updated agent information.
@@ -855,6 +865,7 @@ async def copy_agent_to_local(
         agent_id: The ID of the agent to copy.
         target_scenario_id: The scenario ID to assign the copied agent to.
         user: The authenticated user.
+        database_service: The database service instance.
 
     Returns:
         The new local copy of the agent.
@@ -945,6 +956,7 @@ async def create_feedback(
         request: The FastAPI request object for rate limiting.
         feedback_data: Feedback creation data.
         user: The authenticated user.
+        database_service: The database service instance.
 
     Returns:
         Created feedback information.
@@ -1000,6 +1012,7 @@ async def update_feedback(
         feedback_id: The ID of the feedback to update.
         feedback_data: Updated feedback data.
         user: The authenticated user.
+        database_service: The database service instance.
 
     Returns:
         Updated feedback information.
@@ -1083,6 +1096,7 @@ async def copy_feedback_to_local(
         request: The FastAPI request object for rate limiting.
         feedback_id: The ID of the feedback to copy.
         user: The authenticated user.
+        database_service: The database service instance.
 
     Returns:
         The new local copy of the feedback.

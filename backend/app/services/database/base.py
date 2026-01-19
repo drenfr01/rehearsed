@@ -1,5 +1,6 @@
 """Base database service with connection pool management and model registry."""
 
+import os
 from typing import Optional
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.engine import Engine
@@ -43,6 +44,11 @@ class DatabaseService:
         Returns:
             Connection URL string
         """
+        # Check for test database URL first (for testing with SQLite)
+        test_db_url = os.getenv("TEST_DATABASE_URL")
+        if test_db_url:
+            return test_db_url
+        
         if settings.ENVIRONMENT == Environment.PRODUCTION:
             return (
                 f"postgresql+psycopg2://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}"
@@ -60,20 +66,32 @@ class DatabaseService:
             return
         
         try:
-            pool_size = settings.POSTGRES_POOL_SIZE
-            max_overflow = settings.POSTGRES_MAX_OVERFLOW
-            
             connection_url = self._get_connection_url()
             
-            self._engine = create_engine(
-                connection_url,
-                pool_pre_ping=True,
-                poolclass=QueuePool,
-                pool_size=pool_size,
-                max_overflow=max_overflow,
-                pool_timeout=30,  # Connection timeout (seconds)
-                pool_recycle=1800,  # Recycle connections after 30 minutes
-            )
+            # Use different pool settings for SQLite vs PostgreSQL
+            test_db_url = os.getenv("TEST_DATABASE_URL", "")
+            is_sqlite = "sqlite" in connection_url or (test_db_url and test_db_url.startswith("sqlite"))
+            
+            if is_sqlite:
+                # SQLite doesn't support connection pooling the same way
+                self._engine = create_engine(
+                    connection_url,
+                    connect_args={"check_same_thread": False},
+                    echo=False,
+                )
+            else:
+                pool_size = settings.POSTGRES_POOL_SIZE
+                max_overflow = settings.POSTGRES_MAX_OVERFLOW
+                
+                self._engine = create_engine(
+                    connection_url,
+                    pool_pre_ping=True,
+                    poolclass=QueuePool,
+                    pool_size=pool_size,
+                    max_overflow=max_overflow,
+                    pool_timeout=30,  # Connection timeout (seconds)
+                    pool_recycle=1800,  # Recycle connections after 30 minutes
+                )
             
             # Create tables for all registered models
             SQLModel.metadata.create_all(self._engine)

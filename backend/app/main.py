@@ -22,7 +22,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.api.v1.api import api_router
-from app.core.config import settings
+from app.core.config import Environment, settings
 from app.core.limiter import limiter
 from app.core.logging import logger
 from app.core.metrics import setup_metrics
@@ -122,11 +122,13 @@ app.add_middleware(
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 # Populate seed data (order matters: scenarios first, then personalities, then voices, then agents, then feedback)
-seed_scenario_data()
-seed_agent_personality_data()
-seed_agent_voice_data()
-seed_agent_data()
-seed_feedback_data()
+# Skip seeding in test environment to avoid database connection issues during test imports
+if settings.ENVIRONMENT != Environment.TEST and not os.getenv("TEST_DATABASE_URL"):
+    seed_scenario_data()
+    seed_agent_personality_data()
+    seed_agent_voice_data()
+    seed_agent_data()
+    seed_feedback_data()
 
 
 @app.get("/")

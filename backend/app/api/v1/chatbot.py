@@ -212,12 +212,16 @@ async def chat_stream(
 async def get_session_messages(
     request: Request,
     session: Session = Depends(get_current_session),
+    database_service: DatabaseService = Depends(get_database_service),
+    text_to_speech_service: GeminiTextToSpeech = Depends(get_text_to_speech_service),
 ):
     """Get all messages for a session.
 
     Args:
         request: The FastAPI request object for rate limiting.
         session: The current session from the auth token.
+        database_service: The database service instance.
+        text_to_speech_service: The text-to-speech service instance.
 
     Returns:
         ChatResponse: All messages in the session.
@@ -226,8 +230,20 @@ async def get_session_messages(
         HTTPException: If there's an error retrieving the messages.
     """
     try:
-        messages = await agent.get_chat_history(session.id)
+        # Get scenario_id from the current scenario
+        current_scenario = database_service.scenarios.get_current_scenario()
+        if current_scenario is None:
+            raise ValueError("No scenario is currently set. Please set a scenario before retrieving messages.")
+        scenario_id = current_scenario.id
+        messages = await agent.get_chat_history(
+            session.id, 
+            scenario_id=scenario_id,
+            tts_service=text_to_speech_service
+        )
         return ChatResponse(messages=messages)
+    except ValueError as e:
+        logger.error("get_messages_failed", session_id=session.id, error=str(e), exc_info=True)
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error("get_messages_failed", session_id=session.id, error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

@@ -465,17 +465,26 @@ class LangGraphAgent:
             logger.error("Error in stream processing", error=str(stream_error), session_id=session_id)
             raise stream_error
 
-    async def get_chat_history(self, session_id: str, scenario_id: Optional[int] = None) -> list[Message]:
+    async def get_chat_history(
+        self, 
+        session_id: str, 
+        scenario_id: Optional[int] = None,
+        tts_service: Optional[GeminiTextToSpeech] = None,
+    ) -> list[Message]:
         """Get the chat history for a given thread ID.
 
         Args:
             session_id (str): The session ID for the conversation.
             scenario_id (Optional[int]): The scenario ID to use for the graph.
+            tts_service (Optional[GeminiTextToSpeech]): The text-to-speech service instance.
 
         Returns:
             list[Message]: The chat history.
         """
-        graph = await self.create_graph(scenario_id)
+        if tts_service is None:
+            raise ValueError("tts_service is required for get_chat_history")
+        
+        graph = await self.create_graph(scenario_id, tts_service)
         if graph is None:
             return []
 

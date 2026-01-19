@@ -258,9 +258,14 @@ class TestGetMessages:
         async_client: AsyncClient,
         authenticated_headers: dict,
         test_chat_session,
+        test_scenario,
         mock_langgraph_agent,
     ):
         """Test successful get messages request."""
+        # Set the current scenario
+        from app.services.database import database_service
+        database_service.scenarios.set_scenario(test_scenario.id)
+        
         response = await async_client.get(
             "/api/v1/chatbot/messages",
             headers=authenticated_headers,

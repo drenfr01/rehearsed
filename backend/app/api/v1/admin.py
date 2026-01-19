@@ -719,6 +719,7 @@ async def delete_agent_personality(
         request: The FastAPI request object for rate limiting.
         personality_id: The ID of the personality to delete.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Success message.
@@ -1038,6 +1039,7 @@ async def delete_agent(
         request: The FastAPI request object for rate limiting.
         agent_id: The ID of the agent to delete.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Success message.
@@ -1282,6 +1284,7 @@ async def delete_scenario(
         request: The FastAPI request object for rate limiting.
         scenario_id: The ID of the scenario to delete.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Success message.
@@ -1523,6 +1526,7 @@ async def delete_feedback(
         request: The FastAPI request object for rate limiting.
         feedback_id: The ID of the feedback to delete.
         admin_user: The authenticated admin user.
+        database_service: The database service instance.
 
     Returns:
         Success message.

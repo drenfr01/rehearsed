@@ -181,6 +181,7 @@ async def list_my_scenarios(
     Args:
         request: The FastAPI request object for rate limiting.
         user: The authenticated user.
+        database_service: The database service instance.
 
     Returns:
         List of user's local scenarios.
@@ -330,6 +331,7 @@ async def delete_scenario(
         request: The FastAPI request object for rate limiting.
         scenario_id: The ID of the scenario to delete.
         user: The authenticated user.
+        database_service: The database service instance.
 
     Returns:
         Success message.
@@ -399,6 +401,7 @@ async def list_my_agent_personalities(
     Args:
         request: The FastAPI request object for rate limiting.
         user: The authenticated user.
+        database_service: The database service instance.
 
     Returns:
         List of user's local agent personalities.
@@ -530,6 +533,7 @@ async def delete_agent_personality(
         request: The FastAPI request object for rate limiting.
         personality_id: The ID of the personality to delete.
         user: The authenticated user.
+        database_service: The database service instance.
 
     Returns:
         Success message.
@@ -596,6 +600,7 @@ async def list_my_agents(
     Args:
         request: The FastAPI request object for rate limiting.
         user: The authenticated user.
+        database_service: The database service instance.
 
     Returns:
         List of user's local agents.
@@ -827,6 +832,7 @@ async def delete_agent(
         request: The FastAPI request object for rate limiting.
         agent_id: The ID of the agent to delete.
         user: The authenticated user.
+        database_service: The database service instance.
 
     Returns:
         Success message.
@@ -917,6 +923,7 @@ async def list_my_feedback(
     Args:
         request: The FastAPI request object for rate limiting.
         user: The authenticated user.
+        database_service: The database service instance.
 
     Returns:
         List of user's local feedback.
@@ -1067,6 +1074,7 @@ async def delete_feedback(
         request: The FastAPI request object for rate limiting.
         feedback_id: The ID of the feedback to delete.
         user: The authenticated user.
+        database_service: The database service instance.
 
     Returns:
         Success message.

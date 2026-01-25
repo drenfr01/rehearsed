@@ -130,22 +130,25 @@ async def chat(
         try:
             if result.student_responses:
                 latest = result.student_responses[-1]
-                audio_id = getattr(latest, "audio_id", "") or ""
-                has_audio = bool(getattr(latest, "audio_base64", "") or "")
+                audio_id = latest.audio_id or ""
+                has_audio = bool(latest.audio_base64 or "")
+                
+                # Extract voice_name safely (voice is Optional on Agent)
                 voice_name = ""
-                if getattr(latest, "student_details", None) is not None:
-                    voice = getattr(latest.student_details, "voice", None)
-                    voice_name = getattr(voice, "voice_name", "") or ""
-
-                if audio_id and (not has_audio) and voice_name:
+                if latest.student_details and latest.student_details.voice:
+                    voice_name = latest.student_details.voice.voice_name or ""
+                
+                # Only generate TTS if we have audio_id, no existing audio, and a voice_name
+                if audio_id and not has_audio and voice_name:
                     existing = tts_audio_cache.get(audio_id)
                     if existing is None:
-                        tts_audio_cache.put_pending(audio_id, session.id)
+                        # Extract personality safely
                         personality = ""
-                        if getattr(latest, "student_personality", None) is not None:
-                            personality = getattr(latest.student_personality, "personality_description", "") or ""
+                        if latest.student_personality:
+                            personality = latest.student_personality.personality_description or ""
                         tts_prompt = f"Speak as a {personality or 'helpful and engaged'} student in a classroom setting."
-
+                        
+                        tts_audio_cache.put_pending(audio_id, session.id)
                         background_tasks.add_task(
                             generate_tts_and_store,
                             audio_id,

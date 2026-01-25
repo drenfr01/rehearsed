@@ -50,9 +50,11 @@
                   (click)="onSubmit()"
                   [disabled]="!userInput() || isLoading()"
                   class="submit-button"
+                  [class.submit-button-disabled]="!userInput() || isLoading()"
                 >
                   @if (isLoading()) {
-                    <app-loading-spinner></app-loading-spinner>
+                    <mat-icon class="submit-hourglass">hourglass_empty</mat-icon>
+                    <span>Sending...</span>
                   } @else {
                     <span>Submit</span>
                   }

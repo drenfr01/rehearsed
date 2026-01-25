@@ -552,6 +552,29 @@ mat-card-content {
   transform: scale(0.98);
 }
 
+.submit-button-disabled {
+  background-color: #9ca3af !important;
+  color: #e5e7eb !important;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.submit-hourglass {
+  animation: spin 1.5s linear infinite;
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 .end-scenario-button {
   flex-shrink: 0;
   height: 48px;

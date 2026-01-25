@@ -15,7 +15,6 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LoadingSpinner } from '../../shared/loading-spinner/loading-spinner';
 import { ClassroomStatus } from './classroom-status/classroom-status';
 import { ScenarioFeedbackDialog } from '../../shared/dialogs/scenario-feedback-dialog/scenario-feedback-dialog';
 import { gcsUriToHttpUrl } from '../../core/utils/gcs-uri.util';
@@ -32,7 +31,6 @@ import { gcsUriToHttpUrl } from '../../core/utils/gcs-uri.util';
     MatTooltipModule,
     CommonModule,
     FormsModule,
-    LoadingSpinner,
     ClassroomStatus,
   ],
   templateUrl: './classroom.html',

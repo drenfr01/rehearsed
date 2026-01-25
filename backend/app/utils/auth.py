@@ -75,7 +75,6 @@ def verify_token(token: str) -> Optional[str]:
             logger.warning("token_missing_thread_id")
             return None
 
-        logger.info("token_verified", thread_id=thread_id)
         return thread_id
 
     except JWTError as e:

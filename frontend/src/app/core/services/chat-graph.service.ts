@@ -149,18 +149,27 @@ export class ChatGraphService {
   ensureInlineFeedback(feedbackId: string): Observable<string[]> {
     if (!feedbackId) return EMPTY;
 
+    console.log('Starting feedback polling for:', feedbackId);
+    
     // Poll until ready
     this.feedbackStatus.set('pending');
     let hasFeedback = false;
+    let pollCount = 0;
 
     // Poll every 1s for up to 30 attempts (30s total timeout for feedback generation)
     return timer(0, 1000).pipe(
       take(30),
-      switchMap(() => this.getFeedback(feedbackId)),
+      switchMap(() => {
+        pollCount++;
+        console.log(`Feedback poll #${pollCount} for ${feedbackId}`);
+        return this.getFeedback(feedbackId);
+      }),
+      tap(r => console.log('Feedback poll response:', r)),
       filter(r => r.status === 'ready' && r.feedback.length > 0),
       map(r => r.feedback),
       take(1),
       tap((feedback) => {
+        console.log('Feedback ready, setting:', feedback);
         hasFeedback = true;
         this.feedbackStatus.set('ready');
         this.inlineFeedback.set(feedback);
@@ -170,6 +179,7 @@ export class ChatGraphService {
         return EMPTY;
       }),
       finalize(() => {
+        console.log('Feedback polling finalized, hasFeedback:', hasFeedback);
         if (!hasFeedback) {
           this.feedbackStatus.set('failed');
         }
@@ -204,15 +214,22 @@ export class ChatGraphService {
     pipe(
       tap((response: ChatResponse) => {
         console.log('Response: ', response);
+        console.log('inline_feedback:', response.inline_feedback, 'length:', response.inline_feedback?.length);
+        console.log('feedback_request_id:', response.feedback_request_id);
+        
         // Inline feedback is now async - set from response if available, or poll
         if (response.inline_feedback && response.inline_feedback.length > 0) {
+          console.log('Branch: inline_feedback has content');
           this.inlineFeedback.set(response.inline_feedback);
           this.feedbackStatus.set('ready');
         } else if (response.feedback_request_id) {
+          console.log('Branch: starting async feedback polling');
           // Clear previous feedback and start async polling for new feedback
           this.inlineFeedback.set([]);
           this.feedbackStatus.set('pending');
           this.ensureInlineFeedback(response.feedback_request_id).subscribe();
+        } else {
+          console.log('Branch: no feedback handling (no inline_feedback and no feedback_request_id)');
         }
         this.summaryFeedback.set(response.summary_feedback);
         this.studentResponses.set(response.student_responses);

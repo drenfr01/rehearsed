@@ -534,7 +534,7 @@ class LangGraphAgent:
             messages=langchain_messages,
         )
         # Fire feedback task immediately (runs in parallel with graph)
-        feedback_task = asyncio.create_task(
+        _ = asyncio.create_task(
             generate_feedback_and_store(feedback_id, self.llm)
         )
         logger.info("async_feedback_started_early", feedback_id=feedback_id, session_id=session_id)

@@ -4,6 +4,7 @@ This module provides tools to measure operation durations and log timing breakdo
 for identifying performance bottlenecks.
 """
 
+import threading
 import time
 from contextlib import contextmanager, asynccontextmanager
 from typing import Dict, Optional
@@ -137,7 +138,6 @@ class TimingContext:
 
 # Global timing context for operations that span multiple function calls
 # Use thread-local storage for thread safety
-import threading
 
 _timing_context_local = threading.local()
 

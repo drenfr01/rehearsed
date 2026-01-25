@@ -104,6 +104,7 @@ export class ChatGraphService {
     if (!audioId) return EMPTY;
 
     const existing = this.graphMessages().find(m => m.audio_id === audioId && !!m.audio_base64)?.audio_base64;
+    // Uses of in RxJS to emit an observable value that emits the existing audio base64 (if present) 
     if (existing) return of(existing);
 
     // Poll until ready (short, bounded) so audio becomes available quickly without blocking chat.
@@ -111,6 +112,10 @@ export class ChatGraphService {
     this.setTtsStatus(audioId, 'pending');
     let hasAudio = false;
 
+    // Poll every 750ms for up to 20 attempts (1.5s total timeout)
+    // Note: we filter the objects to only get the ones that are ready and have audio base64
+    // !!r.audio_base64 is a trick to convert the string to a boolean (first ! converts to boolean, second ! negates it)
+    // so it's true if the string is not empty, false if it is empty
     return timer(0, 750).pipe(
       take(20),
       switchMap(() => this.getTtsAudio(audioId)),

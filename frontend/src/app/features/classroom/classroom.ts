@@ -4,6 +4,7 @@ import { ChatGraphService } from '../../core/services/chat-graph.service';
 import { ScenarioService } from '../../core/services/scenario.service';
 import { ChatRequest } from '../../core/models/chat-graph.model';
 import { Agent } from '../../core/models/agent.model';
+import { firstValueFrom } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -195,7 +196,7 @@ export class Classroom implements OnInit {
     this.playingMessageIndex.set(null);
   }
   
-  async togglePlayPauseForMessage(messageIndex: number, audioBase64: string) {
+  async togglePlayPauseForMessage(messageIndex: number, audioBase64: string | undefined, audioId: string | undefined) {
     const currentlyPlaying = this.playingMessageIndex();
     
     // If clicking on the same message that's playing, toggle pause/play
@@ -214,9 +215,24 @@ export class Classroom implements OnInit {
     if (this.audioElement) {
       this.audioElement.pause();
     }
+
+    let resolvedAudioBase64 = audioBase64;
+    // If audio hasn't arrived yet, fetch/poll for it on demand.
+    if ((!resolvedAudioBase64 || resolvedAudioBase64.trim().length === 0) && audioId) {
+      try {
+        resolvedAudioBase64 = await firstValueFrom(this.chatGraphService.ensureTtsAudio(audioId), { defaultValue: '' });
+      } catch (error) {
+        console.error('Audio not ready or failed to fetch:', error);
+        return;
+      }
+      if (!resolvedAudioBase64) {
+        console.warn('Audio still not ready after polling.');
+        return;
+      }
+    }
     
     // Get or create the audio URL for this message
-    const audioUrl = await this.getOrCreateAudioUrl(messageIndex, audioBase64);
+    const audioUrl = await this.getOrCreateAudioUrl(messageIndex, resolvedAudioBase64 || '');
     if (!audioUrl) {
       console.error('Could not load audio for message', messageIndex);
       return;
@@ -244,9 +260,36 @@ export class Classroom implements OnInit {
   isMessagePlaying(messageIndex: number): boolean {
     return this.playingMessageIndex() === messageIndex && this.isPlaying();
   }
+
+  getAudioState(message: { audio_base64?: string; audio_id?: string }): 'ready' | 'pending' | 'failed' | 'none' {
+    if (message.audio_base64 && message.audio_base64.length > 0) return 'ready';
+    if (!message.audio_id) return 'none';
+    return this.chatGraphService.getTtsStatus(message.audio_id) || 'pending';
+  }
+
+  isAudioButtonDisabled(message: { audio_base64?: string; audio_id?: string }): boolean {
+    return this.getAudioState(message) === 'pending';
+  }
+
+  getAudioIcon(messageIndex: number, message: { audio_base64?: string; audio_id?: string }): string {
+    const state = this.getAudioState(message);
+    if (state === 'pending') return 'hourglass_empty';
+    if (state === 'failed') return 'error_outline';
+    return this.isMessagePlaying(messageIndex) ? 'pause_circle' : 'play_circle';
+  }
+
+  getAudioTooltip(messageIndex: number, message: { audio_base64?: string; audio_id?: string }): string {
+    const state = this.getAudioState(message);
+    if (state === 'pending') return 'Generating audio...';
+    if (state === 'failed') return 'Audio not ready. Click to retry.';
+    return this.isMessagePlaying(messageIndex) ? 'Pause' : 'Play';
+  }
   
-  hasAudioForMessage(message: { audio_base64?: string }): boolean {
-    return !!(message.audio_base64 && message.audio_base64.length > 0);
+  hasAudioForMessage(message: { audio_base64?: string; audio_id?: string }): boolean {
+    return !!(
+      (message.audio_base64 && message.audio_base64.length > 0) ||
+      (message.audio_id && message.audio_id.length > 0)
+    );
   }
 
   // Audio recording methods

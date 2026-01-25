@@ -10,6 +10,7 @@ from typing import List
 
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
     Depends,
     HTTPException,
     Request,
@@ -32,6 +33,7 @@ from app.schemas.chat import (
 from app.services.database.base import DatabaseService
 from app.services.gemini_text_to_speech import GeminiTextToSpeech
 from app.services.speech_to_text import SpeechToTextService
+from app.services.tts_audio_cache import generate_tts_and_store, tts_audio_cache
 
 router = APIRouter()
 agent = LangGraphAgent()
@@ -43,6 +45,7 @@ speech_to_text_service = SpeechToTextService()
 async def chat(
     request: Request,
     chat_request: ChatRequest,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_current_session),
     database_service: DatabaseService = Depends(get_database_service),
     text_to_speech_service: GeminiTextToSpeech = Depends(get_text_to_speech_service),
@@ -52,6 +55,7 @@ async def chat(
     Args:
         request: The FastAPI request object for rate limiting.
         chat_request: The chat request containing messages.
+        background_tasks: The background tasks to run.
         session: The current session from the auth token.
         database_service: The database service instance.
         text_to_speech_service: The text-to-speech service instance.
@@ -120,6 +124,42 @@ async def chat(
         # Include transcribed text in response if audio was provided
         if chat_request.audio_base64 and resumption_text:
             result.transcribed_text = resumption_text
+
+        # Background prewarm for TTS (lazy-loaded): generate audio after returning text.
+        # We only prewarm the most recent student response (avoids duplicate work).
+        try:
+            if result.student_responses:
+                latest = result.student_responses[-1]
+                audio_id = latest.audio_id or ""
+                has_audio = bool(latest.audio_base64 or "")
+                
+                # Extract voice_name safely (voice is Optional on Agent)
+                voice_name = ""
+                if latest.student_details and latest.student_details.voice:
+                    voice_name = latest.student_details.voice.voice_name or ""
+                
+                # Only generate TTS if we have audio_id, no existing audio, and a voice_name
+                if audio_id and not has_audio and voice_name:
+                    existing = tts_audio_cache.get(audio_id)
+                    if existing is None:
+                        # Extract personality safely
+                        personality = ""
+                        if latest.student_personality:
+                            personality = latest.student_personality.personality_description or ""
+                        tts_prompt = f"Speak as a {personality or 'helpful and engaged'} student in a classroom setting."
+                        
+                        tts_audio_cache.put_pending(audio_id, session.id)
+                        background_tasks.add_task(
+                            generate_tts_and_store,
+                            audio_id,
+                            session.id,
+                            voice_name,
+                            tts_prompt,
+                            latest.student_response,
+                            text_to_speech_service,
+                        )
+        except Exception as e:
+            logger.warning("tts_background_task_schedule_failed", session_id=session.id, error=str(e))
 
         logger.info("chat_request_processed", session_id=session.id)
 

@@ -135,12 +135,14 @@
                           @if (hasAudioForMessage(message)) {
                             <button 
                               mat-icon-button 
-                              (click)="togglePlayPauseForMessage($index, message.audio_base64!)"
+                              (click)="togglePlayPauseForMessage($index, message.audio_base64, message.audio_id)"
                               class="inline-audio-button"
                               [class.playing]="isMessagePlaying($index)"
+                              [disabled]="isAudioButtonDisabled(message)"
+                              [matTooltip]="getAudioTooltip($index, message)"
                               aria-label="Play or pause audio"
                             >
-                              <mat-icon>{{ isMessagePlaying($index) ? 'pause_circle' : 'play_circle' }}</mat-icon>
+                              <mat-icon>{{ getAudioIcon($index, message) }}</mat-icon>
                             </button>
                           }
                         </div>

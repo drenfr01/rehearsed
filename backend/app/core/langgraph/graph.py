@@ -1,6 +1,6 @@
 """This file contains the graph builder for the application."""
 
-import base64
+import uuid
 from typing import Callable, List, Optional
 
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -208,20 +208,11 @@ class LangGraphBuilder:
             )
             response = await self._call_general_llm(state, system_instructions)
             
-            # Generate TTS audio for the response
-            audio_base64 = ""
+            # Lazy-load TTS: do NOT generate audio here (keeps chat latency low).
+            # We include an audio_id for the client/backend to fetch later.
+            audio_id = ""
             if agent.voice and agent.voice.voice_name:
-                try:
-                    # Build a prompt for natural student speech
-                    tts_prompt = f"Speak as a {personality_description} student in a classroom setting."
-                    audio_bytes = self._tts_service.synthesize(
-                        prompt=tts_prompt,
-                        text=response,
-                        voice_name=agent.voice.voice_name
-                    )
-                    audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
-                except Exception as e:
-                    logger.error("tts_synthesis_failed", error=str(e), agent_name=agent.name)
+                audio_id = uuid.uuid4().hex
             
             return {
                 "student_responses": [
@@ -229,7 +220,8 @@ class LangGraphBuilder:
                         student_response=response, 
                         student_details=agent, 
                         student_personality=agent.agent_personality,
-                        audio_base64=audio_base64
+                        audio_base64="",
+                        audio_id=audio_id,
                     )
                 ]
             }

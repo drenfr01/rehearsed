@@ -8,6 +8,7 @@ class GeminiTextToSpeech:
     def __init__(self):
         """Initialize the text-to-speech service."""
         self._client = None
+        self._async_client = None
 
     @property
     def client(self):
@@ -16,11 +17,23 @@ class GeminiTextToSpeech:
             self._client = texttospeech.TextToSpeechClient()
         return self._client
 
-    def synthesize(self, prompt: str, text: str, voice_name: str, model_name: str = "gemini-2.5-flash-tts") -> bytes:
-        """Synthesize speech from the input text and return the audio content as bytes.
+    @property
+    def async_client(self):
+        """Lazy-load the async text-to-speech client on first access."""
+        if self._async_client is None:
+            self._async_client = texttospeech.TextToSpeechAsyncClient()
+        return self._async_client
 
-        Note: we deliberately avoid saving the audio content to a file in this function.
 
+    async def synthesize_async(
+        self,
+        prompt: str,
+        text: str,
+        voice_name: str,
+        model_name: str = "gemini-2.5-flash-tts",
+    ) -> bytes:
+        """Asynchronously synthesize speech from the input text and return bytes.
+        
         Args:
             prompt: Styling instructions on how to synthesize the content in the text field.
             text: The text to synthesize.
@@ -32,23 +45,16 @@ class GeminiTextToSpeech:
         """
         synthesis_input = texttospeech.SynthesisInput(text=text, prompt=prompt)
 
-        # Select the voice you want to use.
         voice = texttospeech.VoiceSelectionParams(
             language_code="en-US",
             name=voice_name,
             model_name=model_name,
         )
 
-        audio_config = texttospeech.AudioConfig(
-            audio_encoding=texttospeech.AudioEncoding.MP3
-        )
+        audio_config = texttospeech.AudioConfig(audio_encoding=texttospeech.AudioEncoding.MP3)
 
-        # Perform the text-to-speech request on the text input with the selected
-        # voice parameters and audio file type.
-        response = self.client.synthesize_speech(
+        response = await self.async_client.synthesize_speech(
             input=synthesis_input, voice=voice, audio_config=audio_config
         )
-
-        # The response's audio_content is binary.
         return response.audio_content
             

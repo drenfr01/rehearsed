@@ -210,6 +210,11 @@ export class ChatGraphService {
       this.graphMessages.set([...this.graphMessages(), ...chatRequest.messages]);
     }
 
+    // Immediately show feedback as loading when user sends a message
+    // This provides instant visual feedback before the response returns
+    this.inlineFeedback.set([]);
+    this.feedbackStatus.set('pending');
+
     return this.httpClient.post<ChatResponse>(`${environment.baseUrl}/api/v1/chatbot/chat`, chatRequest).
     pipe(
       tap((response: ChatResponse) => {

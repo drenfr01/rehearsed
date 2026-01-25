@@ -50,9 +50,11 @@
                   (click)="onSubmit()"
                   [disabled]="!userInput() || isLoading()"
                   class="submit-button"
+                  [class.submit-button-disabled]="!userInput() || isLoading()"
                 >
                   @if (isLoading()) {
-                    <app-loading-spinner></app-loading-spinner>
+                    <mat-icon class="submit-hourglass">hourglass_empty</mat-icon>
+                    <span>Sending...</span>
                   } @else {
                     <span>Submit</span>
                   }
@@ -174,6 +176,11 @@
                   <div class="feedback-text">{{ feedback }}</div>
                 </div>
               }
+            } @else if (feedbackStatus() === 'pending') {
+              <div class="no-feedback feedback-loading">
+                <mat-icon class="empty-feedback-icon hourglass-icon">hourglass_empty</mat-icon>
+                <p>Generating feedback...</p>
+              </div>
             } @else {
               <div class="no-feedback">
                 <mat-icon class="empty-feedback-icon">info_outline</mat-icon>

@@ -1,5 +1,6 @@
 """This file contains the graph builder for the application."""
 
+import time
 import uuid
 from typing import Callable, List, Optional
 
@@ -79,8 +80,16 @@ class LangGraphBuilder:
             # Store scenario_id for use in feedback agents
             self._scenario_id = scenario_id
             
-            # Fetch agents for this scenario from the database
+            # Time: Fetch agents for this scenario from the database
+            fetch_start = time.perf_counter()
             self._agents = await database_service.agents.get_agents_by_scenario(scenario_id)
+            fetch_duration = time.perf_counter() - fetch_start
+            logger.info(
+                "timing_measurement",
+                operation="build_graph.fetch_agents",
+                duration_ms=round(fetch_duration * 1000, 2),
+                agent_count=len(self._agents),
+            )
             
             if not self._agents:
                 logger.warning(
@@ -89,7 +98,18 @@ class LangGraphBuilder:
                     environment=settings.ENVIRONMENT.value,
                 )
             
+            # Time: Build graph structure
+            build_start = time.perf_counter()
             graph_builder = self._build_graph()
+            build_duration = time.perf_counter() - build_start
+            logger.info(
+                "timing_measurement",
+                operation="build_graph.build_structure",
+                duration_ms=round(build_duration * 1000, 2),
+            )
+            
+            # Time: Setup checkpointer
+            checkpointer_start = time.perf_counter()
             if self._connection_pool:
                 checkpointer = AsyncPostgresSaver(self._connection_pool)
                 await checkpointer.setup()
@@ -98,9 +118,23 @@ class LangGraphBuilder:
                 checkpointer = None
                 if settings.ENVIRONMENT != Environment.PRODUCTION:
                     raise Exception("Connection pool initialization failed")
+            checkpointer_duration = time.perf_counter() - checkpointer_start
+            logger.info(
+                "timing_measurement",
+                operation="build_graph.checkpointer_setup",
+                duration_ms=round(checkpointer_duration * 1000, 2),
+            )
 
+            # Time: Compile graph
+            compile_start = time.perf_counter()
             graph = graph_builder.compile(
                 checkpointer=checkpointer, name=f"{settings.PROJECT_NAME} Agent - Scenario {scenario_id} ({settings.ENVIRONMENT.value})"
+            )
+            compile_duration = time.perf_counter() - compile_start
+            logger.info(
+                "timing_measurement",
+                operation="build_graph.compile",
+                duration_ms=round(compile_duration * 1000, 2),
             )
 
             logger.info(
@@ -194,6 +228,8 @@ class LangGraphBuilder:
         """
         async def handler(state: GraphState) -> GraphState:
             """Handle student agent node execution."""
+            node_start = time.perf_counter()
+            
             personality_description = (
                 agent.agent_personality.personality_description 
                 if agent.agent_personality 
@@ -206,13 +242,31 @@ class LangGraphBuilder:
                 context=agent.context,
                 personality=personality_description,
             )
+            
+            # Time: LLM call
+            llm_start = time.perf_counter()
             response = await self._call_general_llm(state, system_instructions)
+            llm_duration = time.perf_counter() - llm_start
+            logger.info(
+                "timing_measurement",
+                operation=f"node.student_{student_number}_agent.llm_call",
+                duration_ms=round(llm_duration * 1000, 2),
+                agent_name=agent.name,
+            )
             
             # Lazy-load TTS: do NOT generate audio here (keeps chat latency low).
             # We include an audio_id for the client/backend to fetch later.
             audio_id = ""
             if agent.voice and agent.voice.voice_name:
                 audio_id = uuid.uuid4().hex
+            
+            node_duration = time.perf_counter() - node_start
+            logger.info(
+                "timing_measurement",
+                operation=f"node.student_{student_number}_agent.total",
+                duration_ms=round(node_duration * 1000, 2),
+                agent_name=agent.name,
+            )
             
             return {
                 "student_responses": [
@@ -240,6 +294,8 @@ class LangGraphBuilder:
         Returns a Command that dynamically routes to only the selected student agent
         plus the inline feedback agent in parallel.
         """
+        node_start = time.perf_counter()
+        
         # Build dynamic student profiles from agents
         student_profiles = self._build_student_profiles()
         
@@ -253,16 +309,36 @@ class LangGraphBuilder:
             ),
         ]
 
+        # Time: LLM call (using async .ainvoke() for parallel execution)
+        llm_start = time.perf_counter()
         structured_llm = self.llm.with_structured_output(StudentChoiceResponse)
-        response = structured_llm.invoke(system_message + state.messages)
+        response = await structured_llm.ainvoke(system_message + state.messages)
+        llm_duration = time.perf_counter() - llm_start
+        logger.info(
+            "timing_measurement",
+            operation="node.pick_answering_student.llm_ainvoke",
+            duration_ms=round(llm_duration * 1000, 2),
+        )
+        
         # Ensure the student number is within valid range
         student_num = max(1, min(response.student_number, len(self._agents)))
         
-        # Dynamically route to only the selected student + inline feedback
+        # Dynamically route to only the selected student
+        # NOTE: inline_feedback_agent is now computed asynchronously after the response
+        # is returned to reduce latency. See feedback_cache.py for the background task.
         student_node = f"student_{student_num}_agent"
+        
+        node_duration = time.perf_counter() - node_start
+        logger.info(
+            "timing_measurement",
+            operation="node.pick_answering_student.total",
+            duration_ms=round(node_duration * 1000, 2),
+            selected_student=student_num,
+        )
+        
         return Command(
             update={"answering_student": student_num},
-            goto=[student_node, "inline_feedback_agent"]
+            goto=[student_node]
         )
     
     def _build_student_profiles(self) -> str:
@@ -296,9 +372,18 @@ class LangGraphBuilder:
         messages = [SystemMessage(content=system_instructions)]
         messages.extend(state.messages)  # Include full conversation history
         
-        response = self.llm.with_structured_output(
+        # Time: LLM invoke call (using async .ainvoke() for parallel execution)
+        invoke_start = time.perf_counter()
+        response = await self.llm.with_structured_output(
             GeneralResponse, method="json_schema", include_raw=True
-        ).invoke(messages)
+        ).ainvoke(messages)
+        invoke_duration = time.perf_counter() - invoke_start
+        logger.info(
+            "timing_measurement",
+            operation="_call_general_llm.ainvoke",
+            duration_ms=round(invoke_duration * 1000, 2),
+            message_count=len(messages),
+        )
 
         if response["parsed"] is None:
             logger.error(
@@ -321,10 +406,22 @@ class LangGraphBuilder:
 
     async def _inline_feedback_agent(self, state: GraphState) -> GraphState:
         """This node is used to call the inline feedback agent."""
+        node_start = time.perf_counter()
+        
+        # Time: Database query for feedback config
+        db_start = time.perf_counter()
         feedback = await database_service.feedback.get_feedback_by_type("inline", self._scenario_id)
+        db_duration = time.perf_counter() - db_start
+        logger.info(
+            "timing_measurement",
+            operation="node.inline_feedback.db_query",
+            duration_ms=round(db_duration * 1000, 2),
+        )
+        
         if feedback is None:
             logger.warning("inline_feedback_not_found", scenario_id=self._scenario_id)
             return {"inline_feedback": ["No inline feedback configured for this scenario."]}
+        
         system_instructions = format_feedback_instructions(
             objective=feedback.objective,
             instructions=feedback.instructions,
@@ -332,7 +429,25 @@ class LangGraphBuilder:
             context=feedback.context,
             output_format=feedback.output_format,
         )
-        return {"inline_feedback": [await self._call_general_llm(state, system_instructions)]}
+        
+        # Time: LLM call
+        llm_start = time.perf_counter()
+        result = await self._call_general_llm(state, system_instructions)
+        llm_duration = time.perf_counter() - llm_start
+        logger.info(
+            "timing_measurement",
+            operation="node.inline_feedback.llm_call",
+            duration_ms=round(llm_duration * 1000, 2),
+        )
+        
+        node_duration = time.perf_counter() - node_start
+        logger.info(
+            "timing_measurement",
+            operation="node.inline_feedback.total",
+            duration_ms=round(node_duration * 1000, 2),
+        )
+        
+        return {"inline_feedback": [result]}
 
     async def _gather_new_human_response(self, state: GraphState) -> GraphState:
         """This node is used to gather a new human response if the human response is not appropriate."""
@@ -370,7 +485,18 @@ class LangGraphBuilder:
 
     async def _generate_summary_feedback(self, state: GraphState) -> GraphState:
         """Generate summary feedback for the entire conversation."""
+        node_start = time.perf_counter()
+        
+        # Time: Database query for feedback config
+        db_start = time.perf_counter()
         feedback = await database_service.feedback.get_feedback_by_type("summary", self._scenario_id)
+        db_duration = time.perf_counter() - db_start
+        logger.info(
+            "timing_measurement",
+            operation="node.summary_feedback.db_query",
+            duration_ms=round(db_duration * 1000, 2),
+        )
+        
         if feedback is None:
             logger.warning("summary_feedback_not_found", scenario_id=self._scenario_id)
             return {"summary_feedback": "No summary feedback configured for this scenario."}
@@ -386,8 +512,9 @@ class LangGraphBuilder:
             SystemMessage(content=system_instructions),
             *state.messages,
         ]
-            
         
+        # Time: LLM initialization (creates a new LLM instance)
+        llm_init_start = time.perf_counter()
         llm = ChatGoogleGenerativeAI(
             model="gemini-3-pro-preview",
             temperature=settings.DEFAULT_LLM_TEMPERATURE,
@@ -397,10 +524,33 @@ class LangGraphBuilder:
             vertexai=True,
             google_api_key=None,  # Explicitly disable API key to force Vertex AI usage
         )
-        response = llm.with_structured_output(SummaryFeedbackResponse, method="json_schema", include_raw=True).invoke(prompt)
+        llm_init_duration = time.perf_counter() - llm_init_start
+        logger.info(
+            "timing_measurement",
+            operation="node.summary_feedback.llm_init",
+            duration_ms=round(llm_init_duration * 1000, 2),
+        )
+        
+        # Time: LLM invoke call (using async .ainvoke() for parallel execution)
+        llm_invoke_start = time.perf_counter()
+        response = await llm.with_structured_output(SummaryFeedbackResponse, method="json_schema", include_raw=True).ainvoke(prompt)
+        llm_invoke_duration = time.perf_counter() - llm_invoke_start
+        logger.info(
+            "timing_measurement",
+            operation="node.summary_feedback.llm_ainvoke",
+            duration_ms=round(llm_invoke_duration * 1000, 2),
+        )
+        
         if response["parsed"] is None:
             logger.error("summary_feedback_generation_failed", error=response["raw"], exc_info=True)
             return {"summary_feedback": "Could not generate summary feedback"}
+
+        node_duration = time.perf_counter() - node_start
+        logger.info(
+            "timing_measurement",
+            operation="node.summary_feedback.total",
+            duration_ms=round(node_duration * 1000, 2),
+        )
 
         return {"summary_feedback": response["parsed"]}
 

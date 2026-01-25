@@ -43,8 +43,6 @@ def create_access_token(thread_id: str, expires_delta: Optional[timedelta] = Non
 
     encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
-    logger.info("token_created", thread_id=thread_id, expires_at=expire.isoformat())
-
     return Token(access_token=encoded_jwt, expires_at=expire)
 
 
@@ -77,7 +75,6 @@ def verify_token(token: str) -> Optional[str]:
             logger.warning("token_missing_thread_id")
             return None
 
-        logger.info("token_verified", thread_id=thread_id)
         return thread_id
 
     except JWTError as e:

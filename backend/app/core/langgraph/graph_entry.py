@@ -1,5 +1,8 @@
 """This file contains the LangGraph Agent/workflow and interactions with the LLM."""
 
+import asyncio
+import time
+import uuid
 from typing import (
     Any,
     AsyncGenerator,
@@ -30,11 +33,13 @@ from app.core.langgraph.tools import tools
 from app.core.logging import logger
 from app.core.metrics import llm_inference_duration_seconds
 from app.core.prompts import SYSTEM_PROMPT
+from app.core.timing import TimingContext, set_current_timing, get_current_timing
 from app.schemas import (
     ChatResponse,
     GraphState,
     Message,
 )
+from app.services.feedback_cache import feedback_cache, generate_feedback_and_store
 from app.services.gemini_text_to_speech import GeminiTextToSpeech
 from app.utils import (
     dump_messages,
@@ -64,6 +69,7 @@ class LangGraphAgent:
     def llm(self):
         """Lazy-load the LLM on first access."""
         if self._llm is None:
+            start_time = time.perf_counter()
             # Use environment-specific LLM model
             # Explicitly set google_api_key=None when using Vertex AI to prevent
             # the library from falling back to Generative Language API
@@ -77,7 +83,12 @@ class LangGraphAgent:
                 google_api_key=None,  # Explicitly disable API key to force Vertex AI usage
                 **self._get_model_kwargs(),
             ).bind_tools(tools)
-            print("LLM: ", self._llm)
+            duration = time.perf_counter() - start_time
+            logger.info(
+                "timing_measurement",
+                operation="llm_client_init",
+                duration_ms=round(duration * 1000, 2),
+            )
             logger.info("llm_initialized", model=settings.LLM_MODEL, environment=settings.ENVIRONMENT.value)
         return self._llm
 
@@ -108,6 +119,7 @@ class LangGraphAgent:
             AsyncConnectionPool: A connection pool for PostgreSQL database.
         """
         if self._connection_pool is None:
+            start_time = time.perf_counter()
             try:
                 # Configure pool size based on environment
                 max_size = settings.POSTGRES_POOL_SIZE
@@ -138,6 +150,12 @@ class LangGraphAgent:
                     },
                 )
                 await self._connection_pool.open()
+                duration = time.perf_counter() - start_time
+                logger.info(
+                    "timing_measurement",
+                    operation="connection_pool_open",
+                    duration_ms=round(duration * 1000, 2),
+                )
                 logger.info("connection_pool_created", max_size=max_size, environment=settings.ENVIRONMENT.value)
             except Exception as e:
                 logger.error("connection_pool_creation_failed", error=str(e), environment=settings.ENVIRONMENT.value)
@@ -254,16 +272,48 @@ class LangGraphAgent:
         
         # Check if we already have a graph for this scenario
         if scenario_id in self._graphs:
+            logger.info("timing_measurement", operation="graph_cache_hit", duration_ms=0.0)
             return self._graphs[scenario_id]
+        
+        total_start = time.perf_counter()
         
         # Build a new graph for this scenario
         connection_pool = await self._get_connection_pool()
-        langgraph_builder = LangGraphBuilder(self.llm, connection_pool, tts_service)
+        
+        # Time LLM access (triggers lazy init if needed)
+        llm_start = time.perf_counter()
+        llm = self.llm  # Access property to trigger potential initialization
+        llm_access_duration = time.perf_counter() - llm_start
+        if llm_access_duration > 0.01:  # Only log if > 10ms (indicates initialization)
+            logger.info(
+                "timing_measurement",
+                operation="llm_property_access",
+                duration_ms=round(llm_access_duration * 1000, 2),
+            )
+        
+        # Time graph building
+        build_start = time.perf_counter()
+        langgraph_builder = LangGraphBuilder(llm, connection_pool, tts_service)
         graph = await langgraph_builder.build_graph(scenario_id)
+        build_duration = time.perf_counter() - build_start
+        logger.info(
+            "timing_measurement",
+            operation="graph_build",
+            duration_ms=round(build_duration * 1000, 2),
+            scenario_id=scenario_id,
+        )
         
         # Cache the graph
         self._graphs[scenario_id] = graph
         self._current_scenario_id = scenario_id
+        
+        total_duration = time.perf_counter() - total_start
+        logger.info(
+            "timing_measurement",
+            operation="create_graph_total",
+            duration_ms=round(total_duration * 1000, 2),
+            scenario_id=scenario_id,
+        )
         
         return graph
     
@@ -347,31 +397,105 @@ class LangGraphAgent:
         Returns:
             ChatResponse: The response from the LLM.
         """
-        graph = await self.create_graph(scenario_id, tts_service)
-        if graph is None:
-            raise Exception("Failed to create graph")
-            
-        config = {
-            "configurable": {"thread_id": session_id},
-            "callbacks": [CallbackHandler()],
-            "metadata": {
-                "user_id": user_id,
-                "session_id": session_id,
-                "scenario_id": scenario_id,
-                "environment": settings.ENVIRONMENT.value,
-                "debug": False,
-            },
-        }
+        # Set up timing context for this request
+        timing = TimingContext(request_id=session_id, prefix="get_resumption")
+        set_current_timing(timing)
+        
+        total_start = time.perf_counter()
+        
         try:
+            # Time graph creation
+            graph_start = time.perf_counter()
+            graph = await self.create_graph(scenario_id, tts_service)
+            timing.record("graph_creation", time.perf_counter() - graph_start)
+            
+            if graph is None:
+                raise Exception("Failed to create graph")
+                
+            config = {
+                "configurable": {"thread_id": session_id},
+                "callbacks": [CallbackHandler()],
+                "metadata": {
+                    "user_id": user_id,
+                    "session_id": session_id,
+                    "scenario_id": scenario_id,
+                    "environment": settings.ENVIRONMENT.value,
+                    "debug": False,
+                },
+            }
+            
+            # Get current conversation state and start feedback immediately
+            # This allows feedback to run in parallel with graph execution
+            feedback_id = uuid.uuid4().hex
+            feedback_started_early = False
+            try:
+                from langchain_core.messages import HumanMessage
+                state: StateSnapshot = await sync_to_async(graph.get_state)(config)
+                current_messages = list(state.values.get("messages", [])) if state.values else []
+                # Add the new user message to context for feedback
+                current_messages.append(HumanMessage(content=resumption_text))
+                feedback_cache.put_pending(
+                    feedback_id=feedback_id,
+                    session_id=session_id,
+                    scenario_id=scenario_id,
+                    messages=current_messages,
+                )
+                # Fire feedback task immediately (runs in parallel with graph)
+                asyncio.create_task(
+                    generate_feedback_and_store(feedback_id, self.llm)
+                )
+                feedback_started_early = True
+                logger.info("async_feedback_started_early", feedback_id=feedback_id, session_id=session_id)
+            except Exception as e:
+                logger.warning("early_feedback_start_failed", error=str(e), feedback_id=feedback_id)
+                # Will fall back to starting feedback after execution
+            
+            # Time graph execution (feedback may be running in parallel)
+            exec_start = time.perf_counter()
             response: GraphState = await graph.ainvoke(
                 Command(
                     resume={"response": resumption_text}
                 ), config
             )
-            return self._hydrate_chat_response(response)
+            timing.record("graph_execution", time.perf_counter() - exec_start)
+            
+            # Time response hydration
+            hydrate_start = time.perf_counter()
+            result = self._hydrate_chat_response(response)
+            timing.record("response_hydration", time.perf_counter() - hydrate_start)
+            
+            # If early feedback start failed, start it now with full response messages
+            if not feedback_started_early:
+                feedback_cache.put_pending(
+                    feedback_id=feedback_id,
+                    session_id=session_id,
+                    scenario_id=scenario_id,
+                    messages=response["messages"],
+                )
+                asyncio.create_task(
+                    generate_feedback_and_store(feedback_id, self.llm)
+                )
+                logger.info("async_feedback_started_fallback", feedback_id=feedback_id, session_id=session_id)
+            
+            # Attach the feedback_id
+            result.feedback_request_id = feedback_id
+            
+            # Log total time and summary
+            total_duration = time.perf_counter() - total_start
+            logger.info(
+                "timing_measurement",
+                request_id=session_id,
+                operation="get_resumption_total",
+                duration_ms=round(total_duration * 1000, 2),
+            )
+            timing.log_summary()
+            
+            return result
         except Exception as e:
             logger.error(f"Error getting response: {str(e)}")
             raise e
+        finally:
+            set_current_timing(None)
 
     async def get_response(
         self,
@@ -393,29 +517,80 @@ class LangGraphAgent:
         Returns:
             ChatResponse: The response from the LLM.
         """
-        graph = await self.create_graph(scenario_id, tts_service)
-        if graph is None:
-            raise Exception("Failed to create graph")
-            
-        config = {
-            "configurable": {"thread_id": session_id},
-            "callbacks": [CallbackHandler()],
-            "metadata": {
-                "user_id": user_id,
-                "session_id": session_id,
-                "scenario_id": scenario_id,
-                "environment": settings.ENVIRONMENT.value,
-                "debug": False,
-            },
-        }
+        # Set up timing context for this request
+        timing = TimingContext(request_id=session_id, prefix="get_response")
+        set_current_timing(timing)
+        
+        total_start = time.perf_counter()
+        
+        # Generate feedback_id and start feedback generation immediately
+        # This runs in parallel with graph execution for faster feedback
+        feedback_id = uuid.uuid4().hex
+        langchain_messages = dump_messages(messages)
+        feedback_cache.put_pending(
+            feedback_id=feedback_id,
+            session_id=session_id,
+            scenario_id=scenario_id,
+            messages=langchain_messages,
+        )
+        # Fire feedback task immediately (runs in parallel with graph)
+        _ = asyncio.create_task(
+            generate_feedback_and_store(feedback_id, self.llm)
+        )
+        logger.info("async_feedback_started_early", feedback_id=feedback_id, session_id=session_id)
+        
         try:
+            # Time graph creation
+            graph_start = time.perf_counter()
+            graph = await self.create_graph(scenario_id, tts_service)
+            timing.record("graph_creation", time.perf_counter() - graph_start)
+            
+            if graph is None:
+                raise Exception("Failed to create graph")
+                
+            config = {
+                "configurable": {"thread_id": session_id},
+                "callbacks": [CallbackHandler()],
+                "metadata": {
+                    "user_id": user_id,
+                    "session_id": session_id,
+                    "scenario_id": scenario_id,
+                    "environment": settings.ENVIRONMENT.value,
+                    "debug": False,
+                },
+            }
+            
+            # Time graph execution (feedback is running in parallel)
+            exec_start = time.perf_counter()
             response: GraphState = await graph.ainvoke(
-                {"messages": dump_messages(messages), "session_id": session_id}, config
+                {"messages": langchain_messages, "session_id": session_id}, config
             )
-            return self._hydrate_chat_response(response)
+            timing.record("graph_execution", time.perf_counter() - exec_start)
+            
+            # Time response hydration
+            hydrate_start = time.perf_counter()
+            result = self._hydrate_chat_response(response)
+            timing.record("response_hydration", time.perf_counter() - hydrate_start)
+            
+            # Attach the feedback_id that was started earlier
+            result.feedback_request_id = feedback_id
+            
+            # Log total time and summary
+            total_duration = time.perf_counter() - total_start
+            logger.info(
+                "timing_measurement",
+                request_id=session_id,
+                operation="get_response_total",
+                duration_ms=round(total_duration * 1000, 2),
+            )
+            timing.log_summary()
+            
+            return result
         except Exception as e:
             logger.error(f"Error getting response: {str(e)}")
             raise e
+        finally:
+            set_current_timing(None)
 
     async def get_stream_response(
         self, 

@@ -1,5 +1,5 @@
 import { inject,  Injectable, signal, effect } from '@angular/core';
-import { Message, SummaryFeedbackResponse } from '../models/chat-graph.model';
+import { Message, SummaryFeedbackResponse, FeedbackStatus, FeedbackResponse } from '../models/chat-graph.model';
 import { HttpClient } from '@angular/common/http';
 import { EMPTY, Observable, catchError, filter, finalize, map, of, switchMap, take, tap, timer } from 'rxjs';
 import { ChatRequest, ChatResponse } from '../models/chat-graph.model';
@@ -27,6 +27,7 @@ export class ChatGraphService {
   private summaryFeedback = signal<SummaryFeedbackResponse | string>('')
   // TODO: make this not an array? 
   private inlineFeedback = signal<string[]>(this.loadInlineFeedbackFromStorage());
+  private feedbackStatus = signal<FeedbackStatus | null>(null);
   private studentResponses = signal<ChatResponse['student_responses']>([]);
   private transcribedText = signal<string>('');
 
@@ -34,6 +35,7 @@ export class ChatGraphService {
   loadedStudentResponses = this.studentResponses.asReadonly();
   loadedTranscribedText = this.transcribedText.asReadonly();
   loadedTtsStatusById = this.ttsStatusById.asReadonly();
+  loadedFeedbackStatus = this.feedbackStatus.asReadonly();
 
   constructor() {
     // Effect to persist graphMessages to localStorage
@@ -139,6 +141,42 @@ export class ChatGraphService {
     );
   }
 
+  private getFeedback(feedbackId: string): Observable<FeedbackResponse> {
+    return this.httpClient.get<FeedbackResponse>(`${environment.baseUrl}/api/v1/chatbot/feedback/${feedbackId}`);
+  }
+
+  /** Poll for async inline feedback and update the signal when ready. */
+  ensureInlineFeedback(feedbackId: string): Observable<string[]> {
+    if (!feedbackId) return EMPTY;
+
+    // Poll until ready
+    this.feedbackStatus.set('pending');
+    let hasFeedback = false;
+
+    // Poll every 1s for up to 30 attempts (30s total timeout for feedback generation)
+    return timer(0, 1000).pipe(
+      take(30),
+      switchMap(() => this.getFeedback(feedbackId)),
+      filter(r => r.status === 'ready' && r.feedback.length > 0),
+      map(r => r.feedback),
+      take(1),
+      tap((feedback) => {
+        hasFeedback = true;
+        this.feedbackStatus.set('ready');
+        this.inlineFeedback.set(feedback);
+      }),
+      catchError((err) => {
+        console.warn('Failed to fetch inline feedback:', err);
+        return EMPTY;
+      }),
+      finalize(() => {
+        if (!hasFeedback) {
+          this.feedbackStatus.set('failed');
+        }
+      }),
+    );
+  }
+
   resetGraphMessages() {
     this.graphMessages.set([]);
     this.inlineFeedback.set([]);
@@ -166,7 +204,16 @@ export class ChatGraphService {
     pipe(
       tap((response: ChatResponse) => {
         console.log('Response: ', response);
-        this.inlineFeedback.set(response.inline_feedback);
+        // Inline feedback is now async - set from response if available, or poll
+        if (response.inline_feedback && response.inline_feedback.length > 0) {
+          this.inlineFeedback.set(response.inline_feedback);
+          this.feedbackStatus.set('ready');
+        } else if (response.feedback_request_id) {
+          // Clear previous feedback and start async polling for new feedback
+          this.inlineFeedback.set([]);
+          this.feedbackStatus.set('pending');
+          this.ensureInlineFeedback(response.feedback_request_id).subscribe();
+        }
         this.summaryFeedback.set(response.summary_feedback);
         this.studentResponses.set(response.student_responses);
         this.transcribedText.set(response.transcribed_text || '');

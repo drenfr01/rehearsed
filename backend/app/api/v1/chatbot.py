@@ -31,6 +31,7 @@ from app.schemas.chat import (
     StreamResponse,
 )
 from app.services.database.base import DatabaseService
+from app.services.feedback_cache import feedback_cache
 from app.services.gemini_text_to_speech import GeminiTextToSpeech
 from app.services.speech_to_text import SpeechToTextService
 from app.services.tts_audio_cache import generate_tts_and_store, tts_audio_cache
@@ -160,6 +161,9 @@ async def chat(
                         )
         except Exception as e:
             logger.warning("tts_background_task_schedule_failed", session_id=session.id, error=str(e))
+
+        # Note: Feedback generation is now started immediately in graph_entry.py
+        # and runs in parallel with graph execution (no need to schedule here)
 
         logger.info("chat_request_processed", session_id=session.id)
 
@@ -310,3 +314,36 @@ async def clear_chat_history(
     except Exception as e:
         logger.error("clear_chat_history_failed", session_id=session.id, error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/feedback/{feedback_id}")
+@limiter.limit(settings.RATE_LIMIT_ENDPOINTS["messages"][0])
+async def get_feedback(
+    request: Request,
+    feedback_id: str,
+    session: Session = Depends(get_current_session),
+):
+    """Get async inline feedback by ID.
+
+    This endpoint is used for polling feedback that is generated asynchronously
+    after the chat response is returned.
+
+    Args:
+        request: The FastAPI request object for rate limiting.
+        feedback_id: The unique ID of the feedback request.
+        session: The current session from the auth token.
+
+    Returns:
+        dict: The feedback status and content if ready.
+            - status: "pending" | "ready" | "failed"
+            - feedback: List of feedback strings (empty if not ready)
+    """
+    entry = feedback_cache.get(feedback_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="Feedback request not found")
+    
+    # Verify the feedback belongs to this session
+    if entry.session_id != session.id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this feedback")
+    
+    return entry.to_api_payload()

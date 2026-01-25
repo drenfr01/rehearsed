@@ -88,6 +88,7 @@ class ChatResponse(BaseModel):
     # TODO: potentially make this sub model and DRY out this and the GraphState model
     student_responses: List[StudentResponse] = Field(default_factory=list, description="List of student responses")
     inline_feedback: List[str] = Field(default_factory=list, description="List of inline feedback")
+    feedback_request_id: str = Field(default="", description="ID to poll for async inline feedback if not immediately available")
     summary_feedback: Union[SummaryFeedbackResponse, str] = Field(default="", description="The summary feedback for the student responses")
     summary: str = Field(default="", description="The summary of the student responses")
     answering_student: int = Field(default=0, description="The student number that is answering")

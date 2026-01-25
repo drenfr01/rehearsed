@@ -1,6 +1,8 @@
 """This file contains the LangGraph Agent/workflow and interactions with the LLM."""
 
+import asyncio
 import time
+import uuid
 from typing import (
     Any,
     AsyncGenerator,
@@ -37,6 +39,7 @@ from app.schemas import (
     GraphState,
     Message,
 )
+from app.services.feedback_cache import feedback_cache, generate_feedback_and_store
 from app.services.gemini_text_to_speech import GeminiTextToSpeech
 from app.utils import (
     dump_messages,
@@ -421,7 +424,33 @@ class LangGraphAgent:
                 },
             }
             
-            # Time graph execution
+            # Get current conversation state and start feedback immediately
+            # This allows feedback to run in parallel with graph execution
+            feedback_id = uuid.uuid4().hex
+            feedback_started_early = False
+            try:
+                from langchain_core.messages import HumanMessage
+                state: StateSnapshot = await sync_to_async(graph.get_state)(config)
+                current_messages = list(state.values.get("messages", [])) if state.values else []
+                # Add the new user message to context for feedback
+                current_messages.append(HumanMessage(content=resumption_text))
+                feedback_cache.put_pending(
+                    feedback_id=feedback_id,
+                    session_id=session_id,
+                    scenario_id=scenario_id,
+                    messages=current_messages,
+                )
+                # Fire feedback task immediately (runs in parallel with graph)
+                asyncio.create_task(
+                    generate_feedback_and_store(feedback_id, self.llm)
+                )
+                feedback_started_early = True
+                logger.info("async_feedback_started_early", feedback_id=feedback_id, session_id=session_id)
+            except Exception as e:
+                logger.warning("early_feedback_start_failed", error=str(e), feedback_id=feedback_id)
+                # Will fall back to starting feedback after execution
+            
+            # Time graph execution (feedback may be running in parallel)
             exec_start = time.perf_counter()
             response: GraphState = await graph.ainvoke(
                 Command(
@@ -434,6 +463,22 @@ class LangGraphAgent:
             hydrate_start = time.perf_counter()
             result = self._hydrate_chat_response(response)
             timing.record("response_hydration", time.perf_counter() - hydrate_start)
+            
+            # If early feedback start failed, start it now with full response messages
+            if not feedback_started_early:
+                feedback_cache.put_pending(
+                    feedback_id=feedback_id,
+                    session_id=session_id,
+                    scenario_id=scenario_id,
+                    messages=response["messages"],
+                )
+                asyncio.create_task(
+                    generate_feedback_and_store(feedback_id, self.llm)
+                )
+                logger.info("async_feedback_started_fallback", feedback_id=feedback_id, session_id=session_id)
+            
+            # Attach the feedback_id
+            result.feedback_request_id = feedback_id
             
             # Log total time and summary
             total_duration = time.perf_counter() - total_start
@@ -478,6 +523,22 @@ class LangGraphAgent:
         
         total_start = time.perf_counter()
         
+        # Generate feedback_id and start feedback generation immediately
+        # This runs in parallel with graph execution for faster feedback
+        feedback_id = uuid.uuid4().hex
+        langchain_messages = dump_messages(messages)
+        feedback_cache.put_pending(
+            feedback_id=feedback_id,
+            session_id=session_id,
+            scenario_id=scenario_id,
+            messages=langchain_messages,
+        )
+        # Fire feedback task immediately (runs in parallel with graph)
+        feedback_task = asyncio.create_task(
+            generate_feedback_and_store(feedback_id, self.llm)
+        )
+        logger.info("async_feedback_started_early", feedback_id=feedback_id, session_id=session_id)
+        
         try:
             # Time graph creation
             graph_start = time.perf_counter()
@@ -499,10 +560,10 @@ class LangGraphAgent:
                 },
             }
             
-            # Time graph execution
+            # Time graph execution (feedback is running in parallel)
             exec_start = time.perf_counter()
             response: GraphState = await graph.ainvoke(
-                {"messages": dump_messages(messages), "session_id": session_id}, config
+                {"messages": langchain_messages, "session_id": session_id}, config
             )
             timing.record("graph_execution", time.perf_counter() - exec_start)
             
@@ -510,6 +571,9 @@ class LangGraphAgent:
             hydrate_start = time.perf_counter()
             result = self._hydrate_chat_response(response)
             timing.record("response_hydration", time.perf_counter() - hydrate_start)
+            
+            # Attach the feedback_id that was started earlier
+            result.feedback_request_id = feedback_id
             
             # Log total time and summary
             total_duration = time.perf_counter() - total_start

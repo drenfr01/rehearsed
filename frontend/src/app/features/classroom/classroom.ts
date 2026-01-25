@@ -77,6 +77,7 @@ export class Classroom implements OnInit {
   // Expose readonly signals from the service
   protected messages = this.chatGraphService.loadedGraphMessages;
   protected inlineFeedback = this.chatGraphService.loadedInlineFeedback;
+  protected feedbackStatus = this.chatGraphService.loadedFeedbackStatus;
   protected studentResponses = this.chatGraphService.loadedStudentResponses;
   protected transcribedText = this.chatGraphService.loadedTranscribedText;
 

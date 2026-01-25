@@ -682,6 +682,23 @@ mat-card-content {
   opacity: 0.5;
 }
 
+.feedback-loading .hourglass-icon {
+  animation: pulse 1.5s ease-in-out infinite;
+  opacity: 0.7;
+  color: var(--mat-sys-primary);
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
 .error-message {
   color: var(--mat-sys-error);
   background-color: var(--mat-sys-error-container);

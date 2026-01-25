@@ -55,6 +55,7 @@ export interface ChatResponse {
     interrupt_value_type: 'text' | 'image' | 'audio' | 'video';
     student_responses: StudentResponse[];
     inline_feedback: string[];
+    feedback_request_id: string;
     summary_feedback: SummaryFeedbackResponse | string;
     summary: string;
     answering_student: number;
@@ -63,4 +64,11 @@ export interface ChatResponse {
     learning_goals_achieved: boolean;
     transcribed_text: string;
     interrupt: object[];
+}
+
+export type FeedbackStatus = 'pending' | 'ready' | 'failed';
+
+export interface FeedbackResponse {
+    status: FeedbackStatus;
+    feedback: string[];
 }

@@ -323,7 +323,9 @@ class LangGraphBuilder:
         # Ensure the student number is within valid range
         student_num = max(1, min(response.student_number, len(self._agents)))
         
-        # Dynamically route to only the selected student + inline feedback
+        # Dynamically route to only the selected student
+        # NOTE: inline_feedback_agent is now computed asynchronously after the response
+        # is returned to reduce latency. See feedback_cache.py for the background task.
         student_node = f"student_{student_num}_agent"
         
         node_duration = time.perf_counter() - node_start
@@ -336,7 +338,7 @@ class LangGraphBuilder:
         
         return Command(
             update={"answering_student": student_num},
-            goto=[student_node, "inline_feedback_agent"]
+            goto=[student_node]
         )
     
     def _build_student_profiles(self) -> str:

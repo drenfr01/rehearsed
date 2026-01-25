@@ -55,6 +55,7 @@ async def chat(
     Args:
         request: The FastAPI request object for rate limiting.
         chat_request: The chat request containing messages.
+        background_tasks: The background tasks to run.
         session: The current session from the auth token.
         database_service: The database service instance.
         text_to_speech_service: The text-to-speech service instance.

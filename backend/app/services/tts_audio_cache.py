@@ -21,6 +21,7 @@ TTSStatus = Literal["pending", "ready", "failed"]
 
 @dataclass
 class TTSAudioEntry:
+    """A single entry in the TTS audio cache."""
     audio_id: str
     session_id: str
     status: TTSStatus
@@ -29,6 +30,7 @@ class TTSAudioEntry:
     error: str = ""
 
     def to_api_payload(self) -> dict:
+        """Convert the TTS audio entry to an API payload."""
         if self.status == "ready" and self.audio_bytes:
             return {
                 "status": "ready",
@@ -43,11 +45,13 @@ class TTSAudioCache:
     """A simple TTL in-memory cache for TTS audio entries."""
 
     def __init__(self, ttl_seconds: int = 15 * 60, max_entries: int = 2000):
+        """Initialize the TTS audio cache."""
         self._ttl_seconds = ttl_seconds
         self._max_entries = max_entries
         self._entries: Dict[str, TTSAudioEntry] = {}
 
     def _cleanup(self) -> None:
+        """Cleanup the TTS audio cache based on both TTL and max size. If the cache is full, evict the oldest entries."""
         now = time.time()
         # TTL cleanup
         expired = [k for k, v in self._entries.items() if now - v.created_at > self._ttl_seconds]
@@ -63,10 +67,12 @@ class TTSAudioCache:
             self._entries.pop(k, None)
 
     def get(self, audio_id: str) -> Optional[TTSAudioEntry]:
+        """Get an entry from the TTS audio cache after cleaning up the cache."""
         self._cleanup()
         return self._entries.get(audio_id)
 
     def put_pending(self, audio_id: str, session_id: str) -> TTSAudioEntry:
+        """Put a pending entry into the TTS audio cache after cleaning up the cache."""
         self._cleanup()
         entry = TTSAudioEntry(
             audio_id=audio_id,
@@ -78,6 +84,7 @@ class TTSAudioCache:
         return entry
 
     def put_ready(self, audio_id: str, session_id: str, audio_bytes: bytes) -> None:
+        """Put a ready entry into the TTS audio cache after cleaning up the cache."""
         self._cleanup()
         self._entries[audio_id] = TTSAudioEntry(
             audio_id=audio_id,
@@ -88,6 +95,7 @@ class TTSAudioCache:
         )
 
     def put_failed(self, audio_id: str, session_id: str, error: str) -> None:
+        """Put a failed entry into the TTS audio cache after cleaning up the cache."""
         self._cleanup()
         self._entries[audio_id] = TTSAudioEntry(
             audio_id=audio_id,

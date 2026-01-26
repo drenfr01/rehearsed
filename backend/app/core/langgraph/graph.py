@@ -212,7 +212,6 @@ class LangGraphBuilder:
         """
         # Capture agent and student_number for use in the decorated handler
         captured_agent = agent
-        captured_student_number = student_number
         
         @observe(name=f"student_{student_number}_agent")
         async def handler(state: GraphState) -> GraphState:

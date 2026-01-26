@@ -1,6 +1,5 @@
 """This file contains the graph builder for the application."""
 
-import time
 import uuid
 from typing import Callable, List, Optional
 
@@ -11,6 +10,7 @@ from langchain_core.messages import (
     SystemMessage,
     AIMessage,
 )
+from langfuse import observe
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph.state import (
     END,
@@ -67,6 +67,7 @@ class LangGraphBuilder:
         self._scenario_id: int = 0
         self._tts_service = tts_service
 
+    @observe(name="build_graph")
     async def build_graph(self, scenario_id: int) -> CompiledStateGraph:
         """Build the LangGraph workflow for a specific scenario.
         
@@ -80,16 +81,8 @@ class LangGraphBuilder:
             # Store scenario_id for use in feedback agents
             self._scenario_id = scenario_id
             
-            # Time: Fetch agents for this scenario from the database
-            fetch_start = time.perf_counter()
-            self._agents = await database_service.agents.get_agents_by_scenario(scenario_id)
-            fetch_duration = time.perf_counter() - fetch_start
-            logger.info(
-                "timing_measurement",
-                operation="build_graph.fetch_agents",
-                duration_ms=round(fetch_duration * 1000, 2),
-                agent_count=len(self._agents),
-            )
+            # Fetch agents for this scenario from the database
+            self._agents = await self._fetch_agents(scenario_id)
             
             if not self._agents:
                 logger.warning(
@@ -98,43 +91,15 @@ class LangGraphBuilder:
                     environment=settings.ENVIRONMENT.value,
                 )
             
-            # Time: Build graph structure
-            build_start = time.perf_counter()
+            # Build graph structure
             graph_builder = self._build_graph()
-            build_duration = time.perf_counter() - build_start
-            logger.info(
-                "timing_measurement",
-                operation="build_graph.build_structure",
-                duration_ms=round(build_duration * 1000, 2),
-            )
             
-            # Time: Setup checkpointer
-            checkpointer_start = time.perf_counter()
-            if self._connection_pool:
-                checkpointer = AsyncPostgresSaver(self._connection_pool)
-                await checkpointer.setup()
-            else:
-                # In production, proceed without checkpointer if needed
-                checkpointer = None
-                if settings.ENVIRONMENT != Environment.PRODUCTION:
-                    raise Exception("Connection pool initialization failed")
-            checkpointer_duration = time.perf_counter() - checkpointer_start
-            logger.info(
-                "timing_measurement",
-                operation="build_graph.checkpointer_setup",
-                duration_ms=round(checkpointer_duration * 1000, 2),
-            )
+            # Setup checkpointer
+            checkpointer = await self._setup_checkpointer()
 
-            # Time: Compile graph
-            compile_start = time.perf_counter()
+            # Compile graph
             graph = graph_builder.compile(
                 checkpointer=checkpointer, name=f"{settings.PROJECT_NAME} Agent - Scenario {scenario_id} ({settings.ENVIRONMENT.value})"
-            )
-            compile_duration = time.perf_counter() - compile_start
-            logger.info(
-                "timing_measurement",
-                operation="build_graph.compile",
-                duration_ms=round(compile_duration * 1000, 2),
             )
 
             logger.info(
@@ -154,6 +119,25 @@ class LangGraphBuilder:
                 logger.warning("continuing_without_graph")
                 return None
             raise e
+    
+    @observe(name="fetch_agents")
+    async def _fetch_agents(self, scenario_id: int) -> List[Agent]:
+        """Fetch agents for a scenario from the database."""
+        agents = await database_service.agents.get_agents_by_scenario(scenario_id)
+        return agents
+    
+    @observe(name="setup_checkpointer")
+    async def _setup_checkpointer(self) -> Optional[AsyncPostgresSaver]:
+        """Setup the checkpointer for the graph."""
+        if self._connection_pool:
+            checkpointer = AsyncPostgresSaver(self._connection_pool)
+            await checkpointer.setup()
+            return checkpointer
+        else:
+            # In production, proceed without checkpointer if needed
+            if settings.ENVIRONMENT != Environment.PRODUCTION:
+                raise Exception("Connection pool initialization failed")
+            return None
 
     def _build_graph(self) -> StateGraph:
         graph_builder = StateGraph(GraphState)
@@ -226,54 +210,41 @@ class LangGraphBuilder:
         Returns:
             A coroutine function that handles the student agent node.
         """
+        # Capture agent and student_number for use in the decorated handler
+        captured_agent = agent
+        captured_student_number = student_number
+        
+        @observe(name=f"student_{student_number}_agent")
         async def handler(state: GraphState) -> GraphState:
             """Handle student agent node execution."""
-            node_start = time.perf_counter()
-            
             personality_description = (
-                agent.agent_personality.personality_description 
-                if agent.agent_personality 
+                captured_agent.agent_personality.personality_description 
+                if captured_agent.agent_personality 
                 else "Helpful and engaged"
             )
             system_instructions = STUDENT_SYSTEM_INSTRUCTIONS_TEMPLATE.format(
-                objective_and_persona=agent.objective,
-                instructions=agent.instructions,
-                constraints=agent.constraints,
-                context=agent.context,
+                objective_and_persona=captured_agent.objective,
+                instructions=captured_agent.instructions,
+                constraints=captured_agent.constraints,
+                context=captured_agent.context,
                 personality=personality_description,
             )
             
-            # Time: LLM call
-            llm_start = time.perf_counter()
+            # LLM call
             response = await self._call_general_llm(state, system_instructions)
-            llm_duration = time.perf_counter() - llm_start
-            logger.info(
-                "timing_measurement",
-                operation=f"node.student_{student_number}_agent.llm_call",
-                duration_ms=round(llm_duration * 1000, 2),
-                agent_name=agent.name,
-            )
             
             # Lazy-load TTS: do NOT generate audio here (keeps chat latency low).
             # We include an audio_id for the client/backend to fetch later.
             audio_id = ""
-            if agent.voice and agent.voice.voice_name:
+            if captured_agent.voice and captured_agent.voice.voice_name:
                 audio_id = uuid.uuid4().hex
-            
-            node_duration = time.perf_counter() - node_start
-            logger.info(
-                "timing_measurement",
-                operation=f"node.student_{student_number}_agent.total",
-                duration_ms=round(node_duration * 1000, 2),
-                agent_name=agent.name,
-            )
             
             return {
                 "student_responses": [
                     StudentResponse(
                         student_response=response, 
-                        student_details=agent, 
-                        student_personality=agent.agent_personality,
+                        student_details=captured_agent, 
+                        student_personality=captured_agent.agent_personality,
                         audio_base64="",
                         audio_id=audio_id,
                     )
@@ -288,14 +259,13 @@ class LangGraphBuilder:
             "appropriate_explanation": "",
         }
 
+    @observe(name="pick_answering_student")
     async def _pick_answering_student(self, state: GraphState) -> Command:
         """This node is used to pick the answering student based on the user message.
         
         Returns a Command that dynamically routes to only the selected student agent
         plus the inline feedback agent in parallel.
         """
-        node_start = time.perf_counter()
-        
         # Build dynamic student profiles from agents
         student_profiles = self._build_student_profiles()
         
@@ -309,16 +279,9 @@ class LangGraphBuilder:
             ),
         ]
 
-        # Time: LLM call (using async .ainvoke() for parallel execution)
-        llm_start = time.perf_counter()
+        # LLM call to select student
         structured_llm = self.llm.with_structured_output(StudentChoiceResponse)
         response = await structured_llm.ainvoke(system_message + state.messages)
-        llm_duration = time.perf_counter() - llm_start
-        logger.info(
-            "timing_measurement",
-            operation="node.pick_answering_student.llm_ainvoke",
-            duration_ms=round(llm_duration * 1000, 2),
-        )
         
         # Ensure the student number is within valid range
         student_num = max(1, min(response.student_number, len(self._agents)))
@@ -327,14 +290,6 @@ class LangGraphBuilder:
         # NOTE: inline_feedback_agent is now computed asynchronously after the response
         # is returned to reduce latency. See feedback_cache.py for the background task.
         student_node = f"student_{student_num}_agent"
-        
-        node_duration = time.perf_counter() - node_start
-        logger.info(
-            "timing_measurement",
-            operation="node.pick_answering_student.total",
-            duration_ms=round(node_duration * 1000, 2),
-            selected_student=student_num,
-        )
         
         return Command(
             update={"answering_student": student_num},
@@ -354,6 +309,7 @@ class LangGraphBuilder:
             profiles.append(profile)
         return "\n".join(profiles)
 
+    @observe(name="call_general_llm")
     async def _call_general_llm(self, state: GraphState, system_instructions: str) -> str:
         """Helper function to call the student / feedback agent.
         
@@ -372,18 +328,10 @@ class LangGraphBuilder:
         messages = [SystemMessage(content=system_instructions)]
         messages.extend(state.messages)  # Include full conversation history
         
-        # Time: LLM invoke call (using async .ainvoke() for parallel execution)
-        invoke_start = time.perf_counter()
+        # LLM invoke call
         response = await self.llm.with_structured_output(
             GeneralResponse, method="json_schema", include_raw=True
         ).ainvoke(messages)
-        invoke_duration = time.perf_counter() - invoke_start
-        logger.info(
-            "timing_measurement",
-            operation="_call_general_llm.ainvoke",
-            duration_ms=round(invoke_duration * 1000, 2),
-            message_count=len(messages),
-        )
 
         if response["parsed"] is None:
             logger.error(
@@ -404,19 +352,11 @@ class LangGraphBuilder:
 
         return llm_response
 
+    @observe(name="inline_feedback_agent")
     async def _inline_feedback_agent(self, state: GraphState) -> GraphState:
         """This node is used to call the inline feedback agent."""
-        node_start = time.perf_counter()
-        
-        # Time: Database query for feedback config
-        db_start = time.perf_counter()
+        # Database query for feedback config
         feedback = await database_service.feedback.get_feedback_by_type("inline", self._scenario_id)
-        db_duration = time.perf_counter() - db_start
-        logger.info(
-            "timing_measurement",
-            operation="node.inline_feedback.db_query",
-            duration_ms=round(db_duration * 1000, 2),
-        )
         
         if feedback is None:
             logger.warning("inline_feedback_not_found", scenario_id=self._scenario_id)
@@ -430,22 +370,8 @@ class LangGraphBuilder:
             output_format=feedback.output_format,
         )
         
-        # Time: LLM call
-        llm_start = time.perf_counter()
+        # LLM call
         result = await self._call_general_llm(state, system_instructions)
-        llm_duration = time.perf_counter() - llm_start
-        logger.info(
-            "timing_measurement",
-            operation="node.inline_feedback.llm_call",
-            duration_ms=round(llm_duration * 1000, 2),
-        )
-        
-        node_duration = time.perf_counter() - node_start
-        logger.info(
-            "timing_measurement",
-            operation="node.inline_feedback.total",
-            duration_ms=round(node_duration * 1000, 2),
-        )
         
         return {"inline_feedback": [result]}
 
@@ -483,19 +409,11 @@ class LangGraphBuilder:
         else:
             return {"learning_goals_achieved": False}
 
+    @observe(name="generate_summary_feedback")
     async def _generate_summary_feedback(self, state: GraphState) -> GraphState:
         """Generate summary feedback for the entire conversation."""
-        node_start = time.perf_counter()
-        
-        # Time: Database query for feedback config
-        db_start = time.perf_counter()
+        # Database query for feedback config
         feedback = await database_service.feedback.get_feedback_by_type("summary", self._scenario_id)
-        db_duration = time.perf_counter() - db_start
-        logger.info(
-            "timing_measurement",
-            operation="node.summary_feedback.db_query",
-            duration_ms=round(db_duration * 1000, 2),
-        )
         
         if feedback is None:
             logger.warning("summary_feedback_not_found", scenario_id=self._scenario_id)
@@ -513,8 +431,7 @@ class LangGraphBuilder:
             *state.messages,
         ]
         
-        # Time: LLM initialization (creates a new LLM instance)
-        llm_init_start = time.perf_counter()
+        # Create LLM instance (using gemini-3-pro for better quality summary)
         llm = ChatGoogleGenerativeAI(
             model="gemini-3-pro-preview",
             temperature=settings.DEFAULT_LLM_TEMPERATURE,
@@ -524,33 +441,13 @@ class LangGraphBuilder:
             vertexai=True,
             google_api_key=None,  # Explicitly disable API key to force Vertex AI usage
         )
-        llm_init_duration = time.perf_counter() - llm_init_start
-        logger.info(
-            "timing_measurement",
-            operation="node.summary_feedback.llm_init",
-            duration_ms=round(llm_init_duration * 1000, 2),
-        )
         
-        # Time: LLM invoke call (using async .ainvoke() for parallel execution)
-        llm_invoke_start = time.perf_counter()
+        # LLM invoke call
         response = await llm.with_structured_output(SummaryFeedbackResponse, method="json_schema", include_raw=True).ainvoke(prompt)
-        llm_invoke_duration = time.perf_counter() - llm_invoke_start
-        logger.info(
-            "timing_measurement",
-            operation="node.summary_feedback.llm_ainvoke",
-            duration_ms=round(llm_invoke_duration * 1000, 2),
-        )
         
         if response["parsed"] is None:
             logger.error("summary_feedback_generation_failed", error=response["raw"], exc_info=True)
             return {"summary_feedback": "Could not generate summary feedback"}
-
-        node_duration = time.perf_counter() - node_start
-        logger.info(
-            "timing_measurement",
-            operation="node.summary_feedback.total",
-            duration_ms=round(node_duration * 1000, 2),
-        )
 
         return {"summary_feedback": response["parsed"]}
 

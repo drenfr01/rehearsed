@@ -146,10 +146,7 @@ class TestLangGraphAgent:
         # Mock connection pool and graph creation
         agent._get_connection_pool = AsyncMock(return_value=mock_connection_pool)
         
-        with patch("app.core.langgraph.graph_entry.LangGraphBuilder") as mock_builder_class, \
-             patch("app.core.langgraph.graph_entry.CallbackHandler") as mock_callback_handler:
-            # Mock CallbackHandler to accept any arguments
-            mock_callback_handler.return_value = MagicMock()
+        with patch("app.core.langgraph.graph_entry.LangGraphBuilder") as mock_builder_class:
             
             mock_builder = AsyncMock()
             mock_builder.build_graph = AsyncMock(return_value=mock_graph)
@@ -212,10 +209,7 @@ class TestLangGraphAgent:
         agent = langgraph_agent_with_mocked_llm
         agent._get_connection_pool = AsyncMock(return_value=mock_connection_pool)
         
-        with patch("app.core.langgraph.graph_entry.LangGraphBuilder") as mock_builder_class, \
-             patch("app.core.langgraph.graph_entry.CallbackHandler") as mock_callback_handler:
-            # Mock CallbackHandler to accept any arguments
-            mock_callback_handler.return_value = MagicMock()
+        with patch("app.core.langgraph.graph_entry.LangGraphBuilder") as mock_builder_class:
             
             mock_builder = AsyncMock()
             mock_builder.build_graph = AsyncMock(return_value=mock_graph)
@@ -249,10 +243,7 @@ class TestLangGraphAgent:
         agent = langgraph_agent_with_mocked_llm
         agent._get_connection_pool = AsyncMock(return_value=mock_connection_pool)
         
-        with patch("app.core.langgraph.graph_entry.LangGraphBuilder") as mock_builder_class, \
-             patch("app.core.langgraph.graph_entry.CallbackHandler") as mock_callback_handler:
-            # Mock CallbackHandler to accept any arguments
-            mock_callback_handler.return_value = MagicMock()
+        with patch("app.core.langgraph.graph_entry.LangGraphBuilder") as mock_builder_class:
             
             mock_builder = AsyncMock()
             mock_builder.build_graph = AsyncMock(return_value=mock_graph)
@@ -283,19 +274,15 @@ class TestLangGraphAgent:
         messages = [Message(role="user", content="Hello")]
         session_id = str(uuid.uuid4())
         
-        with patch("app.core.langgraph.graph_entry.CallbackHandler") as mock_callback_handler:
-            # Mock CallbackHandler to accept any arguments
-            mock_callback_handler.return_value = MagicMock()
-            
-            with pytest.raises(ValueError, match="scenario_id and tts_service are required"):
-                async for _ in agent.get_stream_response(
-                    messages=messages,
-                    session_id=session_id,
-                    user_id=None,
-                    scenario_id=None,
-                    tts_service=None,
-                ):
-                    pass
+        with pytest.raises(ValueError, match="scenario_id and tts_service are required"):
+            async for _ in agent.get_stream_response(
+                messages=messages,
+                session_id=session_id,
+                user_id=None,
+                scenario_id=None,
+                tts_service=None,
+            ):
+                pass
 
     async def test_get_chat_history_success(
         self,

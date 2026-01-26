@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Literal, Optional
 
 from langchain_core.messages import BaseMessage
+from langfuse import propagate_attributes, observe
 
 from app.core.logging import logger
 
@@ -127,9 +128,11 @@ class FeedbackCache:
 feedback_cache = FeedbackCache()
 
 
+@observe(name="generate_async_feedback")
 async def generate_feedback_and_store(
     feedback_id: str,
     llm,
+    session_id: str = None,
 ) -> None:
     """Background task: generate inline feedback and store in cache.
     
@@ -138,6 +141,7 @@ async def generate_feedback_and_store(
     Args:
         feedback_id: Unique ID for this feedback request (must exist in cache as pending)
         llm: The LLM instance to use for generation
+        session_id: The session ID for Langfuse tracking (optional, falls back to entry.session_id)
     """
     from app.core.prompts.feedback import format_feedback_instructions
     from app.schemas.graph import GeneralResponse
@@ -150,64 +154,72 @@ async def generate_feedback_and_store(
         logger.error("async_feedback_entry_not_found", feedback_id=feedback_id)
         return
     
-    session_id = entry.session_id
+    entry_session_id = entry.session_id
     scenario_id = entry.scenario_id
     messages = entry.messages
     
+    # Use passed session_id or fall back to entry's session_id
+    trace_session_id = session_id or entry_session_id
+    
     if scenario_id is None or messages is None:
         logger.error("async_feedback_missing_context", feedback_id=feedback_id)
-        feedback_cache.put_failed(feedback_id, session_id, "Missing scenario_id or messages")
+        feedback_cache.put_failed(feedback_id, entry_session_id, "Missing scenario_id or messages")
         return
     
-    try:
-        # Fetch feedback configuration
-        feedback_config = await database_service.feedback.get_feedback_by_type("inline", scenario_id)
-        
-        if feedback_config is None:
-            logger.warning("inline_feedback_not_found_async", scenario_id=scenario_id)
-            feedback_cache.put_ready(feedback_id, session_id, ["No inline feedback configured for this scenario."])
-            return
-        
-        system_instructions = format_feedback_instructions(
-            objective=feedback_config.objective,
-            instructions=feedback_config.instructions,
-            constraints=feedback_config.constraints,
-            context=feedback_config.context,
-            output_format=feedback_config.output_format,
-        )
-        
-        # Build messages with system instructions
-        llm_messages = [SystemMessage(content=system_instructions)]
-        llm_messages.extend(messages)
-        
-        # Call LLM
-        response = await llm.with_structured_output(
-            GeneralResponse, method="json_schema", include_raw=True
-        ).ainvoke(llm_messages)
-        
-        if response["parsed"] is None:
+    # Use propagate_attributes to ensure session_id is propagated to LLM calls
+    with propagate_attributes(
+        session_id=trace_session_id,
+        tags=["async", "feedback", "inline"],
+    ):
+        try:
+            # Fetch feedback configuration
+            feedback_config = await database_service.feedback.get_feedback_by_type("inline", scenario_id)
+            
+            if feedback_config is None:
+                logger.warning("inline_feedback_not_found_async", scenario_id=scenario_id)
+                feedback_cache.put_ready(feedback_id, entry_session_id, ["No inline feedback configured for this scenario."])
+                return
+            
+            system_instructions = format_feedback_instructions(
+                objective=feedback_config.objective,
+                instructions=feedback_config.instructions,
+                constraints=feedback_config.constraints,
+                context=feedback_config.context,
+                output_format=feedback_config.output_format,
+            )
+            
+            # Build messages with system instructions
+            llm_messages = [SystemMessage(content=system_instructions)]
+            llm_messages.extend(messages)
+            
+            # Call LLM - traced via propagate_attributes
+            response = await llm.with_structured_output(
+                GeneralResponse, method="json_schema", include_raw=True
+            ).ainvoke(llm_messages)
+            
+            if response["parsed"] is None:
+                logger.error(
+                    "async_feedback_generation_failed",
+                    feedback_id=feedback_id,
+                    session_id=entry_session_id,
+                    error=str(response["raw"]),
+                )
+                feedback_cache.put_failed(feedback_id, entry_session_id, "LLM returned invalid response")
+                return
+            
+            feedback_text = response["parsed"].llm_response
+            if not feedback_text or not feedback_text.strip():
+                feedback_text = "Unable to generate feedback for this response."
+            
+            feedback_cache.put_ready(feedback_id, entry_session_id, [feedback_text])
+            logger.info("async_feedback_ready", feedback_id=feedback_id, session_id=entry_session_id)
+            
+        except Exception as e:
             logger.error(
                 "async_feedback_generation_failed",
                 feedback_id=feedback_id,
-                session_id=session_id,
-                error=str(response["raw"]),
+                session_id=entry_session_id,
+                error=str(e),
+                exc_info=True,
             )
-            feedback_cache.put_failed(feedback_id, session_id, "LLM returned invalid response")
-            return
-        
-        feedback_text = response["parsed"].llm_response
-        if not feedback_text or not feedback_text.strip():
-            feedback_text = "Unable to generate feedback for this response."
-        
-        feedback_cache.put_ready(feedback_id, session_id, [feedback_text])
-        logger.info("async_feedback_ready", feedback_id=feedback_id, session_id=session_id)
-        
-    except Exception as e:
-        logger.error(
-            "async_feedback_generation_failed",
-            feedback_id=feedback_id,
-            session_id=session_id,
-            error=str(e),
-            exc_info=True,
-        )
-        feedback_cache.put_failed(feedback_id, session_id, str(e))
+            feedback_cache.put_failed(feedback_id, entry_session_id, str(e))

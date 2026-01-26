@@ -1,6 +1,7 @@
 """Shared pytest configuration and fixtures."""
 
 import os
+
 import uuid
 from typing import (
     AsyncGenerator,
@@ -41,6 +42,12 @@ from app.services.database import DatabaseService
 # Set test environment
 os.environ["APP_ENV"] = "test"
 
+from langfuse import Langfuse
+
+@pytest.fixture(autouse=True)
+def disable_langfuse_tracing(monkeypatch):
+    # Set the environment variable to false
+    monkeypatch.setenv("LANGFUSE_TRACING_ENABLED", "false")
 
 def unique_email(prefix: str = "test") -> str:
     """Generate a unique email address for testing.

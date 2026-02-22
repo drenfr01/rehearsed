@@ -105,6 +105,7 @@ export class GeminiLiveService {
           this.appendTranscript('agent', this.currentAgentUtterance.trim());
         }
         this.currentAgentUtterance = '';
+        this.currentUserUtterance = '';
         break;
 
       case 'error':

@@ -11,7 +11,10 @@ from typing import AsyncGenerator
 
 from google import genai
 from google.genai.types import (
+    Blob,
+    Content,
     LiveConnectConfig,
+    Part,
     PrebuiltVoiceConfig,
     SpeechConfig,
     VoiceConfig,
@@ -102,17 +105,23 @@ class GeminiLiveSession:
                         rms=round(rms, 1),
                     )
 
-            await self._session.send(
-                input={"data": audio_data, "mime_type": "audio/pcm"},
+            await self._session.send_realtime_input(
+                audio=Blob(data=audio_data, mime_type="audio/pcm;rate=16000"),
             )
 
     async def send_text(self, text: str):
-        """Send a text message to Gemini."""
+        """Send a text message to Gemini as a complete turn."""
         if self._session and not self._closed:
-            await self._session.send_realtime_input(text=text)
+            await self._session.send_client_content(
+                turns=Content(parts=[Part(text=text)]),
+                turn_complete=True,
+            )
 
     async def receive_messages(self) -> AsyncGenerator[dict, None]:
         """Yield messages from the Gemini Live session.
+
+        The SDK's receive() iterator breaks after each turn_complete, so we
+        wrap it in an outer loop to keep listening across multiple turns.
 
         Yields dicts with structure:
           - {"type": "audio", "data": "<base64 pcm>"}
@@ -127,54 +136,46 @@ class GeminiLiveSession:
         logger.info("gemini_live_receive_started", session_id=self.session_id)
 
         try:
-            async for message in self._session.receive():
-                if self._closed:
-                    break
+            while not self._closed:
+                async for message in self._session.receive():
+                    if self._closed:
+                        return
 
-                logger.debug(
-                    "gemini_live_raw_message",
-                    session_id=self.session_id,
-                    message_type=type(message).__name__,
-                    message_keys=str(
-                        [k for k in dir(message) if not k.startswith("_")]
-                    ),
-                )
+                    server_content = getattr(message, "server_content", None)
+                    if server_content is None:
+                        continue
 
-                server_content = getattr(message, "server_content", None)
-                if server_content is None:
-                    logger.debug(
-                        "gemini_live_skip_no_server_content",
-                        session_id=self.session_id,
-                    )
-                    continue
+                    model_turn = getattr(server_content, "model_turn", None)
+                    if model_turn and hasattr(model_turn, "parts") and model_turn.parts:
+                        for part in model_turn.parts:
+                            inline_data = getattr(part, "inline_data", None)
+                            if inline_data and inline_data.data:
+                                encoded = base64.b64encode(inline_data.data).decode("utf-8")
+                                yield {"type": "audio", "data": encoded}
 
-                # Model turn: audio and text parts
-                model_turn = getattr(server_content, "model_turn", None)
-                if model_turn and hasattr(model_turn, "parts"):
-                    for part in model_turn.parts:
-                        inline_data = getattr(part, "inline_data", None)
-                        if inline_data and inline_data.data:
-                            encoded = base64.b64encode(inline_data.data).decode("utf-8")
-                            yield {"type": "audio", "data": encoded}
+                            text = getattr(part, "text", None)
+                            if text:
+                                logger.info("gemini_live_agent_text_part", session_id=self.session_id, text=text[:100])
+                                yield {"type": "transcript_agent", "text": text}
 
-                        text = getattr(part, "text", None)
+                    input_transcription = getattr(server_content, "input_transcription", None)
+                    if input_transcription:
+                        text = getattr(input_transcription, "text", "")
+                        if text:
+                            logger.info("gemini_live_user_transcript", session_id=self.session_id, text=text[:100])
+                            yield {"type": "transcript_user", "text": text}
+
+                    output_transcription = getattr(server_content, "output_transcription", None)
+                    if output_transcription:
+                        text = getattr(output_transcription, "text", "")
                         if text:
                             logger.info("gemini_live_agent_transcript", session_id=self.session_id, text=text[:100])
                             yield {"type": "transcript_agent", "text": text}
 
-                # Input transcription (what the user said)
-                input_transcription = getattr(server_content, "input_transcription", None)
-                if input_transcription:
-                    text = getattr(input_transcription, "text", "")
-                    if text:
-                        logger.info("gemini_live_user_transcript", session_id=self.session_id, text=text[:100])
-                        yield {"type": "transcript_user", "text": text}
-
-                # Turn complete signal
-                turn_complete = getattr(server_content, "turn_complete", False)
-                if turn_complete:
-                    logger.info("gemini_live_turn_complete", session_id=self.session_id)
-                    yield {"type": "turn_complete"}
+                    turn_complete = getattr(server_content, "turn_complete", False)
+                    if turn_complete:
+                        logger.info("gemini_live_turn_complete", session_id=self.session_id)
+                        yield {"type": "turn_complete"}
 
         except Exception as e:
             if not self._closed:

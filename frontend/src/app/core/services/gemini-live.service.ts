@@ -21,7 +21,6 @@ export class GeminiLiveService {
 
   private playbackQueue: Float32Array[] = [];
   private isPlayingBack = false;
-  private sendingPaused = false;
 
   private readonly SAMPLE_RATE_INPUT = 16000;
   private readonly SAMPLE_RATE_OUTPUT = 24000;
@@ -101,9 +100,7 @@ export class GeminiLiveService {
         break;
 
       case 'turn_complete':
-        if (this.currentAgentUtterance.trim()) {
-          this.appendTranscript('agent', this.currentAgentUtterance.trim());
-        }
+        this.flushAgentUtterance();
         this.currentAgentUtterance = '';
         this.currentUserUtterance = '';
         break;
@@ -182,7 +179,7 @@ export class GeminiLiveService {
         },
       });
       this.audioWorkletNode.port.onmessage = (event: MessageEvent) => {
-        if (this.ws?.readyState === WebSocket.OPEN && !this.sendingPaused) {
+        if (this.ws?.readyState === WebSocket.OPEN) {
           const pcmData: Float32Array = event.data;
           const int16 = this.float32ToInt16(pcmData);
           const b64 = this.arrayBufferToBase64(int16.buffer as ArrayBuffer);
@@ -253,7 +250,6 @@ export class GeminiLiveService {
     }
     this.playbackQueue.push(float32);
     if (!this.isPlayingBack) {
-      this.sendingPaused = true;
       this.playNextAudioChunk();
     }
   }
@@ -261,7 +257,6 @@ export class GeminiLiveService {
   private playNextAudioChunk() {
     if (this.playbackQueue.length === 0) {
       this.isPlayingBack = false;
-      this.sendingPaused = false;
       return;
     }
 

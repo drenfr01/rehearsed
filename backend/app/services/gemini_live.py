@@ -5,18 +5,13 @@ sessions with the Gemini Live API, proxying between a WebSocket client
 and Gemini's multimodal live endpoint.
 """
 
-import asyncio
 import base64
-import json
 import struct
-from typing import AsyncGenerator, Optional
+from typing import AsyncGenerator
 
 from google import genai
 from google.genai.types import (
-    Content,
     LiveConnectConfig,
-    Modality,
-    Part,
     PrebuiltVoiceConfig,
     SpeechConfig,
     VoiceConfig,
@@ -48,7 +43,7 @@ class GeminiLiveSession:
 
     def _build_config(self) -> LiveConnectConfig:
         return LiveConnectConfig(
-            response_modalities=[Modality.AUDIO],
+            response_modalities=["AUDIO"],
             system_instruction=self.system_instruction,
             input_audio_transcription={},
             output_audio_transcription={},
@@ -114,10 +109,7 @@ class GeminiLiveSession:
     async def send_text(self, text: str):
         """Send a text message to Gemini."""
         if self._session and not self._closed:
-            await self._session.send_client_content(
-                turns=Content(role="user", parts=[Part(text=text)]),
-                turn_complete=True,
-            )
+            await self._session.send_realtime_input(text=text)
 
     async def receive_messages(self) -> AsyncGenerator[dict, None]:
         """Yield messages from the Gemini Live session.
@@ -156,7 +148,7 @@ class GeminiLiveSession:
                     )
                     continue
 
-                # Model audio output
+                # Model turn: audio and text parts
                 model_turn = getattr(server_content, "model_turn", None)
                 if model_turn and hasattr(model_turn, "parts"):
                     for part in model_turn.parts:
@@ -165,6 +157,11 @@ class GeminiLiveSession:
                             encoded = base64.b64encode(inline_data.data).decode("utf-8")
                             yield {"type": "audio", "data": encoded}
 
+                        text = getattr(part, "text", None)
+                        if text:
+                            logger.info("gemini_live_agent_transcript", session_id=self.session_id, text=text[:100])
+                            yield {"type": "transcript_agent", "text": text}
+
                 # Input transcription (what the user said)
                 input_transcription = getattr(server_content, "input_transcription", None)
                 if input_transcription:
@@ -172,14 +169,6 @@ class GeminiLiveSession:
                     if text:
                         logger.info("gemini_live_user_transcript", session_id=self.session_id, text=text[:100])
                         yield {"type": "transcript_user", "text": text}
-
-                # Output transcription (what the model said)
-                output_transcription = getattr(server_content, "output_transcription", None)
-                if output_transcription:
-                    text = getattr(output_transcription, "text", "")
-                    if text:
-                        logger.info("gemini_live_agent_transcript", session_id=self.session_id, text=text[:100])
-                        yield {"type": "transcript_agent", "text": text}
 
                 # Turn complete signal
                 turn_complete = getattr(server_content, "turn_complete", False)

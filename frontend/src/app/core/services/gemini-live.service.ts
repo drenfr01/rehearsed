@@ -19,8 +19,8 @@ export class GeminiLiveService {
   private audioWorkletNode: AudioWorkletNode | null = null;
   private sourceNode: MediaStreamAudioSourceNode | null = null;
 
-  private playbackQueue: Float32Array[] = [];
-  private isPlayingBack = false;
+  private playbackCtx: AudioContext | null = null;
+  private nextPlaybackTime = 0;
 
   private readonly SAMPLE_RATE_INPUT = 16000;
   private readonly SAMPLE_RATE_OUTPUT = 24000;
@@ -236,8 +236,11 @@ export class GeminiLiveService {
       this.ws.close();
       this.ws = null;
     }
-    this.playbackQueue = [];
-    this.isPlayingBack = false;
+    if (this.playbackCtx && this.playbackCtx.state !== 'closed') {
+      this.playbackCtx.close();
+    }
+    this.playbackCtx = null;
+    this.nextPlaybackTime = 0;
     this.connectionState.set('disconnected');
   }
 
@@ -248,33 +251,26 @@ export class GeminiLiveService {
     for (let i = 0; i < int16.length; i++) {
       float32[i] = int16[i] / 32768;
     }
-    this.playbackQueue.push(float32);
-    if (!this.isPlayingBack) {
-      this.playNextAudioChunk();
-    }
+    this.scheduleAudioChunk(float32);
   }
 
-  private playNextAudioChunk() {
-    if (this.playbackQueue.length === 0) {
-      this.isPlayingBack = false;
-      return;
+  private scheduleAudioChunk(samples: Float32Array) {
+    if (!this.playbackCtx || this.playbackCtx.state === 'closed') {
+      this.playbackCtx = new AudioContext({ sampleRate: this.SAMPLE_RATE_OUTPUT });
+      this.nextPlaybackTime = this.playbackCtx.currentTime;
     }
 
-    this.isPlayingBack = true;
-    const chunk = this.playbackQueue.shift()!;
-
-    const ctx = new AudioContext({ sampleRate: this.SAMPLE_RATE_OUTPUT });
-    const buffer = ctx.createBuffer(1, chunk.length, this.SAMPLE_RATE_OUTPUT);
-    buffer.getChannelData(0).set(chunk);
+    const ctx = this.playbackCtx;
+    const buffer = ctx.createBuffer(1, samples.length, this.SAMPLE_RATE_OUTPUT);
+    buffer.getChannelData(0).set(samples);
 
     const source = ctx.createBufferSource();
     source.buffer = buffer;
     source.connect(ctx.destination);
-    source.onended = () => {
-      ctx.close();
-      this.playNextAudioChunk();
-    };
-    source.start();
+
+    const startAt = Math.max(this.nextPlaybackTime, ctx.currentTime);
+    source.start(startAt);
+    this.nextPlaybackTime = startAt + buffer.duration;
   }
 
   private float32ToInt16(float32: Float32Array): Int16Array {

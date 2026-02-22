@@ -6,6 +6,8 @@ import { ScenarioSelection } from './features/scenario-selection/scenario-select
 import { ScenarioOverview } from './features/scenario-overview/scenario-overview';
 import { Classroom } from './features/classroom/classroom';
 import { ScenarioFeedback } from './features/scenario-feedback/scenario-feedback';
+import { OneOnOneSetup } from './features/one-on-one-setup/one-on-one-setup';
+import { OneOnOneConversation } from './features/one-on-one-conversation/one-on-one-conversation';
 import { Admin } from './features/admin/admin';
 import { AdminAgentPersonalities } from './features/admin-agent-personalities/admin-agent-personalities';
 import { AdminAgents } from './features/admin-agents/admin-agents';
@@ -45,6 +47,14 @@ export const routes: Routes = [
             {
                 path: 'scenario-feedback',
                 component: ScenarioFeedback,
+            },
+            {
+                path: 'one-on-one-setup',
+                component: OneOnOneSetup,
+            },
+            {
+                path: 'one-on-one',
+                component: OneOnOneConversation,
             },
             // User Content Routes
             {

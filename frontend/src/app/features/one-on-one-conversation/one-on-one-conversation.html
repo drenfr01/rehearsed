@@ -1,0 +1,141 @@
+<div class="conversation-container">
+  <mat-card class="conversation-card">
+    <mat-card-content>
+      <!-- Agent Info Bar -->
+      <div class="agent-bar">
+        <div class="agent-bar-left">
+          @if (getAgentAvatarUrl()) {
+            <img [src]="getAgentAvatarUrl()" [alt]="agent()?.name" class="agent-bar-avatar" />
+          } @else {
+            <div class="agent-bar-avatar-placeholder">
+              <mat-icon>person</mat-icon>
+            </div>
+          }
+          <div class="agent-bar-info">
+            <span class="agent-bar-name">{{ agent()?.name ?? 'Student' }}</span>
+            <span class="agent-bar-scenario">{{ scenario()?.name ?? '' }}</span>
+          </div>
+        </div>
+        <div class="agent-bar-right">
+          <div class="connection-indicator" [class.connected]="connectionState() === 'connected'">
+            <span class="indicator-dot"></span>
+            <span class="indicator-label">
+              @switch (connectionState()) {
+                @case ('connected') { Live }
+                @case ('connecting') { Connecting... }
+                @case ('error') { Error }
+                @default { Disconnected }
+              }
+            </span>
+          </div>
+          <button
+            mat-raised-button
+            class="end-button"
+            (click)="endConversation()"
+            matTooltip="End conversation"
+          >
+            End
+          </button>
+        </div>
+      </div>
+
+      @if (error()) {
+        <div class="error-message">{{ error() }}</div>
+      }
+
+      <!-- Transcript Area -->
+      <div class="transcript-area" #transcriptContainer>
+        @for (entry of transcript(); track $index) {
+          <div class="transcript-entry" [class.user-entry]="entry.role === 'user'" [class.agent-entry]="entry.role === 'agent'">
+            @if (entry.role === 'user') {
+              <div class="entry-content-wrapper">
+                <div class="entry-bubble user-bubble">
+                  <span class="entry-text">{{ entry.text }}</span>
+                </div>
+                <div class="entry-avatar teacher-avatar">
+                  <mat-icon>school</mat-icon>
+                </div>
+              </div>
+            } @else {
+              <div class="entry-content-wrapper">
+                @if (getAgentAvatarUrl()) {
+                  <img [src]="getAgentAvatarUrl()" [alt]="agent()?.name" class="entry-avatar-img" />
+                } @else {
+                  <div class="entry-avatar agent-avatar-ph">
+                    <mat-icon>smart_toy</mat-icon>
+                  </div>
+                }
+                <div class="agent-entry-content">
+                  <span class="entry-name">{{ agent()?.name ?? 'Student' }}</span>
+                  <div class="entry-bubble agent-bubble">
+                    <span class="entry-text">{{ entry.text }}</span>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        @if (transcript().length === 0 && connectionState() === 'connected') {
+          <div class="empty-transcript">
+            <mat-icon class="empty-icon">mic</mat-icon>
+            <p>Start speaking to begin the conversation</p>
+          </div>
+        }
+
+        @if (isConnecting()) {
+          <div class="empty-transcript">
+            <mat-icon class="empty-icon spinner-icon">hourglass_empty</mat-icon>
+            <p>Connecting to live session...</p>
+          </div>
+        }
+      </div>
+
+      <!-- Voice Control Area -->
+      <div class="voice-control-area">
+        <div class="input-row">
+          <mat-form-field appearance="outline" class="text-input-field">
+            <mat-label>Type a message (optional)</mat-label>
+            <input
+              matInput
+              [(ngModel)]="textInput"
+              [value]="textInput()"
+              (ngModelChange)="textInput.set($event)"
+              (keydown)="onTextKeydown($event)"
+              placeholder="Or just speak..."
+              [disabled]="connectionState() !== 'connected'"
+            />
+          </mat-form-field>
+
+          <button
+            mat-icon-button
+            (click)="sendText()"
+            [disabled]="!textInput() || connectionState() !== 'connected'"
+            class="send-button"
+            matTooltip="Send text message"
+          >
+            <mat-icon>send</mat-icon>
+          </button>
+
+          <button
+            mat-fab
+            [color]="isRecording() ? 'warn' : 'primary'"
+            (click)="toggleMic()"
+            [disabled]="connectionState() !== 'connected'"
+            class="mic-fab"
+            [matTooltip]="isRecording() ? 'Mute microphone' : 'Unmute microphone'"
+          >
+            <mat-icon>{{ isRecording() ? 'mic' : 'mic_off' }}</mat-icon>
+          </button>
+        </div>
+
+        @if (isRecording()) {
+          <div class="recording-indicator">
+            <span class="pulse-dot"></span>
+            <span class="recording-label">Listening...</span>
+          </div>
+        }
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

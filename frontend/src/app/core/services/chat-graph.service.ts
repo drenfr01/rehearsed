@@ -11,6 +11,16 @@ interface TtsAudioResponse {
   audio_base64?: string;
 }
 
+interface StreamEvent {
+  content: string;
+  done: boolean;
+  student_name?: string;
+  audio_id?: string;
+  feedback_request_id?: string;
+  interrupt_value?: string;
+  interrupt_value_type?: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -192,6 +202,150 @@ export class ChatGraphService {
     this.inlineFeedback.set([]);
     localStorage.removeItem(this.GRAPH_MESSAGES_KEY);
     localStorage.removeItem(this.INLINE_FEEDBACK_KEY);
+  }
+
+  /**
+   * Send a chat request and stream the student response token-by-token via SSE.
+   *
+   * A placeholder assistant message is inserted into `graphMessages` immediately
+   * so the UI can show a typing indicator.  Each incoming token appends to its
+   * `content`.  The final SSE event (done=true) patches in the student name,
+   * audio_id, and kicks off feedback polling and TTS prefetch.
+   */
+  sendStreamingRequest(chatRequest: ChatRequest, initialGraphRequest: boolean): Observable<void> {
+    const isAudioMessage = !!chatRequest.audio_base64;
+
+    if (!initialGraphRequest) {
+      const humanMessage: Message = {
+        role: 'user',
+        content: chatRequest.resumption_text || (isAudioMessage ? 'Transcribing...' : ''),
+      };
+      this.graphMessages.set([...this.graphMessages(), humanMessage]);
+    } else {
+      this.graphMessages.set([...this.graphMessages(), ...chatRequest.messages]);
+    }
+
+    this.inlineFeedback.set([]);
+    this.feedbackStatus.set('pending');
+
+    return new Observable<void>(observer => {
+      const abortController = new AbortController();
+
+      // Read the bearer token the same way the HTTP interceptor does
+      const token = localStorage.getItem('token');
+
+      // Insert a streaming placeholder so the UI shows something immediately
+      const placeholderIndex = this.graphMessages().length;
+      this.graphMessages.set([
+        ...this.graphMessages(),
+        { role: 'assistant', content: '' },
+      ]);
+
+      fetch(`${environment.baseUrl}/api/v1/chatbot/chat/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          Accept: 'text/event-stream',
+        },
+        body: JSON.stringify(chatRequest),
+        signal: abortController.signal,
+      })
+        .then(async response => {
+          if (!response.ok) {
+            const errText = await response.text().catch(() => response.statusText);
+            throw new Error(errText || `HTTP ${response.status}`);
+          }
+
+          const reader = response.body!.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+
+            // SSE events are separated by double newlines
+            const parts = buffer.split('\n\n');
+            buffer = parts.pop() ?? '';
+
+            for (const part of parts) {
+              const dataLine = part
+                .split('\n')
+                .find(l => l.startsWith('data: '));
+              if (!dataLine) continue;
+
+              const event: StreamEvent = JSON.parse(dataLine.slice(6));
+
+              if (!event.done) {
+                // Append token to the in-progress assistant message
+                const msgs = this.graphMessages();
+                const updated = [...msgs];
+                updated[placeholderIndex] = {
+                  ...updated[placeholderIndex],
+                  content: updated[placeholderIndex].content + event.content,
+                };
+                this.graphMessages.set(updated);
+              } else {
+                // Final event – patch metadata onto the placeholder message
+                const msgs = this.graphMessages();
+                const updated = [...msgs];
+                updated[placeholderIndex] = {
+                  ...updated[placeholderIndex],
+                  student_name: event.student_name ?? updated[placeholderIndex].student_name,
+                  audio_id: event.audio_id ?? undefined,
+                };
+                this.graphMessages.set(updated);
+
+                this.interruptionContent.set(event.interrupt_value ?? '');
+                this.interruptionType.set(event.interrupt_value_type ?? '');
+
+                // Update transcribed text for audio messages
+                if (isAudioMessage && event.content) {
+                  const latestMsgs = this.graphMessages();
+                  const lastUserIdx = latestMsgs.map(m => m.role).lastIndexOf('user');
+                  if (lastUserIdx !== -1) {
+                    const withTranscription = [...latestMsgs];
+                    withTranscription[lastUserIdx] = {
+                      ...withTranscription[lastUserIdx],
+                      content: event.content,
+                    };
+                    this.graphMessages.set(withTranscription);
+                  }
+                  this.transcribedText.set(event.content);
+                }
+
+                // Kick off async feedback polling
+                if (event.feedback_request_id) {
+                  this.feedbackStatus.set('pending');
+                  this.ensureInlineFeedback(event.feedback_request_id).subscribe();
+                } else {
+                  this.feedbackStatus.set(null);
+                }
+
+                // Prefetch TTS audio
+                if (event.audio_id) {
+                  this.ensureTtsAudio(event.audio_id).subscribe();
+                }
+              }
+            }
+          }
+
+          observer.complete();
+        })
+        .catch(err => {
+          if (err.name !== 'AbortError') {
+            // Remove the placeholder on error so the UI doesn't show an empty bubble
+            const msgs = this.graphMessages();
+            this.graphMessages.set(msgs.filter((_, i) => i !== placeholderIndex));
+            observer.error(err);
+          }
+        });
+
+      return () => abortController.abort();
+    });
   }
 
   sendGraphRequest (chatRequest: ChatRequest, initialGraphRequest: boolean): Observable<ChatResponse> {

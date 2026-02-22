@@ -410,13 +410,13 @@ export class Classroom implements OnInit {
 
     const newChatRequest: ChatRequest = {
       is_resumption: true,
-      resumption_text: '', // Will be filled by speech-to-text on backend
+      resumption_text: '',
       resumption_approved: this.isApproved(),
       messages: [],
       audio_base64: audioBase64,
     };
 
-    const subscription = this.chatGraphService.sendGraphRequest(newChatRequest, false).subscribe({
+    const subscription = this.chatGraphService.sendStreamingRequest(newChatRequest, false).subscribe({
       error: (error: Error) => {
         this.error.set(error.message);
         this.isLoading.set(false);
@@ -426,9 +426,7 @@ export class Classroom implements OnInit {
       },
     });
 
-    this.destroyRef.onDestroy(() => {
-      subscription.unsubscribe();
-    });
+    this.destroyRef.onDestroy(() => subscription.unsubscribe());
   }
 
   onSubmit() {
@@ -439,8 +437,8 @@ export class Classroom implements OnInit {
       resumption_text: this.userInput()!,
       resumption_approved: this.isApproved()!,
       messages: [],
-    }
-    const subscription = this.chatGraphService.sendGraphRequest(newChatRequest, false).subscribe({
+    };
+    const subscription = this.chatGraphService.sendStreamingRequest(newChatRequest, false).subscribe({
       error: (error: Error) => {
         this.error.set(error.message);
         this.isLoading.set(false);
@@ -451,9 +449,7 @@ export class Classroom implements OnInit {
       },
     });
 
-    this.destroyRef.onDestroy(() => {
-      subscription.unsubscribe();
-    });
+    this.destroyRef.onDestroy(() => subscription.unsubscribe());
   }
 
   onEndScenario() {

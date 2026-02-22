@@ -4,10 +4,13 @@ This module provides endpoints for chat interactions, including regular chat,
 streaming chat, message history management, and chat history clearing.
 """
 
+import asyncio
 import base64
 import json
+import uuid
 from typing import List
 
+from asgiref.sync import sync_to_async
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -16,6 +19,8 @@ from fastapi import (
     Request,
 )
 from fastapi.responses import StreamingResponse
+from langchain_core.messages import HumanMessage as LCHumanMessage
+from langgraph.types import StateSnapshot
 
 from app.api.v1.auth import get_current_session
 from app.api.v1.deps import get_database_service, get_text_to_speech_service
@@ -31,7 +36,7 @@ from app.schemas.chat import (
     StreamResponse,
 )
 from app.services.database.base import DatabaseService
-from app.services.feedback_cache import feedback_cache
+from app.services.feedback_cache import feedback_cache, generate_feedback_and_store
 from app.services.gemini_text_to_speech import GeminiTextToSpeech
 from app.services.speech_to_text import SpeechToTextService
 from app.services.tts_audio_cache import generate_tts_and_store, tts_audio_cache
@@ -186,9 +191,15 @@ async def chat_stream(
 ):
     """Process a chat request using LangGraph with streaming response.
 
+    Streams student response tokens via Server-Sent Events so the frontend can
+    render text progressively.  The final SSE event (``done=True``) carries
+    metadata (student name, audio_id, feedback_request_id, interrupt values)
+    needed to finalise the message in the UI.
+
     Args:
         request: The FastAPI request object for rate limiting.
         chat_request: The chat request containing messages.
+        background_tasks: FastAPI background tasks for async post-processing.
         session: The current session from the auth token.
         database_service: The database service instance.
         text_to_speech_service: The text-to-speech service instance.
@@ -203,51 +214,147 @@ async def chat_stream(
         logger.info(
             "stream_chat_request_received",
             session_id=session.id,
-            message_count=len(chat_request.messages),
+            is_resumption=chat_request.is_resumption,
         )
 
-        async def event_generator():
-            """Generate streaming events.
+        scenario_id = database_service.scenarios.get_current_scenario().id
 
-            Yields:
-                str: Server-sent events in JSON format.
-
-            Raises:
-                Exception: If there's an error during streaming.
-            """
+        # Resolve resumption text (handles audio transcription if needed)
+        resumption_text = chat_request.resumption_text
+        transcribed_text: str = ""
+        if chat_request.audio_base64:
+            logger.info("audio_transcription_started", session_id=session.id)
             try:
-                full_response = ""
-                with llm_stream_duration_seconds.labels(model=agent.llm.model_name).time():
-                    async for chunk in agent.get_stream_response(
-                        chat_request.messages, session.id, user_id=session.user_id, scenario_id=chat_request.scenario_id, tts_service=text_to_speech_service
-                    ):
-                        full_response += chunk
-                        response = StreamResponse(content=chunk, done=False)
-                        yield f"data: {json.dumps(response.model_dump())}\n\n"
+                audio_bytes = base64.b64decode(chat_request.audio_base64)
+                transcribed = await speech_to_text_service.transcribe_audio(audio_bytes)
+                if transcribed:
+                    resumption_text = transcribed
+                    transcribed_text = transcribed
+                    logger.info("audio_transcription_completed", session_id=session.id)
+                else:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Could not transcribe audio. Please try again or type your message.",
+                    )
+            except base64.binascii.Error as e:
+                raise HTTPException(status_code=400, detail="Invalid audio data encoding")
 
-                # Send final message indicating completion
-                final_response = StreamResponse(content="", done=True)
-                yield f"data: {json.dumps(final_response.model_dump())}\n\n"
+        # Start async feedback generation in parallel with graph execution
+        feedback_id = ""
+        if chat_request.is_resumption:
+            try:
+                graph_obj = await agent.create_graph(scenario_id, text_to_speech_service)
+                if graph_obj is not None:
+                    config_snap = {"configurable": {"thread_id": session.id}}
+                    state_snap: StateSnapshot = await sync_to_async(graph_obj.get_state)(config_snap)
+                    current_messages = list(state_snap.values.get("messages", [])) if state_snap.values else []
+                    current_messages.append(LCHumanMessage(content=resumption_text))
+                    feedback_id = uuid.uuid4().hex
+                    feedback_cache.put_pending(
+                        feedback_id=feedback_id,
+                        session_id=session.id,
+                        scenario_id=scenario_id,
+                        messages=current_messages,
+                    )
+                    asyncio.create_task(
+                        generate_feedback_and_store(feedback_id, agent.llm, session.id)
+                    )
+                    logger.info("async_feedback_started_early", feedback_id=feedback_id, session_id=session.id)
+            except Exception as fb_err:
+                logger.warning("stream_early_feedback_start_failed", error=str(fb_err))
+
+        async def event_generator():
+            try:
+                with llm_stream_duration_seconds.labels(
+                    model=getattr(agent.llm, "model", getattr(agent.llm, "model_name", "unknown"))
+                ).time():
+                    if chat_request.is_resumption:
+                        token_stream = agent.get_stream_resumption_response(
+                            resumption_text,
+                            session.id,
+                            user_id=session.user_id,
+                            scenario_id=scenario_id,
+                            tts_service=text_to_speech_service,
+                        )
+                    else:
+                        token_stream = agent.get_stream_response(
+                            chat_request.messages,
+                            session.id,
+                            user_id=session.user_id,
+                            scenario_id=scenario_id,
+                            tts_service=text_to_speech_service,
+                        )
+
+                    async for chunk in token_stream:
+                        yield f"data: {json.dumps(StreamResponse(content=chunk, done=False).model_dump())}\n\n"
+
+                # Retrieve final state to populate metadata for the done event.
+                # Guard individually so a state-read failure never drops feedback_request_id.
+                student_name: str | None = None
+                audio_id: str | None = None
+                interrupt_value: str | None = None
+                interrupt_value_type: str | None = None
+
+                try:
+                    final_result = await agent.get_current_chat_state(session.id, scenario_id, text_to_speech_service)
+
+                    if final_result.student_responses:
+                        latest = final_result.student_responses[-1]
+                        student_name = latest.student_details.name if latest.student_details else None
+                        audio_id = latest.audio_id or None
+
+                        # Schedule TTS via asyncio.create_task — background_tasks.add_task()
+                        # added inside a StreamingResponse generator is never executed because
+                        # FastAPI snapshots background tasks before the body iterator runs.
+                        voice_name = ""
+                        if latest.student_details and latest.student_details.voice:
+                            voice_name = latest.student_details.voice.voice_name or ""
+                        if audio_id and not latest.audio_base64 and voice_name:
+                            if tts_audio_cache.get(audio_id) is None:
+                                personality = ""
+                                if latest.student_personality:
+                                    personality = latest.student_personality.personality_description or ""
+                                tts_prompt = f"Speak as a {personality or 'helpful and engaged'} student in a classroom setting."
+                                tts_audio_cache.put_pending(audio_id, session.id)
+                                asyncio.create_task(
+                                    generate_tts_and_store(
+                                        audio_id,
+                                        session.id,
+                                        voice_name,
+                                        tts_prompt,
+                                        latest.student_response,
+                                        text_to_speech_service,
+                                    )
+                                )
+
+                    if final_result.interrupt_task:
+                        interrupt_value = final_result.interrupt_value
+                        interrupt_value_type = final_result.interrupt_value_type
+
+                except Exception as state_err:
+                    logger.warning("stream_final_state_failed", session_id=session.id, error=str(state_err))
+
+                final_event = StreamResponse(
+                    content=transcribed_text,
+                    done=True,
+                    student_name=student_name,
+                    audio_id=audio_id,
+                    feedback_request_id=feedback_id or None,
+                    interrupt_value=interrupt_value,
+                    interrupt_value_type=interrupt_value_type,
+                )
+                yield f"data: {json.dumps(final_event.model_dump())}\n\n"
 
             except Exception as e:
-                logger.error(
-                    "stream_chat_request_failed",
-                    session_id=session.id,
-                    error=str(e),
-                    exc_info=True,
-                )
-                error_response = StreamResponse(content=str(e), done=True)
-                yield f"data: {json.dumps(error_response.model_dump())}\n\n"
+                logger.error("stream_chat_request_failed", session_id=session.id, error=str(e), exc_info=True)
+                yield f"data: {json.dumps(StreamResponse(content=str(e), done=True).model_dump())}\n\n"
 
         return StreamingResponse(event_generator(), media_type="text/event-stream")
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(
-            "stream_chat_request_failed",
-            session_id=session.id,
-            error=str(e),
-            exc_info=True,
-        )
+        logger.error("stream_chat_request_failed", session_id=session.id, error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

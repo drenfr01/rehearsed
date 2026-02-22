@@ -45,6 +45,21 @@ from app.utils import (
 )
 
 
+def _extract_token_text(content: str | list) -> str:
+    """Normalise a LangChain message chunk's content to a plain string.
+
+    Gemini's LangChain adapter can return ``content`` as either a plain ``str``
+    or a list of content-part dicts such as ``[{"type": "text", "text": "…"}]``.
+    This helper handles both shapes so callers can always concatenate safely.
+    """
+    if isinstance(content, list):
+        return "".join(
+            part.get("text", "") if isinstance(part, dict) else str(part)
+            for part in content
+        )
+    return content or ""
+
+
 class LangGraphAgent:
     """Manages the LangGraph Agent/workflow and interactions with the LLM.
 
@@ -533,7 +548,6 @@ class LangGraphAgent:
         Yields:
             str: Tokens of the LLM response.
         """
-        # Use propagate_attributes to set session_id and tags for all nested traces
         with propagate_attributes(
             session_id=session_id,
             user_id=user_id,
@@ -549,18 +563,105 @@ class LangGraphAgent:
                 raise Exception("Failed to create graph")
 
             try:
-                async for token, _ in graph.astream(
+                async for token, metadata in graph.astream(
                     {"messages": dump_messages(messages), "session_id": session_id}, config, stream_mode="messages"
                 ):
                     try:
-                        yield token.content
+                        node_name = metadata.get("langgraph_node", "")
+                        if node_name.startswith("student_"):
+                            text = _extract_token_text(token.content)
+                            if text:
+                                yield text
                     except Exception as token_error:
                         logger.error("Error processing token", error=str(token_error), session_id=session_id)
-                        # Continue with next token even if current one fails
                         continue
             except Exception as stream_error:
                 logger.error("Error in stream processing", error=str(stream_error), session_id=session_id)
                 raise stream_error
+
+    async def get_stream_resumption_response(
+        self,
+        resumption_text: str,
+        session_id: str,
+        user_id: Optional[str] = None,
+        scenario_id: Optional[int] = None,
+        tts_service: Optional[GeminiTextToSpeech] = None,
+    ) -> AsyncGenerator[str, None]:
+        """Stream tokens from a graph resumption (the primary classroom chat flow).
+
+        Resumes the paused graph with the teacher's input and yields each student
+        response token as it is generated, enabling time-to-first-token improvements.
+
+        Args:
+            resumption_text: The teacher's response text to resume the graph with.
+            session_id: The session ID for the conversation.
+            user_id: The user ID for Langfuse tracking.
+            scenario_id: The scenario ID to use for the graph.
+            tts_service: The text-to-speech service instance.
+
+        Yields:
+            str: Individual text tokens from the student agent response.
+        """
+        with propagate_attributes(
+            session_id=session_id,
+            user_id=user_id,
+            tags=["stream", "resumption", "graph_execution"],
+        ):
+            config = {
+                "configurable": {"thread_id": session_id},
+            }
+            if scenario_id is None or tts_service is None:
+                raise ValueError("scenario_id and tts_service are required for get_stream_resumption_response")
+            graph = await self.create_graph(scenario_id, tts_service)
+            if graph is None:
+                raise Exception("Failed to create graph")
+
+            try:
+                async for token, metadata in graph.astream(
+                    Command(resume={"response": resumption_text}),
+                    config,
+                    stream_mode="messages",
+                ):
+                    try:
+                        node_name = metadata.get("langgraph_node", "")
+                        if node_name.startswith("student_"):
+                            text = _extract_token_text(token.content)
+                            if text:
+                                yield text
+                    except Exception as token_error:
+                        logger.error("Error processing token", error=str(token_error), session_id=session_id)
+                        continue
+            except Exception as stream_error:
+                logger.error("Error in stream resumption", error=str(stream_error), session_id=session_id)
+                raise stream_error
+
+    async def get_current_chat_state(
+        self,
+        session_id: str,
+        scenario_id: int,
+        tts_service: GeminiTextToSpeech,
+    ) -> ChatResponse:
+        """Return the current graph state as a ChatResponse.
+
+        Called after streaming completes to retrieve student metadata (name,
+        audio_id, interrupt values) that cannot be reconstructed from raw tokens.
+
+        Args:
+            session_id: The session ID whose checkpoint to read.
+            scenario_id: The scenario ID used to look up the correct graph.
+            tts_service: The text-to-speech service instance.
+
+        Returns:
+            ChatResponse: Hydrated response built from the latest checkpoint state.
+        """
+        graph = await self.create_graph(scenario_id, tts_service)
+        if graph is None:
+            raise Exception("Failed to create graph")
+        config = {"configurable": {"thread_id": session_id}}
+        state: StateSnapshot = await sync_to_async(graph.get_state)(config)
+        if state.values:
+            return self._hydrate_chat_response(state.values)
+        return ChatResponse()
 
     async def get_chat_history(
         self, 

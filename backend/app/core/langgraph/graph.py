@@ -42,7 +42,6 @@ from app.core.prompts.pick_answering_student import PICK_ANSWERING_STUDENT_SYSTE
 from app.core.prompts.feedback import format_feedback_instructions
 from app.schemas.graph import (
     AppropriateResponse,
-    GeneralResponse,
     StudentResponse,
     GraphState,
     StudentChoiceResponse,
@@ -327,29 +326,30 @@ class LangGraphBuilder:
         messages = [SystemMessage(content=system_instructions)]
         messages.extend(state.messages)  # Include full conversation history
         
-        # LLM invoke call
-        response = await self.llm.with_structured_output(
-            GeneralResponse, method="json_schema", include_raw=True
-        ).ainvoke(messages)
+        # Use astream so LangGraph's stream_mode="messages" can emit clean text tokens
+        # to the frontend progressively (reduces time-to-first-token latency).
+        # Gemini's LangChain adapter can return chunk.content as either a plain str
+        # or a list of content-part dicts (e.g. [{"type": "text", "text": "..."}]),
+        # so we normalise both shapes before concatenating.
+        full_response = ""
+        async for chunk in self.llm.astream(messages):
+            content = chunk.content
+            if isinstance(content, list):
+                content = "".join(
+                    part.get("text", "") if isinstance(part, dict) else str(part)
+                    for part in content
+                )
+            if content:
+                full_response += content
 
-        if response["parsed"] is None:
-            logger.error(
-                "general_llm_call_failed",
-                error=str(response["raw"]),
-                system_instructions_preview=system_instructions[:100],
-            )
-            return "I'm sorry, I couldn't generate a response. Please try again."
-        
-        llm_response = response["parsed"].llm_response
-        if not llm_response or not llm_response.strip():
+        if not full_response or not full_response.strip():
             logger.warning(
                 "general_llm_returned_empty_response",
-                raw_response=str(response["raw"]),
                 system_instructions_preview=system_instructions[:100],
             )
             return "I'm sorry, I couldn't generate a response. Please try again."
 
-        return llm_response
+        return full_response
 
     @observe(name="inline_feedback_agent")
     async def _inline_feedback_agent(self, state: GraphState) -> GraphState:

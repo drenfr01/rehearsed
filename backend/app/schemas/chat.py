@@ -5,6 +5,7 @@ from langgraph.types import Interrupt
 from typing import (
     List,
     Literal,
+    Optional,
     TYPE_CHECKING,
     Union,
 )
@@ -103,10 +104,17 @@ class ChatResponse(BaseModel):
 class StreamResponse(BaseModel):
     """Response model for streaming chat endpoint.
 
-    Attributes:
-        content: The content of the current chunk.
-        done: Whether the stream is complete.
+    Token events have ``done=False`` and only ``content`` populated.
+    The final event has ``done=True``, empty ``content``, and optional metadata
+    fields populated so the frontend can finalise the message display.
     """
 
     content: str = Field(default="", description="The content of the current chunk")
     done: bool = Field(default=False, description="Whether the stream is complete")
+
+    # Populated only on the final (done=True) event
+    student_name: Optional[str] = Field(default=None, description="Name of the responding student")
+    audio_id: Optional[str] = Field(default=None, description="Audio ID for TTS prefetch")
+    feedback_request_id: Optional[str] = Field(default=None, description="ID to poll for async inline feedback")
+    interrupt_value: Optional[str] = Field(default=None, description="The student response text stored as interrupt value")
+    interrupt_value_type: Optional[str] = Field(default=None, description="Type of the interrupt value")

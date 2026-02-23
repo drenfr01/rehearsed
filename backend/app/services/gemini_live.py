@@ -20,7 +20,7 @@ from google.genai.types import (
     VoiceConfig,
 )
 
-from app.core.config import settings
+from app.core.config import Environment, settings
 from app.core.logging import logger
 
 GEMINI_LIVE_MODEL = "gemini-live-2.5-flash-native-audio"
@@ -86,25 +86,34 @@ class GeminiLiveSession:
 
     _audio_chunk_count = 0
 
+    def _log_audio_debug(self, audio_data: bytes):
+        """Log audio signal stats for the first 5 chunks, then every 100th."""
+        if self._audio_chunk_count > 5 and self._audio_chunk_count % 100 != 0:
+            return
+
+        n_samples = len(audio_data) // 2
+        if n_samples == 0:
+            return
+
+        samples = struct.unpack(f"<{n_samples}h", audio_data)
+        max_val = max(abs(s) for s in samples)
+        rms = (sum(s * s for s in samples) / n_samples) ** 0.5
+        logger.debug(
+            "gemini_live_audio_level",
+            session_id=self.session_id,
+            chunk=self._audio_chunk_count,
+            bytes_len=len(audio_data),
+            samples=n_samples,
+            max_amplitude=max_val,
+            rms=round(rms, 1),
+        )
+
     async def send_audio(self, audio_data: bytes):
         """Send raw PCM audio data to Gemini."""
         if self._session and not self._closed:
             self._audio_chunk_count += 1
-            if self._audio_chunk_count <= 5 or self._audio_chunk_count % 100 == 0:
-                n_samples = len(audio_data) // 2
-                if n_samples > 0:
-                    samples = struct.unpack(f"<{n_samples}h", audio_data)
-                    max_val = max(abs(s) for s in samples)
-                    rms = (sum(s * s for s in samples) / n_samples) ** 0.5
-                    logger.info(
-                        "gemini_live_audio_level",
-                        session_id=self.session_id,
-                        chunk=self._audio_chunk_count,
-                        bytes_len=len(audio_data),
-                        samples=n_samples,
-                        max_amplitude=max_val,
-                        rms=round(rms, 1),
-                    )
+            if settings.ENVIRONMENT != Environment.PRODUCTION:
+                self._log_audio_debug(audio_data)
 
             await self._session.send_realtime_input(
                 audio=Blob(data=audio_data, mime_type="audio/pcm;rate=16000"),

@@ -54,8 +54,6 @@ async def get_summary_feedback(
     conversation = [msg.model_dump() for msg in request.transcript]
     result = await generate_summary_feedback(request.scenario_id, conversation)
 
-    if isinstance(result, SummaryFeedbackResponse):
-        return SummaryFeedbackApiResponse(summary_feedback=result)
     return SummaryFeedbackApiResponse(summary_feedback=result)
 
 

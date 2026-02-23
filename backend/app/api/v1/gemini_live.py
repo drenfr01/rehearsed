@@ -17,6 +17,7 @@ from app.api.v1.auth import get_current_session
 from app.api.v1.deps import get_database_service
 from app.core.logging import logger
 from app.schemas.graph import SummaryFeedbackResponse
+from app.services.database.base import DatabaseService
 from app.services.gemini_live import (
     GeminiLiveSession,
     build_one_on_one_system_prompt,
@@ -57,7 +58,9 @@ async def get_summary_feedback(
     return SummaryFeedbackApiResponse(summary_feedback=result)
 
 
-async def _authenticate_websocket(websocket: WebSocket) -> tuple[str, int] | None:
+async def _authenticate_websocket(
+    websocket: WebSocket, db: DatabaseService
+) -> tuple[str, int] | None:
     """Validate session token from WebSocket query params.
 
     Returns (session_id, user_id) on success, or None on failure.
@@ -75,7 +78,6 @@ async def _authenticate_websocket(websocket: WebSocket) -> tuple[str, int] | Non
             return None
 
         session_id = sanitize_string(session_id)
-        db = get_database_service()
         session = await db.sessions.get_session(session_id)
         if session is None:
             await websocket.close(code=4001, reason="Session not found")
@@ -89,7 +91,10 @@ async def _authenticate_websocket(websocket: WebSocket) -> tuple[str, int] | Non
 
 
 @router.websocket("/ws")
-async def gemini_live_ws(websocket: WebSocket):
+async def gemini_live_ws(
+    websocket: WebSocket,
+    db: DatabaseService = Depends(get_database_service),
+):
     """WebSocket endpoint for Gemini Live one-on-one conversations.
 
     Protocol:
@@ -109,7 +114,7 @@ async def gemini_live_ws(websocket: WebSocket):
     """
     await websocket.accept()
 
-    auth = await _authenticate_websocket(websocket)
+    auth = await _authenticate_websocket(websocket, db)
     if auth is None:
         return
     session_id, user_id = auth
@@ -135,7 +140,6 @@ async def gemini_live_ws(websocket: WebSocket):
                     )
                     continue
 
-                db = get_database_service()
                 scenario = await db.scenarios.get_scenario(scenario_id)
                 agent = await db.agents.get_agent(agent_id)
 

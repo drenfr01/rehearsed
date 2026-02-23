@@ -82,6 +82,9 @@ export class GeminiLiveService {
     switch (msg.type) {
       case 'setup_complete':
         this.connectionState.set('connected');
+        if (msg.initial_prompt) {
+          this.appendTranscript('user', msg.initial_prompt);
+        }
         setupResolve?.();
         break;
 

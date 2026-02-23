@@ -150,12 +150,17 @@ async def gemini_live_ws(websocket: WebSocket):
                         logger.warning("gemini_relay_error", error=str(e))
 
                 receive_task = asyncio.create_task(_relay_from_gemini())
-                await websocket.send_json({"type": "setup_complete"})
 
-                # Send initial prompt to get the agent to greet the user
-                await gemini_session.send_text(
-                    "Hi, I'm the teacher. Please introduce yourself briefly."
-                )
+                initial_prompt = (scenario.initial_prompt or "").strip()
+                if not initial_prompt:
+                    initial_prompt = "Hi, I'm the teacher. Please introduce yourself briefly."
+
+                await websocket.send_json({
+                    "type": "setup_complete",
+                    "initial_prompt": initial_prompt,
+                })
+
+                await gemini_session.send_text(initial_prompt)
 
             elif msg_type == "audio":
                 if gemini_session:

@@ -36,6 +36,7 @@ class GeminiLiveSession:
         system_instruction: str,
         voice_name: str = "Aoede",
     ):
+        """Initialize the Gemini Live session."""
         self.session_id = session_id
         self.system_instruction = system_instruction
         self.voice_name = voice_name

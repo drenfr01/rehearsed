@@ -29,16 +29,19 @@ router = APIRouter()
 
 
 class TranscriptMessage(BaseModel):
+    """Message model for Gemini Live conversation transcript."""
     role: str = Field(..., description="'user' or 'agent'")
     text: str
 
 
 class SummaryFeedbackRequest(BaseModel):
+    """Request model for summary feedback endpoint."""
     scenario_id: int
     transcript: list[TranscriptMessage]
 
 
 class SummaryFeedbackApiResponse(BaseModel):
+    """Response model for summary feedback endpoint."""
     summary_feedback: Union[SummaryFeedbackResponse, str]
 
 
@@ -171,10 +174,20 @@ async def gemini_live_ws(websocket: WebSocket):
                 )
                 await gemini_session.connect()
 
-                async def _relay_from_gemini():
-                    """Forward Gemini responses to the WebSocket client."""
+                async def _relay_from_gemini(_session=gemini_session):
+                    """Forward Gemini responses to the WebSocket client.
+                    
+                    Note: The _session is passed in to satisfy the type checker.
+                    The concern is that if the loop iterates again, 
+                    gemini_session could change before the function executes, 
+                    causing it to use a different value than intended.
+                    
+                    Args:
+                        _session: The Gemini Live session to relay from.
+                    
+                    """
                     try:
-                        async for gemini_msg in gemini_session.receive_messages():
+                        async for gemini_msg in _session.receive_messages():
                             try:
                                 await websocket.send_json(gemini_msg)
                             except Exception:

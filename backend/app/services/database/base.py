@@ -2,19 +2,20 @@
 
 import os
 from typing import Optional
-from sqlalchemy.exc import SQLAlchemyError
+
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.pool import QueuePool
 from sqlmodel import SQLModel, create_engine
 
 from app.core.config import Environment, settings
 from app.core.logging import logger
-
-from app.services.database.user import UserRepository
-from app.services.database.session import SessionRepository
-from app.services.database.scenario import ScenarioRepository
 from app.services.database.agent import AgentRepository
 from app.services.database.feedback import FeedbackRepository
+from app.services.database.scenario import ScenarioRepository
+from app.services.database.session import SessionRepository
+from app.services.database.user import UserRepository
+
 
 class DatabaseService:
     """Database service with connection pool management and model registry.

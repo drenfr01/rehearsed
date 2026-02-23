@@ -1,0 +1,108 @@
+<div class="setup-page">
+  <main class="main-content">
+    <div class="setup-header">
+      <mat-icon class="header-icon">record_voice_over</mat-icon>
+      <h2 class="setup-title">One on One Conversation</h2>
+      <p class="setup-subtitle">Choose a scenario and a student for a live voice conversation</p>
+    </div>
+
+    @if (error()) {
+      <div class="error-message">{{ error() }}</div>
+    }
+
+    <!-- Step 1: Select Scenario -->
+    <mat-card class="setup-card">
+      <div class="card-header">
+        <div class="step-badge">1</div>
+        <h3>Select a Scenario</h3>
+      </div>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Scenario</mat-label>
+        <mat-select (selectionChange)="onScenarioChange($event.value)">
+          @for (scenario of scenarios(); track scenario.id) {
+            <mat-option [value]="scenario">{{ scenario.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      @if (selectedScenario()) {
+        <div class="scenario-preview">
+          <p class="preview-text">{{ selectedScenario()!.overview }}</p>
+        </div>
+      }
+    </mat-card>
+
+    <!-- Step 2: Select Agent -->
+    @if (selectedScenario()) {
+      <mat-card class="setup-card">
+        <div class="card-header">
+          <div class="step-badge">2</div>
+          <h3>Select a Student</h3>
+        </div>
+
+        @if (agents().length === 0) {
+          <div class="empty-state">
+            <mat-icon>person_search</mat-icon>
+            <p>Loading students...</p>
+          </div>
+        } @else {
+          <div class="agent-grid">
+            @for (agent of agents(); track agent.id) {
+              <div
+                class="agent-card"
+                [class.selected]="selectedAgent()?.id === agent.id"
+                (click)="onAgentSelect(agent)"
+              >
+                @if (getAvatarUrl(agent)) {
+                  <img
+                    [src]="getAvatarUrl(agent)"
+                    [alt]="agent.name"
+                    class="agent-avatar"
+                  />
+                } @else {
+                  <div class="agent-avatar-placeholder">
+                    <mat-icon>person</mat-icon>
+                  </div>
+                }
+                <div class="agent-info">
+                  <p class="agent-name">{{ agent.name }}</p>
+                  @if (agent.agent_personality?.personality_description) {
+                    <p class="agent-desc">{{ agent.agent_personality?.personality_description }}</p>
+                  }
+                </div>
+                @if (selectedAgent()?.id === agent.id) {
+                  <mat-icon class="check-icon">check_circle</mat-icon>
+                }
+              </div>
+            }
+          </div>
+        }
+      </mat-card>
+    }
+
+    <!-- Begin Button -->
+    @if (canBegin()) {
+      <div class="begin-container">
+        <button
+          mat-raised-button
+          color="primary"
+          class="begin-button"
+          (click)="onBegin()"
+          [disabled]="isLoading()"
+        >
+          @if (isLoading()) {
+            <ng-container>
+              <mat-icon class="spinner-icon">hourglass_empty</mat-icon>
+              <span>Starting...</span>
+            </ng-container>
+          } @else {
+            <ng-container>
+              <mat-icon>mic</mat-icon>
+              <span>Begin Conversation</span>
+            </ng-container>
+          }
+        </button>
+      </div>
+    }
+  </main>
+</div>

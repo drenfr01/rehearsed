@@ -2,6 +2,7 @@
 
 from google.cloud import texttospeech
 
+
 class GeminiTextToSpeech:
     """Service for synthesizing speech using Google Cloud Text-to-Speech."""
 

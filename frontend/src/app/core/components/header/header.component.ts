@@ -32,7 +32,8 @@ export class Header {
   routes = [
     { path: '/app/scenario-selection', label: 'Scenario Selection' },
     { path: '/app/scenario-overview', label: 'Scenario Overview' },
-    { path: '/app/classroom', label: 'Classroom' }
+    { path: '/app/classroom', label: 'Classroom' },
+    { path: '/app/one-on-one-setup', label: 'One on One' },
   ];
 
   // User content routes (available to all authenticated users)

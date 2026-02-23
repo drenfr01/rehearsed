@@ -1,8 +1,9 @@
 """This file contains the agent personality seed data for the application."""
 
 from sqlmodel import Session, select
-from app.services.database import database_service
+
 from app.models.agent import AgentPersonality
+from app.services.database import database_service
 
 agent_personalities = [
     AgentPersonality(

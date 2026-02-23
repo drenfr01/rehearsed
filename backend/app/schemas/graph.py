@@ -14,6 +14,7 @@ from pydantic import (
 
 from app.models.agent import Agent, AgentPersonality
 
+
 class StudentResponse(BaseModel):
     """Model for the student response."""
 

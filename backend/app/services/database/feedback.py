@@ -1,6 +1,7 @@
 """Feedback database repository."""
 
 from typing import List, Optional
+
 from fastapi import HTTPException
 from sqlalchemy import or_
 from sqlalchemy.engine import Engine

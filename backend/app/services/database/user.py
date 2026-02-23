@@ -1,6 +1,7 @@
 """User database repository."""
 
 from typing import List, Optional
+
 from fastapi import HTTPException
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, select

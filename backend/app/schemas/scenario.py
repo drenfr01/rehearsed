@@ -11,6 +11,7 @@ from pydantic import (
 
 from app.models.scenario import Scenario
 
+
 class ScenarioRequest(BaseModel):
     """Request model for scenario endpoint.
 

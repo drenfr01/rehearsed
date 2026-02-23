@@ -21,17 +21,17 @@ from app.api.v1.deps import get_database_service
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.logging import logger
+from app.models.scenario import Scenario
 from app.models.user import User
-from app.services.database.base import DatabaseService
+from app.schemas.agent import AgentPersonalityResponse, AgentResponse
 from app.schemas.scenario import (
-    ScenarioRequest,
-    ScenarioResponse,
     AddScenarioRequest,
     AddScenarioResponse,
+    ScenarioRequest,
+    ScenarioResponse,
     ScenarioWithOwnerResponse,
 )
-from app.schemas.agent import AgentResponse, AgentPersonalityResponse
-from app.models.scenario import Scenario
+from app.services.database.base import DatabaseService
 from app.utils.auth import verify_token
 from app.utils.sanitization import sanitize_string
 

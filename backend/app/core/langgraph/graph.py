@@ -46,7 +46,6 @@ from app.schemas.graph import (
     StudentResponse,
     GraphState,
     StudentChoiceResponse,
-    SummaryFeedbackResponse,
 )
 
 
@@ -411,44 +410,17 @@ class LangGraphBuilder:
     @observe(name="generate_summary_feedback")
     async def _generate_summary_feedback(self, state: GraphState) -> GraphState:
         """Generate summary feedback for the entire conversation."""
-        # Database query for feedback config
-        feedback = await database_service.feedback.get_feedback_by_type("summary", self._scenario_id)
-        
-        if feedback is None:
-            logger.warning("summary_feedback_not_found", scenario_id=self._scenario_id)
-            return {"summary_feedback": "No summary feedback configured for this scenario."}
-        system_instructions = format_feedback_instructions(
-            objective=feedback.objective,
-            instructions=feedback.instructions,
-            constraints=feedback.constraints,
-            context=feedback.context,
-            output_format=feedback.output_format,
-        )
+        from app.services.summary_feedback import generate_summary_feedback
 
-        prompt = [
-            SystemMessage(content=system_instructions),
-            *state.messages,
-        ]
-        
-        # Create LLM instance (using gemini-3-pro for better quality summary)
-        llm = ChatGoogleGenerativeAI(
-            model="gemini-3-pro-preview",
-            temperature=settings.DEFAULT_LLM_TEMPERATURE,
-            project=settings.GOOGLE_CLOUD_PROJECT,
-            location=settings.GOOGLE_CLOUD_LOCATION,
-            max_tokens=settings.MAX_TOKENS,
-            vertexai=True,
-            google_api_key=None,  # Explicitly disable API key to force Vertex AI usage
-        )
-        
-        # LLM invoke call
-        response = await llm.with_structured_output(SummaryFeedbackResponse, method="json_schema", include_raw=True).ainvoke(prompt)
-        
-        if response["parsed"] is None:
-            logger.error("summary_feedback_generation_failed", error=response["raw"], exc_info=True)
-            return {"summary_feedback": "Could not generate summary feedback"}
+        conversation = []
+        for msg in state.messages:
+            if isinstance(msg, HumanMessage):
+                conversation.append({"role": "user", "text": msg.content})
+            elif isinstance(msg, AIMessage):
+                conversation.append({"role": "agent", "text": msg.content})
 
-        return {"summary_feedback": response["parsed"]}
+        result = await generate_summary_feedback(self._scenario_id, conversation)
+        return {"summary_feedback": result}
 
     async def _route_appropriate_response(self, state: GraphState) -> GraphState:
         """This node is used to route the conversation based on if the human response is appropriate.

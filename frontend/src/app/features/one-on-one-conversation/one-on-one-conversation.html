@@ -32,6 +32,7 @@
             mat-raised-button
             class="end-button"
             (click)="endConversation()"
+            [disabled]="isGeneratingFeedback()"
             matTooltip="End conversation"
           >
             End
@@ -87,6 +88,13 @@
           <div class="empty-transcript">
             <mat-icon class="empty-icon spinner-icon">hourglass_empty</mat-icon>
             <p>Connecting to live session...</p>
+          </div>
+        }
+
+        @if (isGeneratingFeedback()) {
+          <div class="empty-transcript">
+            <mat-spinner diameter="40"></mat-spinner>
+            <p>Generating session feedback...</p>
           </div>
         }
       </div>

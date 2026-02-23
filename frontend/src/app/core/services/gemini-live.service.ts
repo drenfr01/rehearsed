@@ -1,5 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { environment } from '../../../environments/environment';
+import { SummaryFeedbackResponse } from '../models/chat-graph.model';
 
 export interface TranscriptEntry {
   role: 'user' | 'agent';
@@ -245,6 +246,32 @@ export class GeminiLiveService {
     this.playbackCtx = null;
     this.nextPlaybackTime = 0;
     this.connectionState.set('disconnected');
+  }
+
+  async generateSummaryFeedback(scenarioId: number): Promise<SummaryFeedbackResponse | string> {
+    const token = localStorage.getItem('token');
+    const transcriptMessages = this.transcript()
+      .filter(e => e.text.trim())
+      .map(e => ({ role: e.role, text: e.text }));
+
+    const res = await fetch(`${environment.baseUrl}/api/v1/gemini-live/summary-feedback`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        scenario_id: scenarioId,
+        transcript: transcriptMessages,
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Feedback request failed: ${res.status}`);
+    }
+
+    const data = await res.json();
+    return data.summary_feedback;
   }
 
   private enqueueAudioPlayback(base64Pcm: string) {

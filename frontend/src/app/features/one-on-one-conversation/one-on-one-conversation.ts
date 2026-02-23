@@ -1,16 +1,20 @@
 import { Component, DestroyRef, inject, signal, OnInit, OnDestroy, ElementRef, ViewChild, effect } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
 import { GeminiLiveService, TranscriptEntry } from '../../core/services/gemini-live.service';
 import { ScenarioService } from '../../core/services/scenario.service';
+import { SummaryFeedbackResponse } from '../../core/models/chat-graph.model';
 import { Agent } from '../../core/models/agent.model';
 import { Scenario } from '../../core/models/scenario.model';
 import { gcsUriToHttpUrl } from '../../core/utils/gcs-uri.util';
+import { OneOnOneFeedbackDialog } from './one-on-one-feedback-dialog';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -23,6 +27,7 @@ import { FormsModule } from '@angular/forms';
     MatFormFieldModule,
     MatInputModule,
     MatTooltipModule,
+    MatProgressSpinnerModule,
     CommonModule,
     FormsModule,
   ],
@@ -34,6 +39,7 @@ export class OneOnOneConversation implements OnInit, OnDestroy {
 
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private dialog = inject(MatDialog);
   private destroyRef = inject(DestroyRef);
   private geminiLive = inject(GeminiLiveService);
   private scenarioService = inject(ScenarioService);
@@ -47,6 +53,7 @@ export class OneOnOneConversation implements OnInit, OnDestroy {
   protected scenario = signal<Scenario | null>(null);
   protected textInput = signal('');
   protected isConnecting = signal(false);
+  protected isGeneratingFeedback = signal(false);
 
   private scenarioId: number | null = null;
   private agentId: string | null = null;
@@ -129,9 +136,39 @@ export class OneOnOneConversation implements OnInit, OnDestroy {
     }
   }
 
-  endConversation() {
+  async endConversation() {
     this.geminiLive.disconnect();
-    this.router.navigate(['/app/one-on-one-setup']);
+
+    if (!this.scenarioId || this.transcript().length === 0) {
+      this.router.navigate(['/app/one-on-one-setup']);
+      return;
+    }
+
+    this.isGeneratingFeedback.set(true);
+    try {
+      const feedback = await this.geminiLive.generateSummaryFeedback(this.scenarioId);
+      this.isGeneratingFeedback.set(false);
+      this.openFeedbackDialog(feedback);
+    } catch {
+      this.isGeneratingFeedback.set(false);
+      this.router.navigate(['/app/one-on-one-setup']);
+    }
+  }
+
+  private openFeedbackDialog(feedback: SummaryFeedbackResponse | string) {
+    const dialogRef = this.dialog.open(OneOnOneFeedbackDialog, {
+      data: { feedback },
+      width: '90vw',
+      maxWidth: '1200px',
+      height: '90vh',
+      maxHeight: '800px',
+      disableClose: false,
+      panelClass: 'scenario-feedback-dialog-panel',
+    });
+
+    dialogRef.afterClosed().subscribe(() => {
+      this.router.navigate(['/app/one-on-one-setup']);
+    });
   }
 
   private scrollToBottom() {

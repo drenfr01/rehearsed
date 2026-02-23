@@ -1,4 +1,4 @@
-import { Component, inject, computed } from '@angular/core';
+import { Component, inject, computed, input } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { CommonModule } from '@angular/common';
 import { ChatGraphService } from '../../core/services/chat-graph.service';
@@ -19,8 +19,11 @@ export class ScenarioFeedback {
   private chatGraphService = inject(ChatGraphService);
   private sanitizer = inject(DomSanitizer);
 
-  // Get the summary feedback from the service
-  protected summaryFeedback = this.chatGraphService.loadedSummaryFeedback;
+  feedbackData = input<SummaryFeedbackResponse | string | null>(null);
+
+  protected summaryFeedback = computed(() => {
+    return this.feedbackData() ?? this.chatGraphService.loadedSummaryFeedback();
+  });
 
   // Check if feedback is structured or a string
   protected isStructuredFeedback = computed<boolean>(() => {

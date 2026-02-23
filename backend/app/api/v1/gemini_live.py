@@ -8,19 +8,52 @@ voice conversations with AI agents.
 import asyncio
 import base64
 import json
+from typing import Union
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from pydantic import BaseModel, Field
 
+from app.api.v1.auth import get_current_session
 from app.api.v1.deps import get_database_service
 from app.core.logging import logger
+from app.schemas.graph import SummaryFeedbackResponse
 from app.services.gemini_live import (
     GeminiLiveSession,
     build_one_on_one_system_prompt,
 )
+from app.services.summary_feedback import generate_summary_feedback
 from app.utils.auth import verify_token
 from app.utils.sanitization import sanitize_string
 
 router = APIRouter()
+
+
+class TranscriptMessage(BaseModel):
+    role: str = Field(..., description="'user' or 'agent'")
+    text: str
+
+
+class SummaryFeedbackRequest(BaseModel):
+    scenario_id: int
+    transcript: list[TranscriptMessage]
+
+
+class SummaryFeedbackApiResponse(BaseModel):
+    summary_feedback: Union[SummaryFeedbackResponse, str]
+
+
+@router.post("/summary-feedback", response_model=SummaryFeedbackApiResponse)
+async def get_summary_feedback(
+    request: SummaryFeedbackRequest,
+    session=Depends(get_current_session),
+):
+    """Generate summary feedback for a Gemini Live conversation transcript."""
+    conversation = [msg.model_dump() for msg in request.transcript]
+    result = await generate_summary_feedback(request.scenario_id, conversation)
+
+    if isinstance(result, SummaryFeedbackResponse):
+        return SummaryFeedbackApiResponse(summary_feedback=result)
+    return SummaryFeedbackApiResponse(summary_feedback=result)
 
 
 async def _authenticate_websocket(websocket: WebSocket) -> tuple[str, int] | None:

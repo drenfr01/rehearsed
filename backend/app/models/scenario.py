@@ -5,10 +5,11 @@ from typing import (
     List,
     Optional,
 )
+
 from sqlmodel import (
     Field,
-    SQLModel,
     Relationship,
+    SQLModel,
 )
 
 from app.models.base import BaseModel

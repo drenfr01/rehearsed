@@ -14,8 +14,8 @@ from sqlmodel import (
 from app.models.base import BaseModel
 
 if TYPE_CHECKING:
-    from app.models.user import User
     from app.models.scenario import Scenario
+    from app.models.user import User
 
 class AgentVoice(BaseModel, table=True):
     """Database model for agent voice configurations."""

@@ -3,13 +3,13 @@
 import uuid
 from typing import Callable, List, Optional
 
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import (
+    AIMessage,
     HumanMessage,
     SystemMessage,
-    AIMessage,
 )
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langfuse import observe
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph.state import (
@@ -20,33 +20,33 @@ from langgraph.graph.state import (
 )
 from langgraph.types import (
     Command,
-    interrupt,
     RetryPolicy,
+    interrupt,
 )
 from psycopg_pool import AsyncConnectionPool
 
-from app.models.agent import Agent
-from app.services.database import database_service
-from app.services.gemini_text_to_speech import GeminiTextToSpeech
 from app.core.config import (
     Environment,
     settings,
 )
 from app.core.logging import logger
+from app.core.prompts.feedback import format_feedback_instructions
+from app.core.prompts.pick_answering_student import PICK_ANSWERING_STUDENT_SYSTEM_INSTRUCTIONS
 from app.core.prompts.students import (
     APPROPRIATE_RESPONSE_INSTRUCTIONS,
     STUDENT_PROFILES,
     STUDENT_SYSTEM_INSTRUCTIONS_TEMPLATE,
 )
-from app.core.prompts.pick_answering_student import PICK_ANSWERING_STUDENT_SYSTEM_INSTRUCTIONS
-from app.core.prompts.feedback import format_feedback_instructions
+from app.models.agent import Agent
 from app.schemas.graph import (
     AppropriateResponse,
     GeneralResponse,
-    StudentResponse,
     GraphState,
     StudentChoiceResponse,
+    StudentResponse,
 )
+from app.services.database import database_service
+from app.services.gemini_text_to_speech import GeminiTextToSpeech
 
 
 class LangGraphBuilder:

@@ -1,8 +1,9 @@
 """This file contains the agent voice seed data for the application."""
 
 from sqlmodel import Session, select
-from app.services.database import database_service
+
 from app.models.agent import AgentVoice
+from app.services.database import database_service
 
 AGENT_VOICES = [
     AgentVoice(voice_name="Achernar"),

@@ -2,11 +2,14 @@
 
 import os
 from typing import Optional
-from yaml import safe_load
+
 from sqlmodel import Session, select
-from app.services.database import database_service
+from yaml import safe_load
+
 from app.models.agent import Agent, AgentPersonality, AgentVoice
 from app.models.scenario import Scenario
+from app.services.database import database_service
+
 
 def load_agent_data(session: Session) -> list[Agent]:
     """Load the agent data from the file.

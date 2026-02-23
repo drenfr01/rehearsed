@@ -1,14 +1,14 @@
 """This file contains the chat schema for the application."""
 
 import re
-from langgraph.types import Interrupt
 from typing import (
+    TYPE_CHECKING,
     List,
     Literal,
-    TYPE_CHECKING,
     Union,
 )
 
+from langgraph.types import Interrupt
 from pydantic import (
     BaseModel,
     Field,
@@ -16,6 +16,7 @@ from pydantic import (
 )
 
 from app.schemas.graph import StudentResponse, SummaryFeedbackResponse
+
 
 class Message(BaseModel):
     """Message model for chat endpoint.

@@ -6,8 +6,9 @@ for identifying performance bottlenecks.
 
 import threading
 import time
-from contextlib import contextmanager, asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
 from typing import Dict, Optional
+
 from app.core.logging import logger
 
 

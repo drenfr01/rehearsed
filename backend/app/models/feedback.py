@@ -1,5 +1,9 @@
 """Feedback-related database models."""
 
+from datetime import (
+    UTC,
+    datetime,
+)
 from enum import Enum
 from typing import (
     TYPE_CHECKING,
@@ -11,15 +15,11 @@ from sqlmodel import (
     Relationship,
 )
 
-from datetime import (
-    UTC,
-    datetime,
-)
 from app.models.base import BaseModel
 
 if TYPE_CHECKING:
-    from app.models.user import User
     from app.models.scenario import Scenario
+    from app.models.user import User
 
 
 class FeedbackType(str, Enum):

@@ -18,9 +18,9 @@ from langchain_core.messages import (
     convert_to_openai_messages,
 )
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langfuse import propagate_attributes, observe
+from langfuse import observe, propagate_attributes
 from langgraph.graph.state import CompiledStateGraph
-from langgraph.types import StateSnapshot, Command
+from langgraph.types import Command, StateSnapshot
 from psycopg_pool import AsyncConnectionPool
 
 from app.core.config import (

@@ -5,6 +5,7 @@ used across API routes.
 """
 
 from fastapi import Depends
+
 from app.services.database import database_service
 from app.services.database.base import DatabaseService
 from app.services.gemini_text_to_speech import GeminiTextToSpeech

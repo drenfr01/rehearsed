@@ -5,7 +5,6 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-
 # ========== AgentVoice Schemas ==========
 
 class AgentVoiceResponse(BaseModel):

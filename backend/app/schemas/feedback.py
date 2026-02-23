@@ -7,7 +7,6 @@ from pydantic import BaseModel, Field
 
 from app.models.feedback import FeedbackType
 
-
 # ========== Feedback Schemas ==========
 
 class FeedbackCreate(BaseModel):

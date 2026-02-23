@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Literal, Optional
 
 from langchain_core.messages import BaseMessage
-from langfuse import propagate_attributes, observe
+from langfuse import observe, propagate_attributes
 
 from app.core.logging import logger
 
@@ -143,10 +143,11 @@ async def generate_feedback_and_store(
         llm: The LLM instance to use for generation
         session_id: The session ID for Langfuse tracking (optional, falls back to entry.session_id)
     """
+    from langchain_core.messages import SystemMessage
+
     from app.core.prompts.feedback import format_feedback_instructions
     from app.schemas.graph import GeneralResponse
     from app.services.database import database_service
-    from langchain_core.messages import SystemMessage
     
     # Get the pending entry with context
     entry = feedback_cache.get(feedback_id)

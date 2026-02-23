@@ -1,11 +1,13 @@
 """This file contains the feedback seed data for the application."""
 
 import os
-from yaml import safe_load
+
 from sqlmodel import Session, select
-from app.services.database import database_service
+from yaml import safe_load
+
 from app.models.feedback import Feedback, FeedbackType
 from app.models.scenario import Scenario
+from app.services.database import database_service
 
 
 def load_feedback_data(session: Session) -> list[Feedback]:

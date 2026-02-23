@@ -5,7 +5,7 @@ Used by both the langgraph classroom flow and one-on-one Gemini Live sessions.
 
 from typing import Union
 
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from app.core.config import settings

@@ -1,9 +1,11 @@
 """This file contains the scenario seed data for the application."""
-from sqlmodel import Session, select
-from app.services.database import database_service
-from app.models.scenario import Scenario
 import os
+
+from sqlmodel import Session, select
 from yaml import safe_load
+
+from app.models.scenario import Scenario
+from app.services.database import database_service
 
 scenarios = [
     Scenario(

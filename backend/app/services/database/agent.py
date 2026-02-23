@@ -1,10 +1,11 @@
 """Agent database repository."""
 
 from typing import List, Optional
+
 from fastapi import HTTPException
-from sqlalchemy.orm import selectinload
 from sqlalchemy import or_
 from sqlalchemy.engine import Engine
+from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
 from app.core.logging import logger

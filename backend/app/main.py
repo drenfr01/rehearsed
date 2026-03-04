@@ -37,11 +37,12 @@ from app.services.database import database_service
 # Load environment variables
 load_dotenv()
 
-# Initialize Langfuse
+# Initialize Langfuse singleton (used by @observe decorators throughout the app)
 langfuse = Langfuse(
     public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
     secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
-    host=os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com"),
+    base_url=os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com"),
+    environment=settings.ENVIRONMENT,
 )
 
 

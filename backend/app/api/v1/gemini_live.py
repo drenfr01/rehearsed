@@ -11,6 +11,7 @@ import json
 from typing import Union
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from langfuse import get_client, propagate_attributes
 from pydantic import BaseModel, Field
 
 from app.api.v1.auth import get_current_session
@@ -19,6 +20,7 @@ from app.core.logging import logger
 from app.schemas.graph import SummaryFeedbackResponse
 from app.services.database.base import DatabaseService
 from app.services.gemini_live import (
+    GEMINI_LIVE_MODEL,
     GeminiLiveSession,
     build_one_on_one_system_prompt,
 )
@@ -121,123 +123,175 @@ async def gemini_live_ws(
 
     logger.info("gemini_live_ws_connected", session_id=session_id)
 
+    langfuse = get_client()
     gemini_session: GeminiLiveSession | None = None
     receive_task: asyncio.Task | None = None
 
-    try:
-        while True:
-            raw = await websocket.receive_text()
-            msg = json.loads(raw)
-            msg_type = msg.get("type")
-
-            if msg_type == "setup":
-                scenario_id = msg.get("scenario_id")
-                agent_id = msg.get("agent_id")
-
-                if not scenario_id or not agent_id:
-                    await websocket.send_json(
-                        {"type": "error", "message": "scenario_id and agent_id required"}
-                    )
-                    continue
-
-                scenario = await db.scenarios.get_scenario(scenario_id)
-                agent = await db.agents.get_agent(agent_id)
-
-                if not scenario or not agent:
-                    await websocket.send_json(
-                        {"type": "error", "message": "Scenario or agent not found"}
-                    )
-                    continue
-
-                personality_desc = ""
-                if agent.agent_personality:
-                    personality_desc = agent.agent_personality.personality_description
-
-                voice_name = "Aoede"
-                if agent.voice and agent.voice.voice_name:
-                    voice_name = agent.voice.voice_name
-
-                system_prompt = build_one_on_one_system_prompt(
-                    scenario_name=scenario.name,
-                    scenario_overview=scenario.overview,
-                    scenario_instructions=scenario.system_instructions,
-                    agent_name=agent.name,
-                    agent_personality=personality_desc,
-                    agent_objective=agent.objective,
-                    agent_instructions=agent.instructions,
-                    agent_constraints=agent.constraints,
-                    agent_context=agent.context,
-                )
-
-                gemini_session = GeminiLiveSession(
-                    session_id=session_id,
-                    system_instruction=system_prompt,
-                    voice_name=voice_name,
-                )
-                await gemini_session.connect()
-
-                async def _relay_from_gemini(_session=gemini_session):
-                    """Forward Gemini responses to the WebSocket client.
-                    
-                    Note: The _session is passed in to satisfy the type checker.
-                    The concern is that if the loop iterates again, 
-                    gemini_session could change before the function executes, 
-                    causing it to use a different value than intended.
-                    
-                    Args:
-                        _session: The Gemini Live session to relay from.
-                    
-                    """
-                    try:
-                        async for gemini_msg in _session.receive_messages():
-                            try:
-                                await websocket.send_json(gemini_msg)
-                            except Exception:
-                                break
-                    except Exception as e:
-                        logger.warning("gemini_relay_error", error=str(e))
-
-                receive_task = asyncio.create_task(_relay_from_gemini())
-
-                initial_prompt = (scenario.initial_prompt or "").strip()
-                if not initial_prompt:
-                    initial_prompt = "Hi, I'm the teacher. Please introduce yourself briefly."
-
-                await websocket.send_json({
-                    "type": "setup_complete",
-                    "initial_prompt": initial_prompt,
-                })
-
-                await gemini_session.send_text(initial_prompt)
-
-            elif msg_type == "audio":
-                if gemini_session:
-                    audio_bytes = base64.b64decode(msg["data"])
-                    await gemini_session.send_audio(audio_bytes)
-
-            elif msg_type == "text":
-                if gemini_session:
-                    await gemini_session.send_text(msg["content"])
-
-            elif msg_type == "end":
-                break
-
-    except WebSocketDisconnect:
-        logger.info("gemini_live_ws_disconnected", session_id=session_id)
-    except json.JSONDecodeError:
-        logger.warning("gemini_live_ws_invalid_json", session_id=session_id)
-    except Exception as e:
-        logger.error("gemini_live_ws_error", session_id=session_id, error=str(e))
-        try:
-            await websocket.send_json({"type": "error", "message": str(e)})
-        except Exception:
-            pass
-    finally:
-        if receive_task and not receive_task.done():
-            receive_task.cancel()
+    with propagate_attributes(
+        session_id=session_id,
+        user_id=str(user_id),
+        tags=["gemini-live"],
+    ):
+        with langfuse.start_as_current_observation(
+            as_type="span",
+            name="gemini_live_session",
+        ) as session_span:
             try:
-                await receive_task
-            except (asyncio.CancelledError, Exception):
-                pass
-        if gemini_session:
-            await gemini_session.close()
+                while True:
+                    raw = await websocket.receive_text()
+                    msg = json.loads(raw)
+                    msg_type = msg.get("type")
+
+                    if msg_type == "setup":
+                        scenario_id = msg.get("scenario_id")
+                        agent_id = msg.get("agent_id")
+
+                        if not scenario_id or not agent_id:
+                            await websocket.send_json(
+                                {"type": "error", "message": "scenario_id and agent_id required"}
+                            )
+                            continue
+
+                        scenario = await db.scenarios.get_scenario(scenario_id)
+                        agent = await db.agents.get_agent(agent_id)
+
+                        if not scenario or not agent:
+                            await websocket.send_json(
+                                {"type": "error", "message": "Scenario or agent not found"}
+                            )
+                            continue
+
+                        session_span.update(
+                            metadata={
+                                "scenario_id": scenario_id,
+                                "scenario_name": scenario.name,
+                                "agent_id": agent_id,
+                                "agent_name": agent.name,
+                                "model": GEMINI_LIVE_MODEL,
+                            }
+                        )
+
+                        personality_desc = ""
+                        if agent.agent_personality:
+                            personality_desc = agent.agent_personality.personality_description
+
+                        voice_name = "Aoede"
+                        if agent.voice and agent.voice.voice_name:
+                            voice_name = agent.voice.voice_name
+
+                        system_prompt = build_one_on_one_system_prompt(
+                            scenario_name=scenario.name,
+                            scenario_overview=scenario.overview,
+                            scenario_instructions=scenario.system_instructions,
+                            agent_name=agent.name,
+                            agent_personality=personality_desc,
+                            agent_objective=agent.objective,
+                            agent_instructions=agent.instructions,
+                            agent_constraints=agent.constraints,
+                            agent_context=agent.context,
+                        )
+
+                        gemini_session = GeminiLiveSession(
+                            session_id=session_id,
+                            system_instruction=system_prompt,
+                            voice_name=voice_name,
+                        )
+                        await gemini_session.connect()
+
+                        async def _relay_from_gemini(_session=gemini_session):
+                            """Forward Gemini responses to the WebSocket client.
+
+                            Accumulates transcript fragments per turn and logs a Langfuse
+                            generation when turn_complete fires. The asyncio task inherits
+                            the current OTel context so generations are nested under the
+                            session span automatically.
+
+                            Note: _session is passed in to capture the current value.
+                            The concern is that if the loop iterates again,
+                            gemini_session could change before the function executes,
+                            causing it to use a different value than intended.
+
+                            Args:
+                                _session: The Gemini Live session to relay from.
+                            """
+                            _langfuse = get_client()
+                            turn_user_parts: list[str] = []
+                            turn_agent_parts: list[str] = []
+
+                            try:
+                                async for gemini_msg in _session.receive_messages():
+                                    msg_type = gemini_msg.get("type")
+
+                                    if msg_type == "transcript_user":
+                                        turn_user_parts.append(gemini_msg["text"])
+                                    elif msg_type == "transcript_agent":
+                                        turn_agent_parts.append(gemini_msg["text"])
+                                    elif msg_type == "turn_complete":
+                                        user_text = " ".join(turn_user_parts).strip()
+                                        agent_text = " ".join(turn_agent_parts).strip()
+                                        if user_text or agent_text:
+                                            with _langfuse.start_as_current_observation(
+                                                as_type="generation",
+                                                name="voice_turn",
+                                                model=GEMINI_LIVE_MODEL,
+                                            ) as gen:
+                                                gen.update(
+                                                    input=user_text or None,
+                                                    output=agent_text or None,
+                                                )
+                                        turn_user_parts = []
+                                        turn_agent_parts = []
+
+                                    try:
+                                        await websocket.send_json(gemini_msg)
+                                    except Exception:
+                                        break
+                            except Exception as e:
+                                logger.warning("gemini_relay_error", error=str(e))
+
+                        receive_task = asyncio.create_task(_relay_from_gemini())
+
+                        initial_prompt = (scenario.initial_prompt or "").strip()
+                        if not initial_prompt:
+                            initial_prompt = "Hi, I'm the teacher. Please introduce yourself briefly."
+
+                        await websocket.send_json({
+                            "type": "setup_complete",
+                            "initial_prompt": initial_prompt,
+                        })
+
+                        await gemini_session.send_text(initial_prompt)
+
+                    elif msg_type == "audio":
+                        if gemini_session:
+                            audio_bytes = base64.b64decode(msg["data"])
+                            await gemini_session.send_audio(audio_bytes)
+
+                    elif msg_type == "text":
+                        if gemini_session:
+                            await gemini_session.send_text(msg["content"])
+
+                    elif msg_type == "end":
+                        break
+
+            except WebSocketDisconnect:
+                logger.info("gemini_live_ws_disconnected", session_id=session_id)
+            except json.JSONDecodeError:
+                logger.warning("gemini_live_ws_invalid_json", session_id=session_id)
+            except Exception as e:
+                logger.error("gemini_live_ws_error", session_id=session_id, error=str(e))
+                try:
+                    await websocket.send_json({"type": "error", "message": str(e)})
+                except Exception:
+                    pass
+            finally:
+                if receive_task and not receive_task.done():
+                    receive_task.cancel()
+                    try:
+                        await receive_task
+                    except (asyncio.CancelledError, Exception):
+                        pass
+                if gemini_session:
+                    await gemini_session.close()
+
+    langfuse.flush()

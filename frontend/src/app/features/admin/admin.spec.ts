@@ -1,8 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Admin } from './admin';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { provideAnimations } from '@angular/platform-browser/animations';
+import { provideRouter } from '@angular/router';
+import { Admin } from './admin';
 
 describe('Admin', () => {
   let component: Admin;
@@ -15,6 +16,7 @@ describe('Admin', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         provideAnimations(),
+        provideRouter([]),
       ],
     }).compileComponents();
 
@@ -27,4 +29,3 @@ describe('Admin', () => {
     expect(component).toBeTruthy();
   });
 });
-

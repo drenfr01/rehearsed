@@ -1,16 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { SingleStudent } from './single-student';
+import { provideRouter } from '@angular/router';
+import { UserContent } from './user-content';
 
-describe('SingleStudent', () => {
-  let component: SingleStudent;
-  let fixture: ComponentFixture<SingleStudent>;
+describe('UserContent', () => {
+  let component: UserContent;
+  let fixture: ComponentFixture<UserContent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [SingleStudent],
+      imports: [UserContent],
+      providers: [provideRouter([])],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(SingleStudent);
+    fixture = TestBed.createComponent(UserContent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

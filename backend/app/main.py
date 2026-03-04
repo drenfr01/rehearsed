@@ -41,7 +41,7 @@ load_dotenv()
 langfuse = Langfuse(
     public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
     secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
-    base_url=os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com"),
+    base_url=os.getenv("LANGFUSE_BASE_URL", "https://us.cloud.langfuse.com"),
     environment=settings.ENVIRONMENT,
 )
 

@@ -152,6 +152,7 @@ class Settings:
         self.GOOGLE_CLOUD_LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION", "")
         self.LLM_API_KEY = os.getenv("LLM_API_KEY", "")
         self.LLM_MODEL = os.getenv("LLM_MODEL", "gemini-3-flash-preview")
+        self.LLM_ANSWERING_STUDENT_MODEL = os.getenv("LLM_ANSWERING_STUDENT_MODEL", "gemini-3.1-flash-lite-preview")
         self.DEFAULT_LLM_TEMPERATURE = float(os.getenv("DEFAULT_LLM_TEMPERATURE", "0.2"))
         self.MAX_TOKENS = int(os.getenv("MAX_TOKENS", "200000"))
         self.MAX_LLM_CALL_RETRIES = int(os.getenv("MAX_LLM_CALL_RETRIES", "3"))

@@ -52,15 +52,24 @@ from app.services.gemini_text_to_speech import GeminiTextToSpeech
 class LangGraphBuilder:
     """Builder class for constructing LangGraph workflows."""
 
-    def __init__(self, llm: BaseChatModel, connection_pool: AsyncConnectionPool, tts_service: GeminiTextToSpeech):
+    def __init__(
+        self,
+        llm: BaseChatModel,
+        connection_pool: AsyncConnectionPool,
+        tts_service: GeminiTextToSpeech,
+        llm_answering_student: Optional[BaseChatModel] = None,
+    ):
         """Initialize the LangGraph builder.
 
         Args:
             llm: The language model to use for the graph.
             connection_pool: The async connection pool for database operations.
             tts_service: The text-to-speech service instance.
+            llm_answering_student: Optional separate LLM for the pick_answering_student
+                node. Falls back to ``llm`` if not provided.
         """
         self.llm = llm
+        self.llm_answering_student = llm_answering_student if llm_answering_student is not None else llm
         self._connection_pool = connection_pool
         self._agents: List[Agent] = []
         self._scenario_id: int = 0
@@ -278,7 +287,7 @@ class LangGraphBuilder:
         ]
 
         # LLM call to select student
-        structured_llm = self.llm.with_structured_output(StudentChoiceResponse)
+        structured_llm = self.llm_answering_student.with_structured_output(StudentChoiceResponse)
         response = await structured_llm.ainvoke(system_message + state.messages)
         
         # Ensure the student number is within valid range

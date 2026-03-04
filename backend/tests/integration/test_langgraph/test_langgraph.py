@@ -109,8 +109,9 @@ def langgraph_agent_with_mocked_llm(mock_llm):
         mock_llm_class.return_value.bind_tools.return_value = mock_llm
         
         agent = LangGraphAgent()
-        # Directly set the mocked LLM
+        # Directly set the mocked LLMs
         agent._llm = mock_llm
+        agent._llm_answering_student = mock_llm
         return agent
 
 

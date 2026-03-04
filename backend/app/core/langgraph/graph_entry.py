@@ -56,6 +56,7 @@ class LangGraphAgent:
     def __init__(self):
         """Initialize the LangGraph Agent with necessary components."""
         self._llm = None
+        self._llm_answering_student = None
         self.tools_by_name = {tool.name: tool for tool in tools}
         self._connection_pool: Optional[AsyncConnectionPool] = None
         # Store graphs per scenario_id for dynamic agent support
@@ -82,6 +83,33 @@ class LangGraphAgent:
             ).bind_tools(tools)
             logger.info("llm_initialized", model=settings.LLM_MODEL, environment=settings.ENVIRONMENT.value)
         return self._llm
+
+    @property
+    def llm_answering_student(self):
+        """Lazy-load the answering-student LLM on first access.
+        
+        Uses LLM_ANSWERING_STUDENT_MODEL when set, otherwise falls back to the
+        main LLM instance so no extra model is spun up unnecessarily.
+        """
+        if settings.LLM_ANSWERING_STUDENT_MODEL == settings.LLM_MODEL:
+            return self.llm
+        if self._llm_answering_student is None:
+            self._llm_answering_student = ChatGoogleGenerativeAI(
+                model=settings.LLM_ANSWERING_STUDENT_MODEL,
+                temperature=settings.DEFAULT_LLM_TEMPERATURE,
+                project=settings.GOOGLE_CLOUD_PROJECT,
+                location=settings.GOOGLE_CLOUD_LOCATION,
+                max_tokens=settings.MAX_TOKENS,
+                vertexai=True,
+                google_api_key=None,
+                **self._get_model_kwargs(),
+            )
+            logger.info(
+                "llm_answering_student_initialized",
+                model=settings.LLM_ANSWERING_STUDENT_MODEL,
+                environment=settings.ENVIRONMENT.value,
+            )
+        return self._llm_answering_student
 
     def _get_model_kwargs(self) -> Dict[str, Any]:
         """Get environment-specific model kwargs.
@@ -267,7 +295,7 @@ class LangGraphAgent:
         llm = self.llm
         
         # Build graph
-        langgraph_builder = LangGraphBuilder(llm, connection_pool, tts_service)
+        langgraph_builder = LangGraphBuilder(llm, connection_pool, tts_service, llm_answering_student=self.llm_answering_student)
         graph = await langgraph_builder.build_graph(scenario_id)
         
         # Cache the graph
@@ -296,7 +324,7 @@ class LangGraphAgent:
         
         # Rebuild the graph
         connection_pool = await self._get_connection_pool()
-        langgraph_builder = LangGraphBuilder(self.llm, connection_pool, tts_service)
+        langgraph_builder = LangGraphBuilder(self.llm, connection_pool, tts_service, llm_answering_student=self.llm_answering_student)
         graph = await langgraph_builder.build_graph(scenario_id)
         
         # Cache the new graph

@@ -1,5 +1,4 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-
 import { LoadingSpinner } from './loading-spinner';
 
 describe('LoadingSpinner', () => {
@@ -8,9 +7,8 @@ describe('LoadingSpinner', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [LoadingSpinner]
-    })
-    .compileComponents();
+      imports: [LoadingSpinner],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(LoadingSpinner);
     component = fixture.componentInstance;
@@ -19,5 +17,10 @@ describe('LoadingSpinner', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should render a spinner element', () => {
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('mat-spinner')).toBeTruthy();
   });
 });

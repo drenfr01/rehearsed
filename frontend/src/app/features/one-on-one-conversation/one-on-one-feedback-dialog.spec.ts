@@ -66,16 +66,16 @@ describe('OneOnOneFeedbackDialog', () => {
   });
 
   describe('onDownloadSession', () => {
-    it('should generate and save a PDF from feedbackData', () => {
+    it('should generate and save a PDF from feedbackData', async () => {
       const mockPdf = jasmine.createSpyObj(
         'jsPDF',
         ['setFont', 'setFontSize', 'text', 'splitTextToSize', 'addPage', 'save'],
         { internal: { pageSize: { getWidth: () => 210, getHeight: () => 297 } } },
       );
       mockPdf.splitTextToSize.and.callFake((t: string) => [t]);
-      spyOn(pdfDeps, 'createPdf').and.returnValue(mockPdf);
+      spyOn(pdfDeps, 'createPdf').and.returnValue(Promise.resolve(mockPdf));
 
-      component.onDownloadSession();
+      await component.onDownloadSession();
       expect(mockPdf.save).toHaveBeenCalledWith('session-feedback.pdf');
     });
   });

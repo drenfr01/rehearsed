@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { ScenarioFeedback } from '../scenario-feedback/scenario-feedback';
 import { SummaryFeedbackResponse } from '../../core/models/chat-graph.model';
+import { downloadFeedbackAsPdf } from '../../core/utils/pdf-download.util';
 
 export interface OneOnOneFeedbackDialogData {
   feedback: SummaryFeedbackResponse | string;
@@ -20,43 +21,21 @@ export interface OneOnOneFeedbackDialogData {
     MatIconModule,
     ScenarioFeedback,
   ],
-  template: `
-    <div class="scenario-feedback-dialog">
-      <h1 class="dialog-title">Session Summary</h1>
-
-      <div class="dialog-content">
-        <app-scenario-feedback [feedbackData]="data.feedback" />
-      </div>
-
-      <div class="dialog-actions">
-        <button
-          mat-raised-button
-          color="primary"
-          (click)="onNewSession()"
-          class="action-button"
-        >
-          <mat-icon>refresh</mat-icon>
-          New Session
-        </button>
-
-        <button
-          mat-raised-button
-          (click)="onReturnHome()"
-          class="action-button"
-        >
-          <mat-icon>home</mat-icon>
-          Return to Home Page
-        </button>
-      </div>
-    </div>
-  `,
+  templateUrl:
+    '../../shared/dialogs/scenario-feedback-dialog/scenario-feedback-dialog.html',
   styleUrl:
     '../../shared/dialogs/scenario-feedback-dialog/scenario-feedback-dialog.css',
 })
 export class OneOnOneFeedbackDialog {
   private dialogRef = inject(MatDialogRef<OneOnOneFeedbackDialog>);
   private router = inject(Router);
-  protected data: OneOnOneFeedbackDialogData = inject(MAT_DIALOG_DATA);
+  private data: OneOnOneFeedbackDialogData = inject(MAT_DIALOG_DATA);
+
+  protected feedbackData: SummaryFeedbackResponse | string | null = this.data.feedback;
+
+  async onDownloadSession() {
+    await downloadFeedbackAsPdf(this.feedbackData, 'session-feedback.pdf');
+  }
 
   onNewSession() {
     this.dialogRef.close();

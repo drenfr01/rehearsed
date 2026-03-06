@@ -6,6 +6,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { ScenarioFeedback } from '../../../features/scenario-feedback/scenario-feedback';
 import { ChatGraphService } from '../../../core/services/chat-graph.service';
+import { SummaryFeedbackResponse } from '../../../core/models/chat-graph.model';
+import { downloadFeedbackAsPdf } from '../../../core/utils/pdf-download.util';
 
 @Component({
   selector: 'app-scenario-feedback-dialog',
@@ -24,21 +26,20 @@ export class ScenarioFeedbackDialog {
   private router = inject(Router);
   private chatGraphService = inject(ChatGraphService);
 
-  onDownloadSession() {
-    // TODO: Implement download session functionality
-    console.log('Download session clicked');
-    // This could download the conversation history, feedback, etc.
+  protected feedbackData: SummaryFeedbackResponse | string | null = null;
+
+  async onDownloadSession() {
+    const data = this.feedbackData ?? this.chatGraphService.loadedSummaryFeedback();
+    await downloadFeedbackAsPdf(data, 'session-feedback.pdf');
   }
 
   onNewSession() {
-    // Reset the graph messages and navigate to scenario selection
     this.chatGraphService.resetGraphMessages();
     this.dialogRef.close();
     this.router.navigate(['/app/scenario-selection']);
   }
 
   onReturnHome() {
-    // Reset the graph messages and navigate to home
     this.chatGraphService.resetGraphMessages();
     this.dialogRef.close();
     this.router.navigate(['/app']);

@@ -28,9 +28,9 @@ export class ScenarioFeedbackDialog {
 
   protected feedbackData: SummaryFeedbackResponse | string | null = null;
 
-  onDownloadSession() {
+  async onDownloadSession() {
     const data = this.feedbackData ?? this.chatGraphService.loadedSummaryFeedback();
-    downloadFeedbackAsPdf(data, 'session-feedback.pdf');
+    await downloadFeedbackAsPdf(data, 'session-feedback.pdf');
   }
 
   onNewSession() {

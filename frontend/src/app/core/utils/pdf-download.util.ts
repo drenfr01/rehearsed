@@ -1,4 +1,3 @@
-import jsPDF from 'jspdf';
 import { SummaryFeedbackResponse } from '../models/chat-graph.model';
 
 const PAGE_MARGIN = 15;
@@ -13,7 +12,10 @@ interface FeedbackSection {
 }
 
 export const pdfDeps = {
-  createPdf: () => new jsPDF('p', 'mm', 'a4'),
+  createPdf: async () => {
+    const { default: jsPDF } = await import('jspdf');
+    return new jsPDF('p', 'mm', 'a4');
+  },
 };
 
 function stripMarkdown(md: string): string {
@@ -51,13 +53,13 @@ function lineHeightMm(fontSize: number): number {
   return (fontSize * LINE_HEIGHT_FACTOR * 25.4) / 72;
 }
 
-export function downloadFeedbackAsPdf(
+export async function downloadFeedbackAsPdf(
   feedback: SummaryFeedbackResponse | string | null,
   filename = 'session-feedback.pdf',
-): void {
+): Promise<void> {
   if (!feedback) return;
 
-  const pdf = pdfDeps.createPdf();
+  const pdf = await pdfDeps.createPdf();
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   const contentWidth = pageWidth - PAGE_MARGIN * 2;

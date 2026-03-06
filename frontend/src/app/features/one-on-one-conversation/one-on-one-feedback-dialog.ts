@@ -33,8 +33,8 @@ export class OneOnOneFeedbackDialog {
 
   protected feedbackData: SummaryFeedbackResponse | string | null = this.data.feedback;
 
-  onDownloadSession() {
-    downloadFeedbackAsPdf(this.feedbackData, 'session-feedback.pdf');
+  async onDownloadSession() {
+    await downloadFeedbackAsPdf(this.feedbackData, 'session-feedback.pdf');
   }
 
   onNewSession() {

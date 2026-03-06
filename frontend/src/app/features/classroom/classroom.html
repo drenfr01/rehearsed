@@ -54,6 +54,8 @@
                 >
                   @if (isLoading()) {
                     <mat-icon class="submit-hourglass">hourglass_empty</mat-icon>
+                  }
+                  @if (isLoading()) {
                     <span>Sending...</span>
                   } @else {
                     <span>Submit</span>

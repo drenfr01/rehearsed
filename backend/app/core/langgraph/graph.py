@@ -10,7 +10,7 @@ from langchain_core.messages import (
     SystemMessage,
 )
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langfuse import observe
+from langfuse import get_client, observe
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph.state import (
     END,
@@ -79,6 +79,17 @@ class LangGraphBuilder:
         self._agents: List[Agent] = []
         self._scenario_id: int = 0
         self._tts_service = tts_service
+        self._langfuse = get_client()
+
+    def _tag_span_with_model(self, llm: BaseChatModel, agent_type: str) -> None:
+        """Attach the LLM model name and agent type to the current Langfuse span."""
+        model_name = getattr(llm, "model", None) or getattr(llm, "model_name", "unknown")
+        try:
+            self._langfuse.update_current_span(
+                metadata={"llm_model": model_name, "agent_type": agent_type},
+            )
+        except Exception:
+            pass
 
     @observe(name="build_graph")
     async def build_graph(self, scenario_id: int) -> CompiledStateGraph:
@@ -229,6 +240,7 @@ class LangGraphBuilder:
         @observe(name=f"student_{student_number}_agent")
         async def handler(state: GraphState) -> GraphState:
             """Handle student agent node execution."""
+            self._tag_span_with_model(self.llm, "student_agent")
             personality_description = (
                 captured_agent.agent_personality.personality_description 
                 if captured_agent.agent_personality 
@@ -278,6 +290,8 @@ class LangGraphBuilder:
         Returns a Command that dynamically routes to only the selected student agent
         plus the inline feedback agent in parallel.
         """
+        self._tag_span_with_model(self.llm_answering_student, "student_choice_agent")
+
         # Build dynamic student profiles from agents
         student_profiles = self._build_student_profiles()
         
@@ -327,6 +341,7 @@ class LangGraphBuilder:
         state: GraphState,
         system_instructions: str,
         llm_override: Optional[BaseChatModel] = None,
+        agent_type: str = "student_agent",
     ) -> str:
         """Helper function to call an LLM with structured output.
         
@@ -334,6 +349,7 @@ class LangGraphBuilder:
             state: The current graph state.
             system_instructions: The system instructions for the LLM.
             llm_override: If provided, use this LLM instead of self.llm.
+            agent_type: Label for the agent type used in trace metadata.
             
         Returns:
             str: The LLM response text.
@@ -343,6 +359,7 @@ class LangGraphBuilder:
             raise ValueError("last message should be the human message input")
 
         target_llm = llm_override or self.llm
+        self._tag_span_with_model(target_llm, agent_type)
 
         # Build messages with full conversation history for context
         messages = [SystemMessage(content=system_instructions)]
@@ -375,6 +392,7 @@ class LangGraphBuilder:
     @observe(name="inline_feedback_agent")
     async def _inline_feedback_agent(self, state: GraphState) -> GraphState:
         """This node is used to call the inline feedback agent."""
+        self._tag_span_with_model(self.llm_inline_feedback, "inline_feedback")
         # Database query for feedback config
         feedback = await database_service.feedback.get_feedback_by_type("inline", self._scenario_id)
         
@@ -391,7 +409,11 @@ class LangGraphBuilder:
         )
         
         # LLM call using the dedicated inline feedback LLM
-        result = await self._call_general_llm(state, system_instructions, llm_override=self.llm_inline_feedback)
+        result = await self._call_general_llm(
+            state, system_instructions,
+            llm_override=self.llm_inline_feedback,
+            agent_type="inline_feedback",
+        )
         
         return {"inline_feedback": [result]}
 
@@ -432,6 +454,7 @@ class LangGraphBuilder:
     @observe(name="generate_summary_feedback")
     async def _generate_summary_feedback(self, state: GraphState) -> GraphState:
         """Generate summary feedback for the entire conversation."""
+        self._tag_span_with_model(self.llm_summary_feedback, "summary_feedback")
         from app.services.summary_feedback import generate_summary_feedback
 
         conversation = []

@@ -24,6 +24,7 @@ from app.core.logging import logger
 from app.models.agent_llm_config import AgentType
 from app.models.user import User
 from app.services.database.base import DatabaseService
+from app.api.v1.chatbot import agent as langgraph_agent
 
 router = APIRouter()
 security = HTTPBearer()
@@ -80,7 +81,6 @@ async def update_agent_llm_config(
     model = await database_service.llm_models.get_model(config.llm_model_id)
 
     # Invalidate cached LLMs so the new model is picked up
-    from app.api.v1.chatbot import agent as langgraph_agent
     langgraph_agent.invalidate_llms()
     logger.info(
         "llm_config_updated_by_admin",

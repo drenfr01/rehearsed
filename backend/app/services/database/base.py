@@ -11,7 +11,9 @@ from sqlmodel import SQLModel, create_engine
 from app.core.config import Environment, settings
 from app.core.logging import logger
 from app.services.database.agent import AgentRepository
+from app.services.database.agent_llm_config import AgentLlmConfigRepository
 from app.services.database.feedback import FeedbackRepository
+from app.services.database.llm_model import LlmModelRepository
 from app.services.database.scenario import ScenarioRepository
 from app.services.database.session import SessionRepository
 from app.services.database.user import UserRepository
@@ -36,8 +38,10 @@ class DatabaseService:
         self._scenarios = None
         self._agents = None
         self._feedback = None
+        self._llm_models = None
+        self._agent_llm_config = None
         
-        logger.info("database_service_initialized", repositories=["users", "sessions", "scenarios", "agents", "feedback"])
+        logger.info("database_service_initialized", repositories=["users", "sessions", "scenarios", "agents", "feedback", "llm_models", "agent_llm_config"])
     
     def _get_connection_url(self) -> str:
         """Get the database connection URL based on environment.
@@ -73,6 +77,9 @@ class DatabaseService:
             test_db_url = os.getenv("TEST_DATABASE_URL", "")
             is_sqlite = "sqlite" in connection_url or (test_db_url and test_db_url.startswith("sqlite"))
             
+            pool_size = settings.POSTGRES_POOL_SIZE
+            max_overflow = settings.POSTGRES_MAX_OVERFLOW
+
             if is_sqlite:
                 # SQLite doesn't support connection pooling the same way
                 self._engine = create_engine(
@@ -81,9 +88,6 @@ class DatabaseService:
                     echo=False,
                 )
             else:
-                pool_size = settings.POSTGRES_POOL_SIZE
-                max_overflow = settings.POSTGRES_MAX_OVERFLOW
-                
                 self._engine = create_engine(
                     connection_url,
                     pool_pre_ping=True,
@@ -97,11 +101,7 @@ class DatabaseService:
             # Create tables for all registered models
             SQLModel.metadata.create_all(self._engine)
             
-            self._users = UserRepository(self._engine)
-            self._sessions = SessionRepository(self._engine)
-            self._scenarios = ScenarioRepository(self._engine)
-            self._agents = AgentRepository(self._engine)
-            self._feedback = FeedbackRepository(self._engine)
+            self._init_repositories(self._engine)
             
             logger.info(
                 "database_engine_initialized",
@@ -112,6 +112,16 @@ class DatabaseService:
         except SQLAlchemyError as e:
             logger.error("database_initialization_error", error=str(e), environment=settings.ENVIRONMENT.value)
             raise SQLAlchemyError(f"Database initialization error: {str(e)}")
+
+    def _init_repositories(self, engine: Engine) -> None:
+        """Initialize all repositories with the given engine."""
+        self._users = UserRepository(engine)
+        self._sessions = SessionRepository(engine)
+        self._scenarios = ScenarioRepository(engine)
+        self._agents = AgentRepository(engine)
+        self._feedback = FeedbackRepository(engine)
+        self._llm_models = LlmModelRepository(engine)
+        self._agent_llm_config = AgentLlmConfigRepository(engine)
 
     @property
     def engine(self) -> Engine:
@@ -134,11 +144,7 @@ class DatabaseService:
         
         # Update all repositories with the new engine
         if engine:
-            self._users = UserRepository(engine)
-            self._sessions = SessionRepository(engine)
-            self._scenarios = ScenarioRepository(engine)
-            self._agents = AgentRepository(engine)
-            self._feedback = FeedbackRepository(engine)
+            self._init_repositories(engine)
     
     def reset_engine(self) -> None:
         """Reset the engine to None, forcing recreation on next access."""
@@ -170,6 +176,16 @@ class DatabaseService:
     def feedback(self):
         """Get the feedback repository."""
         return self._feedback
+
+    @property
+    def llm_models(self):
+        """Get the LLM models repository."""
+        return self._llm_models
+
+    @property
+    def agent_llm_config(self):
+        """Get the agent LLM config repository."""
+        return self._agent_llm_config
     
     def get_session_maker(self):
         """Get a session maker for creating database sessions.

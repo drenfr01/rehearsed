@@ -18,6 +18,7 @@ from app.services.database import database_service
 async def generate_summary_feedback(
     scenario_id: int,
     conversation_messages: list[dict],
+    llm=None,
 ) -> Union[SummaryFeedbackResponse, str]:
     """Generate summary feedback for a conversation.
 
@@ -25,6 +26,8 @@ async def generate_summary_feedback(
         scenario_id: The scenario ID to look up feedback configuration.
         conversation_messages: List of dicts with "role" ('user' | 'agent')
             and "text" keys representing the conversation transcript.
+        llm: Optional pre-configured LLM instance. If not provided, a default
+            is created for backward compatibility.
 
     Returns:
         A SummaryFeedbackResponse on success, or a fallback string on failure.
@@ -55,15 +58,16 @@ async def generate_summary_feedback(
         else:
             langchain_messages.append(AIMessage(content=text))
 
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-3-pro-preview",
-        temperature=settings.DEFAULT_LLM_TEMPERATURE,
-        project=settings.GOOGLE_CLOUD_PROJECT,
-        location=settings.GOOGLE_CLOUD_LOCATION,
-        max_tokens=settings.MAX_TOKENS,
-        vertexai=True,
-        google_api_key=None,
-    )
+    if llm is None:
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-3-pro-preview",
+            temperature=settings.DEFAULT_LLM_TEMPERATURE,
+            project=settings.GOOGLE_CLOUD_PROJECT,
+            location=settings.GOOGLE_CLOUD_LOCATION,
+            max_tokens=settings.MAX_TOKENS,
+            vertexai=True,
+            google_api_key=None,
+        )
 
     response = await llm.with_structured_output(
         SummaryFeedbackResponse, method="json_schema", include_raw=True

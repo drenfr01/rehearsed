@@ -32,7 +32,9 @@ from app.core.config import (
 )
 from app.main import app
 from app.models.agent import Agent, AgentPersonality, AgentVoice
+from app.models.agent_llm_config import AgentLlmConfig
 from app.models.feedback import Feedback
+from app.models.llm_model import LlmModel
 from app.models.scenario import Scenario
 from app.models.session import Session as ChatSession
 from app.models.user import User
@@ -79,7 +81,7 @@ def test_engine():
     
     # Clean up any existing data at the start of the test session
     with Session(engine) as session:
-        for model in [ChatSession, Agent, AgentVoice, AgentPersonality, Feedback, Scenario, User]:
+        for model in [AgentLlmConfig, LlmModel, ChatSession, Agent, AgentVoice, AgentPersonality, Feedback, Scenario, User]:
             statement = select(model)
             records = session.exec(statement).all()
             for record in records:
@@ -90,7 +92,7 @@ def test_engine():
     
     # Clean up all data at the end of the test session
     with Session(engine) as session:
-        for model in [ChatSession, Agent, AgentVoice, AgentPersonality, Feedback, Scenario, User]:
+        for model in [AgentLlmConfig, LlmModel, ChatSession, Agent, AgentVoice, AgentPersonality, Feedback, Scenario, User]:
             statement = select(model)
             records = session.exec(statement).all()
             for record in records:

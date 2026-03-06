@@ -1,0 +1,78 @@
+<div class="admin-container">
+  <mat-card class="header-card">
+    <mat-card-header>
+      <mat-card-title>Admin Dashboard</mat-card-title>
+      <mat-card-subtitle>Manage system users, scenarios, agents, personalities, feedback, and app configuration</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="admin-nav">
+        <a mat-raised-button routerLink="/app/admin">
+          <mat-icon>people</mat-icon>
+          Users
+        </a>
+        <a mat-raised-button routerLink="/app/admin/scenarios">
+          <mat-icon>theater_comedy</mat-icon>
+          Scenarios
+        </a>
+        <a mat-raised-button routerLink="/app/admin/agents">
+          <mat-icon>smart_toy</mat-icon>
+          Agents
+        </a>
+        <a mat-raised-button routerLink="/app/admin/agent-personalities">
+          <mat-icon>psychology</mat-icon>
+          Personalities
+        </a>
+        <a mat-raised-button routerLink="/app/admin/feedback">
+          <mat-icon>feedback</mat-icon>
+          Feedback
+        </a>
+        <a mat-raised-button routerLink="/app/admin/app-config" routerLinkActive="active">
+          <mat-icon>settings</mat-icon>
+          App Config
+        </a>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="header-card">
+    <mat-card-header>
+      <mat-card-title>LLM Configuration</mat-card-title>
+      <mat-card-subtitle>Choose which LLM model powers each agent type. Changes take effect immediately.</mat-card-subtitle>
+    </mat-card-header>
+  </mat-card>
+
+  @if (isLoading()) {
+    <div class="loading-container">
+      <app-loading-spinner></app-loading-spinner>
+      <p>Loading configuration...</p>
+    </div>
+  } @else {
+    <div class="config-grid">
+      @for (row of agentRows(); track row.agent_type) {
+        <mat-card class="config-card">
+          <mat-card-header>
+            <mat-card-title>{{ row.label }}</mat-card-title>
+            <mat-card-subtitle>{{ row.description }}</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>LLM Model</mat-label>
+              <mat-select
+                [value]="row.selectedModelId"
+                (selectionChange)="onModelChange(row, $event.value)"
+                [disabled]="savingAgentType() === row.agent_type"
+              >
+                @for (model of llmModels(); track model.id) {
+                  <mat-option [value]="model.id">{{ model.name }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            @if (savingAgentType() === row.agent_type) {
+              <p class="saving-indicator">Saving...</p>
+            }
+          </mat-card-content>
+        </mat-card>
+      }
+    </div>
+  }
+</div>

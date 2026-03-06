@@ -55,8 +55,10 @@ class LangGraphAgent:
 
     def __init__(self):
         """Initialize the LangGraph Agent with necessary components."""
-        self._llm = None
-        self._llm_answering_student = None
+        self._llm_student: Optional[ChatGoogleGenerativeAI] = None
+        self._llm_student_choice: Optional[ChatGoogleGenerativeAI] = None
+        self._llm_inline_feedback: Optional[ChatGoogleGenerativeAI] = None
+        self._llm_summary_feedback: Optional[ChatGoogleGenerativeAI] = None
         self.tools_by_name = {tool.name: tool for tool in tools}
         self._connection_pool: Optional[AsyncConnectionPool] = None
         # Store graphs per scenario_id for dynamic agent support
@@ -64,52 +66,110 @@ class LangGraphAgent:
         # Keep _graph for backwards compatibility (default scenario)
         self._current_scenario_id: Optional[int] = None
 
+    def _create_llm(self, model_name: str, bind_tools_flag: bool = False) -> ChatGoogleGenerativeAI:
+        """Create a ChatGoogleGenerativeAI instance for a given model name."""
+        llm = ChatGoogleGenerativeAI(
+            model=model_name,
+            temperature=settings.DEFAULT_LLM_TEMPERATURE,
+            project=settings.GOOGLE_CLOUD_PROJECT,
+            location=settings.GOOGLE_CLOUD_LOCATION,
+            max_tokens=settings.MAX_TOKENS,
+            vertexai=True,
+            google_api_key=None,
+            **self._get_model_kwargs(),
+        )
+        if bind_tools_flag:
+            llm = llm.bind_tools(tools)
+        return llm
+
+    async def _resolve_model_name(self, agent_type: str, fallback: str) -> str:
+        """Look up the configured model name for an agent type from the database.
+        
+        Falls back to the provided default if no database config exists.
+        """
+        try:
+            from app.services.database import database_service
+            name = await database_service.agent_llm_config.get_model_name_for_agent(agent_type)
+            if name:
+                return name
+        except Exception as e:
+            logger.warning("failed_to_resolve_llm_model", agent_type=agent_type, error=str(e))
+        return fallback
+
     @property
     def llm(self):
-        """Lazy-load the LLM on first access."""
-        if self._llm is None:
-            # Use environment-specific LLM model
-            # Explicitly set google_api_key=None when using Vertex AI to prevent
-            # the library from falling back to Generative Language API
-            self._llm = ChatGoogleGenerativeAI(
-                model=settings.LLM_MODEL,
-                temperature=settings.DEFAULT_LLM_TEMPERATURE,
-                project=settings.GOOGLE_CLOUD_PROJECT,
-                location=settings.GOOGLE_CLOUD_LOCATION,
-                max_tokens=settings.MAX_TOKENS,
-                vertexai=True,
-                google_api_key=None,  # Explicitly disable API key to force Vertex AI usage
-                **self._get_model_kwargs(),
-            ).bind_tools(tools)
-            logger.info("llm_initialized", model=settings.LLM_MODEL, environment=settings.ENVIRONMENT.value)
-        return self._llm
+        """Backwards-compatible accessor – returns the student agent LLM."""
+        return self.llm_student
+
+    @property
+    def llm_student(self):
+        """Lazy-load the student agent LLM."""
+        if self._llm_student is None:
+            self._llm_student = self._create_llm(settings.LLM_MODEL, bind_tools_flag=True)
+            logger.info("llm_student_initialized", model=settings.LLM_MODEL, environment=settings.ENVIRONMENT.value)
+        return self._llm_student
 
     @property
     def llm_answering_student(self):
-        """Lazy-load the answering-student LLM on first access.
+        """Lazy-load the student-choice LLM."""
+        if self._llm_student_choice is None:
+            self._llm_student_choice = self._create_llm(settings.LLM_ANSWERING_STUDENT_MODEL)
+            logger.info("llm_student_choice_initialized", model=settings.LLM_ANSWERING_STUDENT_MODEL, environment=settings.ENVIRONMENT.value)
+        return self._llm_student_choice
+
+    @property
+    def llm_inline_feedback(self):
+        """Lazy-load the inline feedback LLM."""
+        if self._llm_inline_feedback is None:
+            self._llm_inline_feedback = self._create_llm(settings.LLM_MODEL)
+            logger.info("llm_inline_feedback_initialized", model=settings.LLM_MODEL, environment=settings.ENVIRONMENT.value)
+        return self._llm_inline_feedback
+
+    @property
+    def llm_summary_feedback(self):
+        """Lazy-load the summary feedback LLM."""
+        if self._llm_summary_feedback is None:
+            self._llm_summary_feedback = self._create_llm(settings.LLM_MODEL)
+            logger.info("llm_summary_feedback_initialized", model=settings.LLM_MODEL, environment=settings.ENVIRONMENT.value)
+        return self._llm_summary_feedback
+
+    async def _ensure_llms_from_config(self) -> None:
+        """Resolve all 4 LLM instances from the database config.
         
-        Uses LLM_ANSWERING_STUDENT_MODEL when set, otherwise falls back to the
-        main LLM instance so no extra model is spun up unnecessarily.
+        Only initialises instances that haven't been created yet.
         """
-        if settings.LLM_ANSWERING_STUDENT_MODEL == settings.LLM_MODEL:
-            return self.llm
-        if self._llm_answering_student is None:
-            self._llm_answering_student = ChatGoogleGenerativeAI(
-                model=settings.LLM_ANSWERING_STUDENT_MODEL,
-                temperature=settings.DEFAULT_LLM_TEMPERATURE,
-                project=settings.GOOGLE_CLOUD_PROJECT,
-                location=settings.GOOGLE_CLOUD_LOCATION,
-                max_tokens=settings.MAX_TOKENS,
-                vertexai=True,
-                google_api_key=None,
-                **self._get_model_kwargs(),
-            )
-            logger.info(
-                "llm_answering_student_initialized",
-                model=settings.LLM_ANSWERING_STUDENT_MODEL,
-                environment=settings.ENVIRONMENT.value,
-            )
-        return self._llm_answering_student
+        if self._llm_student is None:
+            model = await self._resolve_model_name("student_agent", settings.LLM_MODEL)
+            self._llm_student = self._create_llm(model, bind_tools_flag=True)
+            logger.info("llm_student_initialized_from_config", model=model)
+
+        if self._llm_student_choice is None:
+            model = await self._resolve_model_name("student_choice_agent", settings.LLM_ANSWERING_STUDENT_MODEL)
+            self._llm_student_choice = self._create_llm(model)
+            logger.info("llm_student_choice_initialized_from_config", model=model)
+
+        if self._llm_inline_feedback is None:
+            model = await self._resolve_model_name("inline_feedback", settings.LLM_MODEL)
+            self._llm_inline_feedback = self._create_llm(model)
+            logger.info("llm_inline_feedback_initialized_from_config", model=model)
+
+        if self._llm_summary_feedback is None:
+            model = await self._resolve_model_name("summary_feedback", settings.LLM_MODEL)
+            self._llm_summary_feedback = self._create_llm(model)
+            logger.info("llm_summary_feedback_initialized_from_config", model=model)
+
+    def invalidate_llms(self) -> None:
+        """Clear all cached LLM instances and graphs.
+        
+        Called when an admin changes the agent-LLM configuration so that
+        the next request picks up the new models.
+        """
+        self._llm_student = None
+        self._llm_student_choice = None
+        self._llm_inline_feedback = None
+        self._llm_summary_feedback = None
+        self._graphs.clear()
+        logger.info("llm_instances_invalidated")
 
     def _get_model_kwargs(self) -> Dict[str, Any]:
         """Get environment-specific model kwargs.
@@ -291,11 +351,18 @@ class LangGraphAgent:
         # Build a new graph for this scenario
         connection_pool = await self._get_connection_pool()
         
-        # Access LLM property (triggers lazy init if needed)
-        llm = self.llm
+        # Ensure all LLMs are resolved from config
+        await self._ensure_llms_from_config()
         
-        # Build graph
-        langgraph_builder = LangGraphBuilder(llm, connection_pool, tts_service, llm_answering_student=self.llm_answering_student)
+        # Build graph with all 4 LLMs
+        langgraph_builder = LangGraphBuilder(
+            llm=self.llm_student,
+            connection_pool=connection_pool,
+            tts_service=tts_service,
+            llm_answering_student=self.llm_answering_student,
+            llm_inline_feedback=self.llm_inline_feedback,
+            llm_summary_feedback=self.llm_summary_feedback,
+        )
         graph = await langgraph_builder.build_graph(scenario_id)
         
         # Cache the graph
@@ -324,7 +391,15 @@ class LangGraphAgent:
         
         # Rebuild the graph
         connection_pool = await self._get_connection_pool()
-        langgraph_builder = LangGraphBuilder(self.llm, connection_pool, tts_service, llm_answering_student=self.llm_answering_student)
+        await self._ensure_llms_from_config()
+        langgraph_builder = LangGraphBuilder(
+            llm=self.llm_student,
+            connection_pool=connection_pool,
+            tts_service=tts_service,
+            llm_answering_student=self.llm_answering_student,
+            llm_inline_feedback=self.llm_inline_feedback,
+            llm_summary_feedback=self.llm_summary_feedback,
+        )
         graph = await langgraph_builder.build_graph(scenario_id)
         
         # Cache the new graph
@@ -426,7 +501,7 @@ class LangGraphAgent:
                     )
                     # Fire feedback task immediately (runs in parallel with graph)
                     asyncio.create_task(
-                        generate_feedback_and_store(feedback_id, self.llm, session_id)
+                        generate_feedback_and_store(feedback_id, self.llm_inline_feedback, session_id)
                     )
                     feedback_started_early = True
                     logger.info("async_feedback_started_early", feedback_id=feedback_id, session_id=session_id)
@@ -453,7 +528,7 @@ class LangGraphAgent:
                         messages=response["messages"],
                     )
                     asyncio.create_task(
-                        generate_feedback_and_store(feedback_id, self.llm, session_id)
+                        generate_feedback_and_store(feedback_id, self.llm_inline_feedback, session_id)
                     )
                     logger.info("async_feedback_started_fallback", feedback_id=feedback_id, session_id=session_id)
                 
@@ -504,7 +579,7 @@ class LangGraphAgent:
             )
             # Fire feedback task immediately (runs in parallel with graph)
             _ = asyncio.create_task(
-                generate_feedback_and_store(feedback_id, self.llm, session_id)
+                generate_feedback_and_store(feedback_id, self.llm_inline_feedback, session_id)
             )
             logger.info("async_feedback_started_early", feedback_id=feedback_id, session_id=session_id)
             

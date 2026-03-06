@@ -58,18 +58,23 @@ class LangGraphBuilder:
         connection_pool: AsyncConnectionPool,
         tts_service: GeminiTextToSpeech,
         llm_answering_student: Optional[BaseChatModel] = None,
+        llm_inline_feedback: Optional[BaseChatModel] = None,
+        llm_summary_feedback: Optional[BaseChatModel] = None,
     ):
         """Initialize the LangGraph builder.
 
         Args:
-            llm: The language model to use for the graph.
+            llm: The language model to use for student agents.
             connection_pool: The async connection pool for database operations.
             tts_service: The text-to-speech service instance.
-            llm_answering_student: Optional separate LLM for the pick_answering_student
-                node. Falls back to ``llm`` if not provided.
+            llm_answering_student: Separate LLM for pick_answering_student. Falls back to ``llm``.
+            llm_inline_feedback: Separate LLM for inline feedback. Falls back to ``llm``.
+            llm_summary_feedback: Separate LLM for summary feedback. Falls back to ``llm``.
         """
         self.llm = llm
         self.llm_answering_student = llm_answering_student if llm_answering_student is not None else llm
+        self.llm_inline_feedback = llm_inline_feedback if llm_inline_feedback is not None else llm
+        self.llm_summary_feedback = llm_summary_feedback if llm_summary_feedback is not None else llm
         self._connection_pool = connection_pool
         self._agents: List[Agent] = []
         self._scenario_id: int = 0
@@ -317,12 +322,18 @@ class LangGraphBuilder:
         return "\n".join(profiles)
 
     @observe(name="call_general_llm")
-    async def _call_general_llm(self, state: GraphState, system_instructions: str) -> str:
-        """Helper function to call the student / feedback agent.
+    async def _call_general_llm(
+        self,
+        state: GraphState,
+        system_instructions: str,
+        llm_override: Optional[BaseChatModel] = None,
+    ) -> str:
+        """Helper function to call an LLM with structured output.
         
         Args:
             state: The current graph state.
             system_instructions: The system instructions for the LLM.
+            llm_override: If provided, use this LLM instead of self.llm.
             
         Returns:
             str: The LLM response text.
@@ -331,12 +342,14 @@ class LangGraphBuilder:
         if not isinstance(last_message, HumanMessage):
             raise ValueError("last message should be the human message input")
 
+        target_llm = llm_override or self.llm
+
         # Build messages with full conversation history for context
         messages = [SystemMessage(content=system_instructions)]
         messages.extend(state.messages)  # Include full conversation history
         
         # LLM invoke call
-        response = await self.llm.with_structured_output(
+        response = await target_llm.with_structured_output(
             GeneralResponse, method="json_schema", include_raw=True
         ).ainvoke(messages)
 
@@ -377,8 +390,8 @@ class LangGraphBuilder:
             output_format=feedback.output_format,
         )
         
-        # LLM call
-        result = await self._call_general_llm(state, system_instructions)
+        # LLM call using the dedicated inline feedback LLM
+        result = await self._call_general_llm(state, system_instructions, llm_override=self.llm_inline_feedback)
         
         return {"inline_feedback": [result]}
 
@@ -428,7 +441,9 @@ class LangGraphBuilder:
             elif isinstance(msg, AIMessage):
                 conversation.append({"role": "agent", "text": msg.content})
 
-        result = await generate_summary_feedback(self._scenario_id, conversation)
+        result = await generate_summary_feedback(
+            self._scenario_id, conversation, llm=self.llm_summary_feedback,
+        )
         return {"summary_feedback": result}
 
     async def _route_appropriate_response(self, state: GraphState) -> GraphState:

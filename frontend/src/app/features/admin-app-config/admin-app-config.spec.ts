@@ -122,7 +122,9 @@ describe('AdminAppConfig', () => {
   it('should handle load error gracefully', () => {
     fixture.detectChanges();
     httpTesting.expectOne(`${environment.baseUrl}/api/v1/llm-models`).error(new ProgressEvent('error'));
-    httpTesting.expectOne(`${environment.baseUrl}/api/v1/llm-config`).error(new ProgressEvent('error'));
+    // forkJoin cancels the second request when the first errors,
+    // so we match it without trying to respond
+    httpTesting.match(`${environment.baseUrl}/api/v1/llm-config`);
     expect(component.isLoading()).toBeFalse();
   });
 });

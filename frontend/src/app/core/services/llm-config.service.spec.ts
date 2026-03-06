@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { LlmConfigService } from './llm-config.service';
+import { AgentLlmConfig } from '../models/llm-config.model';
 import { environment } from '../../../environments/environment';
 
 describe('LlmConfigService', () => {
@@ -46,7 +47,7 @@ describe('LlmConfigService', () => {
 
   describe('getAgentLlmConfigs', () => {
     it('should GET /api/v1/llm-config', () => {
-      const mockConfigs = [
+      const mockConfigs: AgentLlmConfig[] = [
         { agent_type: 'student_agent', llm_model_id: 1, llm_model_name: 'gemini-3.1-pro-preview' },
       ];
 
@@ -63,7 +64,7 @@ describe('LlmConfigService', () => {
   describe('updateAgentLlmConfig', () => {
     it('should POST /api/v1/llm-config', () => {
       const update = { agent_type: 'student_agent' as const, llm_model_id: 2 };
-      const mockResponse = {
+      const mockResponse: AgentLlmConfig = {
         agent_type: 'student_agent',
         llm_model_id: 2,
         llm_model_name: 'gemini-3-flash-preview',

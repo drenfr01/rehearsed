@@ -13,10 +13,12 @@ class LlmModelRepository:
     """Repository for LlmModel database operations."""
 
     def __init__(self, engine: Engine):
+        """Initialize LLM model repository with database engine."""
         self._engine = engine
 
     @property
     def engine(self) -> Engine:
+        """Get the database engine from private attribute."""
         return self._engine
 
     async def get_all_models(self) -> List[LlmModel]:

@@ -29,6 +29,7 @@ security = HTTPBearer()
 
 
 class LlmModelResponse(BaseModel):
+    """Response model for LLM models."""
     id: int
     name: str
 

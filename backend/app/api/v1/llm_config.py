@@ -17,6 +17,7 @@ from fastapi.security import (
 from pydantic import BaseModel
 
 from app.api.v1.admin import get_current_admin_user
+from app.api.v1.chatbot import agent as langgraph_agent
 from app.api.v1.deps import get_database_service
 from app.core.config import settings
 from app.core.limiter import limiter
@@ -24,19 +25,20 @@ from app.core.logging import logger
 from app.models.agent_llm_config import AgentType
 from app.models.user import User
 from app.services.database.base import DatabaseService
-from app.api.v1.chatbot import agent as langgraph_agent
 
 router = APIRouter()
 security = HTTPBearer()
 
 
 class AgentLlmConfigResponse(BaseModel):
+    """Response model for an agent-to-LLM configuration."""
     agent_type: str
     llm_model_id: int
     llm_model_name: str
 
 
 class AgentLlmConfigUpdateRequest(BaseModel):
+    """Request model for updating an agent-to-LLM configuration."""
     agent_type: str
     llm_model_id: int
 

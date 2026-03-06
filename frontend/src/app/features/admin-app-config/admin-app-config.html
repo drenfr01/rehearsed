@@ -34,11 +34,16 @@
     </mat-card-content>
   </mat-card>
 
-  <mat-card class="header-card">
+  <mat-card class="section-header-card">
     <mat-card-header>
-      <mat-card-title>LLM Configuration</mat-card-title>
-      <mat-card-subtitle>Choose which LLM model powers each agent type. Changes take effect immediately.</mat-card-subtitle>
+      <mat-card-title>
+        <mat-icon class="section-icon">tune</mat-icon>
+        LLM Configuration
+      </mat-card-title>
     </mat-card-header>
+    <mat-card-content>
+      <p class="section-description">Choose which LLM model powers each agent type. Changes take effect immediately on the next request.</p>
+    </mat-card-content>
   </mat-card>
 
   @if (isLoading()) {
@@ -50,13 +55,22 @@
     <div class="config-grid">
       @for (row of agentRows(); track row.agent_type) {
         <mat-card class="config-card">
-          <mat-card-header>
-            <mat-card-title>{{ row.label }}</mat-card-title>
-            <mat-card-subtitle>{{ row.description }}</mat-card-subtitle>
-          </mat-card-header>
-          <mat-card-content>
+          <div class="config-card-header">
+            <div class="config-icon-wrapper">
+              <mat-icon>{{ row.icon }}</mat-icon>
+            </div>
+            <div class="config-header-text">
+              <h3 class="config-title">{{ row.label }}</h3>
+              <p class="config-description">{{ row.description }}</p>
+            </div>
+          </div>
+
+          <mat-divider></mat-divider>
+
+          <div class="config-card-body">
+            <label class="field-label">Active Model</label>
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>LLM Model</mat-label>
+              <mat-label>Select model</mat-label>
               <mat-select
                 [value]="row.selectedModelId"
                 (selectionChange)="onModelChange(row, $event.value)"
@@ -68,9 +82,12 @@
               </mat-select>
             </mat-form-field>
             @if (savingAgentType() === row.agent_type) {
-              <p class="saving-indicator">Saving...</p>
+              <p class="saving-indicator">
+                <mat-icon class="saving-icon">sync</mat-icon>
+                Saving...
+              </p>
             }
-          </mat-card-content>
+          </div>
         </mat-card>
       }
     </div>

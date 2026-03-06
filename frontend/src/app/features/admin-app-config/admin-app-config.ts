@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -17,25 +18,30 @@ interface AgentConfigRow {
   agent_type: AgentType;
   label: string;
   description: string;
+  icon: string;
   selectedModelId: number | null;
 }
 
-const AGENT_LABELS: Record<AgentType, { label: string; description: string }> = {
+const AGENT_LABELS: Record<AgentType, { label: string; description: string; icon: string }> = {
   student_agent: {
     label: 'Student Agent',
     description: 'Generates student responses in the classroom simulation',
+    icon: 'school',
   },
   student_choice_agent: {
     label: 'Student Choice Agent',
     description: 'Selects which student responds to the teacher',
+    icon: 'how_to_reg',
   },
   inline_feedback: {
     label: 'Inline Feedback',
     description: 'Provides real-time coaching feedback after each exchange',
+    icon: 'rate_review',
   },
   summary_feedback: {
     label: 'Summary Feedback',
     description: 'Generates the end-of-lesson summary report',
+    icon: 'summarize',
   },
 };
 
@@ -47,6 +53,7 @@ const AGENT_LABELS: Record<AgentType, { label: string; description: string }> = 
     FormsModule,
     MatCardModule,
     MatButtonModule,
+    MatDividerModule,
     MatIconModule,
     MatFormFieldModule,
     MatSelectModule,
@@ -103,6 +110,7 @@ export class AdminAppConfig implements OnInit {
         agent_type: t,
         label: AGENT_LABELS[t].label,
         description: AGENT_LABELS[t].description,
+        icon: AGENT_LABELS[t].icon,
         selectedModelId: configMap.get(t)?.llm_model_id ?? null,
       }))
     );

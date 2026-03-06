@@ -64,13 +64,17 @@ describe('AdminAppConfig', () => {
     expect(component.isLoading()).toBeFalse();
   });
 
-  it('should populate agent rows with correct labels', () => {
+  it('should populate agent rows with correct labels and icons', () => {
     flushInit();
     const rows = component.agentRows();
     expect(rows[0].label).toBe('Student Agent');
+    expect(rows[0].icon).toBe('school');
     expect(rows[1].label).toBe('Student Choice Agent');
+    expect(rows[1].icon).toBe('how_to_reg');
     expect(rows[2].label).toBe('Inline Feedback');
+    expect(rows[2].icon).toBe('rate_review');
     expect(rows[3].label).toBe('Summary Feedback');
+    expect(rows[3].icon).toBe('summarize');
   });
 
   it('should populate agent rows with selected model ids', () => {

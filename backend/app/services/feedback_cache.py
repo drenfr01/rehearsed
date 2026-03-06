@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Literal, Optional
 
 from langchain_core.messages import BaseMessage
-from langfuse import observe, propagate_attributes
+from langfuse import get_client, observe, propagate_attributes
 
 from app.core.logging import logger
 
@@ -167,10 +167,13 @@ async def generate_feedback_and_store(
         feedback_cache.put_failed(feedback_id, entry_session_id, "Missing scenario_id or messages")
         return
     
+    model_name = getattr(llm, "model", None) or getattr(llm, "model_name", "unknown")
+
     # Use propagate_attributes to ensure session_id is propagated to LLM calls
     with propagate_attributes(
         session_id=trace_session_id,
         tags=["async", "feedback", "inline"],
+        metadata={"llm_model": model_name, "agent_type": "inline_feedback"},
     ):
         try:
             # Fetch feedback configuration

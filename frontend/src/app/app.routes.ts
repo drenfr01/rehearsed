@@ -13,6 +13,7 @@ import { AdminAgentPersonalities } from './features/admin-agent-personalities/ad
 import { AdminAgents } from './features/admin-agents/admin-agents';
 import { AdminScenarios } from './features/admin-scenarios/admin-scenarios';
 import { AdminFeedback } from './features/admin-feedback/admin-feedback';
+import { AdminAppConfig } from './features/admin-app-config/admin-app-config';
 import { UserContent } from './features/user-content/user-content';
 import { UserScenarios } from './features/user-scenarios/user-scenarios';
 import { UserAgents } from './features/user-agents/user-agents';
@@ -97,6 +98,10 @@ export const routes: Routes = [
             {
                 path: 'admin/feedback',
                 component: AdminFeedback,
+            },
+            {
+                path: 'admin/app-config',
+                component: AdminAppConfig,
             }
         ]
     }

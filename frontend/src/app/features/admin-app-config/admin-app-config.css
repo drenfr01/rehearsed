@@ -1,0 +1,185 @@
+.admin-container {
+  padding: 20px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.header-card {
+  margin-bottom: 20px;
+}
+
+.admin-nav {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.admin-nav a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-nav a.active {
+  background-color: #1976d2;
+  color: white;
+}
+
+/* Section header */
+
+.section-header-card {
+  margin-bottom: 28px;
+}
+
+.section-header-card mat-card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-icon {
+  color: #1976d2;
+}
+
+.section-description {
+  margin: 8px 0 0;
+  color: #555;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Config grid */
+
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+/* Individual config card */
+
+.config-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.config-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 24px 24px 20px;
+}
+
+.config-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 12px;
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+.config-icon-wrapper mat-icon {
+  font-size: 24px;
+  width: 24px;
+  height: 24px;
+}
+
+.config-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.config-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: #212121;
+  line-height: 1.3;
+}
+
+.config-description {
+  margin: 0;
+  font-size: 13px;
+  color: #757575;
+  line-height: 1.45;
+}
+
+.config-card-body {
+  padding: 20px 24px 24px;
+}
+
+.field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: #757575;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.saving-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #1976d2;
+  font-style: italic;
+}
+
+.saving-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Loading */
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 20px;
+}
+
+/* Responsive */
+
+@media (max-width: 960px) {
+  .config-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-container {
+    padding: 10px;
+  }
+
+  .config-card-header {
+    padding: 20px 16px 16px;
+  }
+
+  .config-card-body {
+    padding: 16px;
+  }
+}

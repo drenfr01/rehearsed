@@ -1,7 +1,7 @@
 """Integration tests for LLM models and agent LLM config API endpoints."""
 
 import pytest
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.models.agent_llm_config import AgentLlmConfig, AgentType
 from app.models.llm_model import LlmModel
@@ -10,14 +10,12 @@ from app.models.llm_model import LlmModel
 @pytest.fixture
 def seed_llm_models(db_session: Session):
     """Seed LLM models for testing."""
-    models = []
     for name in ["gemini-3.1-pro-preview", "gemini-3.1-flash-lite-preview", "gemini-3-flash-preview"]:
         m = LlmModel(name=name)
         db_session.add(m)
     db_session.commit()
 
     # Re-query to get IDs
-    from sqlmodel import select
     return list(db_session.exec(select(LlmModel).order_by(LlmModel.name)).all())
 
 

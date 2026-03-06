@@ -43,7 +43,7 @@ from app.utils import (
     dump_messages,
     prepare_messages,
 )
-
+from app.services.database import database_service
 
 class LangGraphAgent:
     """Manages the LangGraph Agent/workflow and interactions with the LLM.
@@ -88,7 +88,6 @@ class LangGraphAgent:
         Falls back to the provided default if no database config exists.
         """
         try:
-            from app.services.database import database_service
             name = await database_service.agent_llm_config.get_model_name_for_agent(agent_type)
             if name:
                 return name

@@ -65,6 +65,7 @@ class AgentRepository:
         agent_personality_id: int,
         voice_id: Optional[int] = None,
         display_text_color: str = "",
+        avatar_gcs_uri: str = "",
         objective: str = "",
         instructions: str = "",
         constraints: str = "",
@@ -79,6 +80,7 @@ class AgentRepository:
             agent_personality_id: ID of the agent's personality
             voice_id: ID of the agent voice for TTS (optional)
             display_text_color: Color for display
+            avatar_gcs_uri: Avatar image file path
             objective: Agent's objective
             instructions: Agent's instructions
             constraints: Agent's constraints
@@ -95,6 +97,7 @@ class AgentRepository:
                 agent_personality_id=agent_personality_id,
                 voice_id=voice_id,
                 display_text_color=display_text_color,
+                avatar_gcs_uri=avatar_gcs_uri,
                 objective=objective,
                 instructions=instructions,
                 constraints=constraints,
@@ -162,6 +165,7 @@ class AgentRepository:
         name: Optional[str] = None,
         voice_id: Optional[int] = None,
         display_text_color: Optional[str] = None,
+        avatar_gcs_uri: Optional[str] = None,
         objective: Optional[str] = None,
         instructions: Optional[str] = None,
         constraints: Optional[str] = None,
@@ -177,6 +181,7 @@ class AgentRepository:
             name: Optional new name
             voice_id: Optional new voice ID
             display_text_color: Optional new display color
+            avatar_gcs_uri: Optional new avatar image file path
             objective: Optional new objective
             instructions: Optional new instructions
             constraints: Optional new constraints
@@ -204,6 +209,8 @@ class AgentRepository:
                 agent.voice_id = None
             if display_text_color is not None:
                 agent.display_text_color = display_text_color
+            if avatar_gcs_uri is not None:
+                agent.avatar_gcs_uri = avatar_gcs_uri
             if objective is not None:
                 agent.objective = objective
             if instructions is not None:
@@ -334,6 +341,7 @@ class AgentRepository:
         agent_personality_id: int,
         voice_id: Optional[int] = None,
         display_text_color: str = "",
+        avatar_gcs_uri: str = "",
         objective: str = "",
         instructions: str = "",
         constraints: str = "",
@@ -349,6 +357,7 @@ class AgentRepository:
             agent_personality_id: ID of the agent's personality
             voice_id: ID of the agent voice for TTS (optional)
             display_text_color: Color for display
+            avatar_gcs_uri: Avatar image file path
             objective: Agent's objective
             instructions: Agent's instructions
             constraints: Agent's constraints
@@ -365,6 +374,7 @@ class AgentRepository:
                 agent_personality_id=agent_personality_id,
                 voice_id=voice_id,
                 display_text_color=display_text_color,
+                avatar_gcs_uri=avatar_gcs_uri,
                 objective=objective,
                 instructions=instructions,
                 constraints=constraints,
@@ -384,6 +394,7 @@ class AgentRepository:
         name: Optional[str] = None,
         voice_id: Optional[int] = None,
         display_text_color: Optional[str] = None,
+        avatar_gcs_uri: Optional[str] = None,
         objective: Optional[str] = None,
         instructions: Optional[str] = None,
         constraints: Optional[str] = None,
@@ -400,6 +411,7 @@ class AgentRepository:
             name: Optional new name for the agent.
             voice_id: Optional new voice ID.
             display_text_color: Optional new display text color.
+            avatar_gcs_uri: Optional new avatar image file path.
             objective: Optional new objective.
             instructions: Optional new instructions.
             constraints: Optional new constraints.
@@ -429,6 +441,8 @@ class AgentRepository:
                 agent.voice_id = None
             if display_text_color is not None:
                 agent.display_text_color = display_text_color
+            if avatar_gcs_uri is not None:
+                agent.avatar_gcs_uri = avatar_gcs_uri
             if objective is not None:
                 agent.objective = objective
             if instructions is not None:

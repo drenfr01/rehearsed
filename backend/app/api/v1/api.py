@@ -8,6 +8,7 @@ from fastapi import APIRouter
 
 from app.api.v1.admin import router as admin_router
 from app.api.v1.auth import router as auth_router
+from app.api.v1.avatars import router as avatars_router
 from app.api.v1.chatbot import router as chatbot_router
 from app.api.v1.gemini_live import router as gemini_live_router
 from app.api.v1.llm_config import router as llm_config_router
@@ -29,6 +30,7 @@ api_router.include_router(user_content_router, prefix="/user-content", tags=["us
 api_router.include_router(tts_router, prefix="/tts", tags=["tts"])
 api_router.include_router(llm_models_router, prefix="/llm-models", tags=["llm-models"])
 api_router.include_router(llm_config_router, prefix="/llm-config", tags=["llm-config"])
+api_router.include_router(avatars_router, prefix="/avatars", tags=["avatars"])
 
 
 @api_router.get("/health")

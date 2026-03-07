@@ -3,6 +3,12 @@ export interface AgentVoice {
     voice_name: string;
 }
 
+export interface Avatar {
+    id: number;
+    name: string;
+    file_path: string;
+}
+
 export interface AgentPersonality {
     id: number;
     name: string;
@@ -47,6 +53,7 @@ export interface AgentCreate {
     agent_personality_id: number;
     voice?: string;
     display_text_color?: string;
+    avatar_gcs_uri?: string;
     objective?: string;
     instructions?: string;
     constraints?: string;
@@ -59,6 +66,7 @@ export interface AgentUpdate {
     agent_personality_id?: number;
     voice?: string;
     display_text_color?: string;
+    avatar_gcs_uri?: string;
     objective?: string;
     instructions?: string;
     constraints?: string;

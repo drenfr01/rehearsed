@@ -38,6 +38,7 @@ describe('AdminAgents', () => {
     httpTesting.expectOne(`${adminUrl}/scenarios`).flush([]);
     httpTesting.expectOne(`${adminUrl}/agent-personalities`).flush([]);
     httpTesting.expectOne(`${environment.baseUrl}/api/v1/user-content/agent-voices`).flush([]);
+    httpTesting.expectOne(`${environment.baseUrl}/api/v1/avatars`).flush([]);
   }
 
   it('should create', () => {
@@ -51,6 +52,7 @@ describe('AdminAgents', () => {
     expect(component.scenarios()).toEqual([]);
     expect(component.personalities()).toEqual([]);
     expect(component.voices()).toEqual([]);
+    expect(component.avatars()).toEqual([]);
     expect(component.isLoading()).toBeFalse();
   });
 
@@ -67,6 +69,7 @@ describe('AdminAgents', () => {
     expect(component.createAgentForm.controls['name']).toBeTruthy();
     expect(component.createAgentForm.controls['scenario_id']).toBeTruthy();
     expect(component.createAgentForm.controls['agent_personality_id']).toBeTruthy();
+    expect(component.createAgentForm.controls['avatar_gcs_uri']).toBeTruthy();
   });
 
   describe('getScenarioName', () => {

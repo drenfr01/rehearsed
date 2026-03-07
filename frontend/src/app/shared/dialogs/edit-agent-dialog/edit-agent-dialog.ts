@@ -7,7 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
-import { Agent, AgentPersonality, AgentVoice } from '../../../core/models/agent.model';
+import { Agent, AgentPersonality, AgentVoice, Avatar } from '../../../core/models/agent.model';
 import { Scenario } from '../../../core/models/scenario.model';
 import { AGENT_DISPLAY_COLORS } from '../../../features/user-agents/user-agents';
 
@@ -16,6 +16,7 @@ export interface EditAgentDialogData {
   scenarios: Scenario[];
   personalities: AgentPersonality[];
   voices: AgentVoice[];
+  avatars?: Avatar[];
 }
 
 export interface EditAgentDialogResult {
@@ -24,6 +25,7 @@ export interface EditAgentDialogResult {
   agent_personality_id: number;
   voice: string;
   display_text_color: string;
+  avatar_gcs_uri: string;
   objective: string;
   instructions: string;
   constraints: string;
@@ -59,6 +61,7 @@ export class EditAgentDialog {
       agent_personality_id: [this.data.agent.agent_personality_id, [Validators.required]],
       voice: [this.data.agent.voice || ''],
       display_text_color: [this.data.agent.display_text_color || ''],
+      avatar_gcs_uri: [this.data.agent.avatar_gcs_uri || ''],
       objective: [this.data.agent.objective || ''],
       instructions: [this.data.agent.instructions || ''],
       constraints: [this.data.agent.constraints || ''],

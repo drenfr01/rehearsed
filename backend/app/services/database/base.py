@@ -12,6 +12,7 @@ from app.core.config import Environment, settings
 from app.core.logging import logger
 from app.services.database.agent import AgentRepository
 from app.services.database.agent_llm_config import AgentLlmConfigRepository
+from app.services.database.avatar import AvatarRepository
 from app.services.database.feedback import FeedbackRepository
 from app.services.database.llm_model import LlmModelRepository
 from app.services.database.scenario import ScenarioRepository
@@ -37,11 +38,12 @@ class DatabaseService:
         self._sessions = None
         self._scenarios = None
         self._agents = None
+        self._avatars = None
         self._feedback = None
         self._llm_models = None
         self._agent_llm_config = None
         
-        logger.info("database_service_initialized", repositories=["users", "sessions", "scenarios", "agents", "feedback", "llm_models", "agent_llm_config"])
+        logger.info("database_service_initialized", repositories=["users", "sessions", "scenarios", "agents", "avatars", "feedback", "llm_models", "agent_llm_config"])
     
     def _get_connection_url(self) -> str:
         """Get the database connection URL based on environment.
@@ -119,6 +121,7 @@ class DatabaseService:
         self._sessions = SessionRepository(engine)
         self._scenarios = ScenarioRepository(engine)
         self._agents = AgentRepository(engine)
+        self._avatars = AvatarRepository(engine)
         self._feedback = FeedbackRepository(engine)
         self._llm_models = LlmModelRepository(engine)
         self._agent_llm_config = AgentLlmConfigRepository(engine)
@@ -171,6 +174,11 @@ class DatabaseService:
     def agents(self):
         """Get the agents repository."""
         return self._agents
+    
+    @property
+    def avatars(self):
+        """Get the avatars repository."""
+        return self._avatars
     
     @property
     def feedback(self):

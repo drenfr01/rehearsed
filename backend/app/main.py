@@ -30,6 +30,7 @@ from app.core.middleware import MetricsMiddleware
 from app.seed_data.agent_personality_seed_data import seed_agent_personality_data
 from app.seed_data.agent_seed_data import seed_agent_data
 from app.seed_data.agent_voice_seed_data import seed_agent_voice_data
+from app.seed_data.avatar_seed_data import seed_avatar_data
 from app.seed_data.feedback_seed_data import seed_feedback_data
 from app.seed_data.llm_seed_data import seed_llm_data
 from app.seed_data.scenario_seed_data import seed_scenario_data
@@ -129,6 +130,7 @@ if settings.ENVIRONMENT != Environment.TEST and not os.getenv("TEST_DATABASE_URL
     seed_scenario_data()
     seed_agent_personality_data()
     seed_agent_voice_data()
+    seed_avatar_data()
     seed_agent_data()
     seed_feedback_data()
     seed_llm_data()

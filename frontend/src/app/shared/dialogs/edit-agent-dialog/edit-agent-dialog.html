@@ -60,6 +60,18 @@
       </mat-select>
     </mat-form-field>
 
+    @if (data.avatars) {
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Avatar</mat-label>
+        <mat-select formControlName="avatar_gcs_uri">
+          <mat-option value="">-- No Avatar --</mat-option>
+          @for (avatar of data.avatars; track avatar.id) {
+            <mat-option [value]="avatar.file_path">{{ avatar.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    }
+
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>Objective</mat-label>
       <textarea matInput formControlName="objective" rows="3" placeholder="Agent's objective"></textarea>

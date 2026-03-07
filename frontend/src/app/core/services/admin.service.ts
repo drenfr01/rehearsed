@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { User, UserCreate } from '../models/user.model';
-import { Agent, AgentCreate, AgentPersonality, AgentPersonalityCreate, AgentVoice } from '../models/agent.model';
+import { Agent, AgentCreate, AgentPersonality, AgentPersonalityCreate, AgentVoice, Avatar } from '../models/agent.model';
 import { Scenario, ScenarioCreate } from '../models/scenario.model';
 import { Feedback, FeedbackCreate, FeedbackUpdate } from '../models/feedback.model';
 
@@ -123,6 +123,12 @@ export class AdminService {
    */
   getAgentVoices(): Observable<AgentVoice[]> {
     return this.httpClient.get<AgentVoice[]>(`${environment.baseUrl}/api/v1/user-content/agent-voices`);
+  }
+
+  // ========== Avatar Methods ==========
+
+  getAvatars(): Observable<Avatar[]> {
+    return this.httpClient.get<Avatar[]>(`${environment.baseUrl}/api/v1/avatars`);
   }
 
   // ========== Agent Methods ==========

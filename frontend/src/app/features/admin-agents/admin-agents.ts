@@ -14,7 +14,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LoadingSpinner } from '../../shared/loading-spinner/loading-spinner';
 import { AdminService } from '../../core/services/admin.service';
-import { Agent, AgentCreate, AgentPersonality, AgentVoice } from '../../core/models/agent.model';
+import { Agent, AgentCreate, AgentPersonality, AgentVoice, Avatar } from '../../core/models/agent.model';
 import { Scenario } from '../../core/models/scenario.model';
 import { EditAgentDialog, EditAgentDialogData, EditAgentDialogResult } from '../../shared/dialogs/edit-agent-dialog/edit-agent-dialog';
 
@@ -50,6 +50,7 @@ export class AdminAgents implements OnInit {
   scenarios = signal<Scenario[]>([]);
   personalities = signal<AgentPersonality[]>([]);
   voices = signal<AgentVoice[]>([]);
+  avatars = signal<Avatar[]>([]);
   displayedColumns: string[] = ['id', 'name', 'scenario', 'personality', 'voice', 'created_at', 'actions'];
   isLoading = signal(false);
   showCreateForm = signal(false);
@@ -64,6 +65,7 @@ export class AdminAgents implements OnInit {
       agent_personality_id: [null, [Validators.required]],
       voice: [''],
       display_text_color: [''],
+      avatar_gcs_uri: [''],
       objective: [''],
       instructions: [''],
       constraints: [''],
@@ -124,18 +126,30 @@ export class AdminAgents implements OnInit {
       },
     });
 
+    const avatarsSubscription = this.adminService.getAvatars().subscribe({
+      next: (avatars) => {
+        this.avatars.set(avatars);
+        this.checkLoadingComplete();
+      },
+      error: (error) => {
+        console.error('Failed to load avatars', error);
+        this.checkLoadingComplete();
+      },
+    });
+
     this.destroyRef.onDestroy(() => {
       agentsSubscription.unsubscribe();
       scenariosSubscription.unsubscribe();
       personalitiesSubscription.unsubscribe();
       voicesSubscription.unsubscribe();
+      avatarsSubscription.unsubscribe();
     });
   }
 
   private loadingCounter = 0;
   private checkLoadingComplete() {
     this.loadingCounter++;
-    if (this.loadingCounter >= 4) {
+    if (this.loadingCounter >= 5) {
       this.isLoading.set(false);
       this.loadingCounter = 0;
     }
@@ -174,6 +188,7 @@ export class AdminAgents implements OnInit {
       scenarios: this.scenarios(),
       personalities: this.personalities(),
       voices: this.voices(),
+      avatars: this.avatars(),
     };
     const dialogRef = this.dialog.open(EditAgentDialog, {
       width: '700px',

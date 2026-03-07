@@ -158,6 +158,22 @@ describe('AdminService', () => {
     });
   });
 
+  // ========== Avatar Methods ==========
+
+  describe('Avatar methods', () => {
+    it('getAvatars should GET /avatars', () => {
+      service.getAvatars().subscribe((avatars) => {
+        expect(avatars.length).toBe(2);
+      });
+      const req = httpTesting.expectOne(`${environment.baseUrl}/api/v1/avatars`);
+      expect(req.request.method).toBe('GET');
+      req.flush([
+        { id: 1, name: 'Ash', file_path: 'Ash.jpg' },
+        { id: 2, name: 'Sage', file_path: 'Sage.jpg' },
+      ]);
+    });
+  });
+
   // ========== Agent Methods ==========
 
   describe('Agent methods', () => {

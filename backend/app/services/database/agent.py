@@ -80,6 +80,7 @@ class AgentRepository:
             agent_personality_id: ID of the agent's personality
             voice_id: ID of the agent voice for TTS (optional)
             display_text_color: Color for display
+            avatar_gcs_uri: Avatar image file path
             objective: Agent's objective
             instructions: Agent's instructions
             constraints: Agent's constraints
@@ -180,6 +181,7 @@ class AgentRepository:
             name: Optional new name
             voice_id: Optional new voice ID
             display_text_color: Optional new display color
+            avatar_gcs_uri: Optional new avatar image file path
             objective: Optional new objective
             instructions: Optional new instructions
             constraints: Optional new constraints
@@ -409,6 +411,7 @@ class AgentRepository:
             name: Optional new name for the agent.
             voice_id: Optional new voice ID.
             display_text_color: Optional new display text color.
+            avatar_gcs_uri: Optional new avatar image file path.
             objective: Optional new objective.
             instructions: Optional new instructions.
             constraints: Optional new constraints.

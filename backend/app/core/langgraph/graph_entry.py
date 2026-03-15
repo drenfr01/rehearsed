@@ -21,6 +21,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langfuse import observe, propagate_attributes
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command, StateSnapshot
+import psycopg
 from psycopg_pool import AsyncConnectionPool
 
 from app.core.config import (
@@ -171,6 +172,16 @@ class LangGraphAgent:
         self._graphs.clear()
         logger.info("llm_instances_invalidated")
 
+    async def _reset_connection_pool(self) -> None:
+        """Close and discard the current connection pool so the next call recreates it."""
+        if self._connection_pool is not None:
+            try:
+                await self._connection_pool.close()
+            except Exception:
+                pass
+            self._connection_pool = None
+        self._graphs.clear()
+
     def _get_model_kwargs(self) -> Dict[str, Any]:
         """Get environment-specific model kwargs.
 
@@ -222,6 +233,9 @@ class LangGraphAgent:
                     connection_url,
                     open=False,
                     max_size=max_size,
+                    check=AsyncConnectionPool.check_connection,
+                    max_idle=300,
+                    max_lifetime=1800,
                     kwargs={
                         "autocommit": True,
                         "connect_timeout": 5,
@@ -583,38 +597,43 @@ class LangGraphAgent:
             )
             logger.info("async_feedback_started_early", feedback_id=feedback_id, session_id=session_id)
             
-            try:
-                graph = await self.create_graph(scenario_id, tts_service)
-                
-                if graph is None:
-                    raise Exception("Failed to create graph")
-                    
-                config = {
-                    "configurable": {"thread_id": session_id},
-                    "metadata": {
-                        "user_id": user_id,
-                        "session_id": session_id,
-                        "scenario_id": scenario_id,
-                        "environment": settings.ENVIRONMENT.value,
-                        "debug": False,
-                    },
-                }
-                
-                # Execute graph (feedback is running in parallel)
-                response: GraphState = await graph.ainvoke(
-                    {"messages": langchain_messages, "session_id": session_id}, config
-                )
-                
-                # Hydrate response
-                result = self._hydrate_chat_response(response)
-                
-                # Attach the feedback_id that was started earlier
-                result.feedback_request_id = feedback_id
-                
-                return result
-            except Exception as e:
-                logger.error(f"Error getting response: {str(e)}")
-                raise e
+            config = {
+                "configurable": {"thread_id": session_id},
+                "metadata": {
+                    "user_id": user_id,
+                    "session_id": session_id,
+                    "scenario_id": scenario_id,
+                    "environment": settings.ENVIRONMENT.value,
+                    "debug": False,
+                },
+            }
+
+            last_error: Optional[Exception] = None
+            for attempt in range(2):
+                try:
+                    graph = await self.create_graph(scenario_id, tts_service)
+                    if graph is None:
+                        raise Exception("Failed to create graph")
+
+                    response: GraphState = await graph.ainvoke(
+                        {"messages": langchain_messages, "session_id": session_id}, config
+                    )
+
+                    result = self._hydrate_chat_response(response)
+                    result.feedback_request_id = feedback_id
+                    return result
+                except psycopg.OperationalError as e:
+                    last_error = e
+                    if attempt == 0:
+                        logger.warning("stale_db_connection_detected", error=str(e), session_id=session_id)
+                        await self._reset_connection_pool()
+                        continue
+                    logger.error(f"Error getting response after retry: {str(e)}")
+                    raise
+                except Exception as e:
+                    logger.error(f"Error getting response: {str(e)}")
+                    raise e
+            raise last_error  # should not reach here
 
     async def get_stream_response(
         self, 
@@ -647,23 +666,32 @@ class LangGraphAgent:
             }
             if scenario_id is None or tts_service is None:
                 raise ValueError("scenario_id and tts_service are required for get_stream_response")
-            graph = await self.create_graph(scenario_id, tts_service)
-            if graph is None:
-                raise Exception("Failed to create graph")
 
-            try:
-                async for token, _ in graph.astream(
-                    {"messages": dump_messages(messages), "session_id": session_id}, config, stream_mode="messages"
-                ):
-                    try:
-                        yield token.content
-                    except Exception as token_error:
-                        logger.error("Error processing token", error=str(token_error), session_id=session_id)
-                        # Continue with next token even if current one fails
+            for attempt in range(2):
+                try:
+                    graph = await self.create_graph(scenario_id, tts_service)
+                    if graph is None:
+                        raise Exception("Failed to create graph")
+
+                    async for token, _ in graph.astream(
+                        {"messages": dump_messages(messages), "session_id": session_id}, config, stream_mode="messages"
+                    ):
+                        try:
+                            yield token.content
+                        except Exception as token_error:
+                            logger.error("Error processing token", error=str(token_error), session_id=session_id)
+                            continue
+                    return
+                except psycopg.OperationalError as e:
+                    if attempt == 0:
+                        logger.warning("stale_db_connection_in_stream", error=str(e), session_id=session_id)
+                        await self._reset_connection_pool()
                         continue
-            except Exception as stream_error:
-                logger.error("Error in stream processing", error=str(stream_error), session_id=session_id)
-                raise stream_error
+                    logger.error("Error in stream processing after retry", error=str(e), session_id=session_id)
+                    raise
+                except Exception as stream_error:
+                    logger.error("Error in stream processing", error=str(stream_error), session_id=session_id)
+                    raise stream_error
 
     async def get_chat_history(
         self, 

@@ -3,7 +3,8 @@
 FastAPI application providing **versioned REST** (`/api/v1`), **JWT authentication**, **LangGraph**-driven classroom simulation, **PostgreSQL** persistence, and integrations with **Vertex / Gemini**, **Google TTS/STT**, and **Langfuse**.
 
 System context: [../DESIGN.md](../DESIGN.md)  
-SPA consumption patterns: [../frontend/DESIGN.md](../frontend/DESIGN.md)
+SPA consumption patterns: [../frontend/DESIGN.md](../frontend/DESIGN.md)  
+Auth redesign: [../docs/auth-redesign.md](../docs/auth-redesign.md)
 
 ---
 

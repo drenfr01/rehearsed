@@ -6,6 +6,7 @@ This document is the **system-level** view. Implementation patterns and conventi
 
 - [frontend/DESIGN.md](frontend/DESIGN.md) — Angular SPA structure, routing, HTTP, and UI patterns  
 - [backend/DESIGN.md](backend/DESIGN.md) — FastAPI layering, LangGraph, persistence, and API patterns  
+- [docs/auth-redesign.md](docs/auth-redesign.md) — JWT hardening: typed tokens, secret validation, admin-claim changes  
 
 ---
 

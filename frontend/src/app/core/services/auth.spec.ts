@@ -6,6 +6,13 @@ import { Router } from '@angular/router';
 import { AuthService } from './auth.service';
 import { environment } from '../../../environments/environment';
 
+/** Build a minimal JWT with the given payload (no real signature). */
+function fakeJwt(payload: Record<string, unknown>): string {
+  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const body = btoa(JSON.stringify(payload));
+  return `${header}.${body}.fake-signature`;
+}
+
 describe('AuthService', () => {
   let service: AuthService;
   let httpTesting: HttpTestingController;
@@ -55,35 +62,57 @@ describe('AuthService', () => {
         is_admin: false,
       });
 
-      // Session creation follows login
+      const sessionToken = fakeJwt({ sub: 'sess-1', type: 'session', is_admin: false });
       const sessionReq = httpTesting.expectOne(`${environment.baseUrl}/api/v1/auth/session`);
       sessionReq.flush({
         session_id: 's1',
         name: 'session',
-        token: { access_token: 'session-token', token_type: 'bearer', expires_at: '2026-12-31', is_admin: false },
+        token: { access_token: sessionToken, token_type: 'bearer', expires_at: '2026-12-31' },
       });
 
       expect(service.isLoggedIn()).toBeTrue();
     });
 
-    it('should store token and admin status', () => {
+    it('should derive admin status from session token JWT, not localStorage flag', () => {
       service.login('admin@test.com', 'pass').subscribe();
 
       httpTesting.expectOne(`${environment.baseUrl}/api/v1/auth/login`).flush({
-        access_token: 'admin-token',
+        access_token: 'admin-user-token',
         token_type: 'bearer',
         expires_at: '2026-12-31',
         is_admin: true,
       });
 
+      const sessionToken = fakeJwt({ sub: 'sess-1', type: 'session', is_admin: true });
       httpTesting.expectOne(`${environment.baseUrl}/api/v1/auth/session`).flush({
         session_id: 's1',
         name: 'session',
-        token: { access_token: 'session-token', token_type: 'bearer', expires_at: '2026-12-31', is_admin: true },
+        token: { access_token: sessionToken, token_type: 'bearer', expires_at: '2026-12-31' },
       });
 
       expect(service.isAdmin()).toBeTrue();
-      expect(localStorage.getItem('isAdmin')).toBe('true');
+      // isAdmin is no longer stored in localStorage
+      expect(localStorage.getItem('isAdmin')).toBeNull();
+    });
+
+    it('should set isAdmin false when session token has no is_admin claim', () => {
+      service.login('user@test.com', 'pass').subscribe();
+
+      httpTesting.expectOne(`${environment.baseUrl}/api/v1/auth/login`).flush({
+        access_token: 'user-token',
+        token_type: 'bearer',
+        expires_at: '2026-12-31',
+        is_admin: false,
+      });
+
+      const sessionToken = fakeJwt({ sub: 'sess-1', type: 'session', is_admin: false });
+      httpTesting.expectOne(`${environment.baseUrl}/api/v1/auth/session`).flush({
+        session_id: 's1',
+        name: 'session',
+        token: { access_token: sessionToken, token_type: 'bearer', expires_at: '2026-12-31' },
+      });
+
+      expect(service.isAdmin()).toBeFalse();
     });
   });
 
@@ -92,13 +121,11 @@ describe('AuthService', () => {
       spyOn(router, 'navigate');
       localStorage.setItem('token', 'some-token');
       localStorage.setItem('userToken', 'some-token');
-      localStorage.setItem('isAdmin', 'true');
 
       service.logout();
 
       expect(localStorage.getItem('token')).toBeNull();
       expect(localStorage.getItem('userToken')).toBeNull();
-      expect(localStorage.getItem('isAdmin')).toBeNull();
       expect(service.isLoggedIn()).toBeFalse();
       expect(service.isAdmin()).toBeFalse();
       expect(router.navigate).toHaveBeenCalledWith(['/']);
@@ -107,6 +134,7 @@ describe('AuthService', () => {
 
   describe('createSession', () => {
     it('should POST to session endpoint and store session token', () => {
+      const sessionToken = fakeJwt({ sub: 'sess-1', type: 'session', is_admin: false });
       service.createSession().subscribe();
 
       const req = httpTesting.expectOne(`${environment.baseUrl}/api/v1/auth/session`);
@@ -114,11 +142,24 @@ describe('AuthService', () => {
       req.flush({
         session_id: 's1',
         name: 'test',
-        token: { access_token: 'new-session-token', token_type: 'bearer', expires_at: '2026-12-31', is_admin: false },
+        token: { access_token: sessionToken, token_type: 'bearer', expires_at: '2026-12-31' },
       });
 
-      expect(localStorage.getItem('token')).toBe('new-session-token');
-      expect(service.token()).toBe('new-session-token');
+      expect(localStorage.getItem('token')).toBe(sessionToken);
+      expect(service.token()).toBe(sessionToken);
+    });
+
+    it('should update isAdmin signal from new session token', () => {
+      const adminSessionToken = fakeJwt({ sub: 'sess-2', type: 'session', is_admin: true });
+      service.createSession().subscribe();
+
+      httpTesting.expectOne(`${environment.baseUrl}/api/v1/auth/session`).flush({
+        session_id: 's2',
+        name: 'admin-session',
+        token: { access_token: adminSessionToken, token_type: 'bearer', expires_at: '2026-12-31' },
+      });
+
+      expect(service.isAdmin()).toBeTrue();
     });
   });
 
@@ -136,9 +177,9 @@ describe('AuthService', () => {
   });
 
   describe('token restoration from localStorage', () => {
-    it('should restore token from localStorage on construction', () => {
-      localStorage.setItem('token', 'stored-token');
-      localStorage.setItem('isAdmin', 'true');
+    it('should restore token and derive admin from JWT on construction', () => {
+      const sessionToken = fakeJwt({ sub: 'sess-1', type: 'session', is_admin: true });
+      localStorage.setItem('token', sessionToken);
 
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({
@@ -151,8 +192,44 @@ describe('AuthService', () => {
       const freshService = TestBed.inject(AuthService);
 
       expect(freshService.isLoggedIn()).toBeTrue();
-      expect(freshService.token()).toBe('stored-token');
+      expect(freshService.token()).toBe(sessionToken);
       expect(freshService.isAdmin()).toBeTrue();
+    });
+
+    it('should not be admin when token has no is_admin claim', () => {
+      const sessionToken = fakeJwt({ sub: 'sess-1', type: 'session' });
+      localStorage.setItem('token', sessionToken);
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          provideRouter([]),
+        ],
+      });
+      const freshService = TestBed.inject(AuthService);
+
+      expect(freshService.isLoggedIn()).toBeTrue();
+      expect(freshService.isAdmin()).toBeFalse();
+    });
+
+    it('should not be admin when localStorage.isAdmin is true but token lacks claim', () => {
+      const sessionToken = fakeJwt({ sub: 'sess-1', type: 'session' });
+      localStorage.setItem('token', sessionToken);
+      localStorage.setItem('isAdmin', 'true');
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          provideRouter([]),
+        ],
+      });
+      const freshService = TestBed.inject(AuthService);
+
+      expect(freshService.isAdmin()).toBeFalse();
     });
   });
 });

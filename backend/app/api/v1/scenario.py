@@ -32,7 +32,7 @@ from app.schemas.scenario import (
     ScenarioWithOwnerResponse,
 )
 from app.services.database.base import DatabaseService
-from app.utils.auth import verify_token
+from app.utils.auth import verify_token_any_type
 from app.utils.sanitization import sanitize_string
 
 router = APIRouter()
@@ -57,27 +57,26 @@ async def get_optional_user(
     
     try:
         token = sanitize_string(credentials.credentials)
-        token_subject = verify_token(token)
-        
-        if token_subject is None:
+        result = verify_token_any_type(token)
+
+        if result is None:
             return None
 
-        token_subject = sanitize_string(token_subject)
+        subject, token_type = result
 
-        # Try to get it as a session first
-        session = await database_service.sessions.get_session(token_subject)
-        
-        if session:
-            user = await database_service.users.get_user(session.user_id)
-            return user
-        else:
-            # Token might be a user token
-            try:
-                user_id = int(token_subject)
-                user = await database_service.users.get_user(user_id)
-                return user
-            except ValueError:
+        if token_type == "session":
+            subject = sanitize_string(subject)
+            session = await database_service.sessions.get_session(subject)
+            if session is None:
                 return None
+            return await database_service.users.get_user(session.user_id)
+        elif token_type == "user":
+            try:
+                user_id = int(subject)
+                return await database_service.users.get_user(user_id)
+            except (ValueError, TypeError):
+                return None
+        return None
     except Exception:
         return None
 

@@ -74,7 +74,7 @@ async def _authenticate_websocket(
 
     try:
         token = sanitize_string(token)
-        session_id = verify_token(token)
+        session_id = verify_token(token, expected_type="session")
         if session_id is None:
             await websocket.close(code=4001, reason="Invalid token")
             return None

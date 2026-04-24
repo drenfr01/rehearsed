@@ -194,7 +194,10 @@ class TestSettings:
     def test_production_environment_overrides(self):
         from app.core.config import Settings
 
-        with patch.dict(os.environ, {"APP_ENV": "production"}, clear=False):
+        with patch.dict(os.environ, {
+            "APP_ENV": "production",
+            "JWT_SECRET_KEY": "test-secret-that-is-at-least-32-characters-long",
+        }, clear=False):
             s = Settings()
             assert s.ENVIRONMENT == Environment.PRODUCTION
             assert s.DEBUG is False

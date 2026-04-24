@@ -16,38 +16,48 @@ export class AuthService {
   private chatGraph = inject(ChatGraphService);
 
   private tokenSignal = signal<string | null>(localStorage.getItem('token'));
-  private isAdminSignal = signal<boolean>(localStorage.getItem('isAdmin') === 'true');
+  private isAdminSignal = signal<boolean>(this.readAdminFromToken());
   isLoggedIn = computed(() => !!this.tokenSignal());
-  token = computed(() => this.tokenSignal() );
+  token = computed(() => this.tokenSignal());
   isAdmin = computed(() => this.isAdminSignal());
 
+  private decodeTokenPayload(token: string): Record<string, unknown> | null {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+      let payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      payload += '='.repeat((4 - (payload.length % 4)) % 4);
+      return JSON.parse(atob(payload));
+    } catch {
+      return null;
+    }
+  }
 
-  private storeLoginTokens(token: string, isAdmin: boolean = false) {
-    // Have to store token in two places because we will use the login token 
-    // to immediately create a session token and the session token will be used 
-    // to authenticate the user for the rest of the session
-    // We need to overwrite token because we will use an http interceptor 
-    // to add the token to the request header
+  private readAdminFromToken(): boolean {
+    const token = localStorage.getItem('token');
+    if (!token) return false;
+    const payload = this.decodeTokenPayload(token);
+    return payload?.['is_admin'] === true;
+  }
+
+  private storeLoginTokens(token: string) {
     localStorage.setItem('token', token);
     localStorage.setItem('userToken', token);
-    localStorage.setItem('isAdmin', isAdmin.toString());
     this.tokenSignal.set(token);
-    this.isAdminSignal.set(isAdmin);
   }
 
   private storeSessionToken(token: string) {
     localStorage.setItem('token', token);
     this.tokenSignal.set(token);
+    this.isAdminSignal.set(this.readAdminFromToken());
   }
 
   logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('userToken');
-    localStorage.removeItem('isAdmin');
     this.tokenSignal.set(null);
     this.isAdminSignal.set(false);
     this.router.navigate(['/']);
-    // TODO: set graph state messages to 0
   }
 
   /**
@@ -67,7 +77,7 @@ export class AuthService {
       },
     }).pipe(
       tap((response: LoginResponse) => {
-        this.storeLoginTokens(response.access_token, response.is_admin);
+        this.storeLoginTokens(response.access_token);
         const subscription = this.createSession().subscribe({
           error: (error) => {
             console.error(error);

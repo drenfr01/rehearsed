@@ -47,7 +47,7 @@ from app.schemas.scenario import (
     ScenarioUpdateRequest,
 )
 from app.services.database.base import DatabaseService
-from app.utils.auth import verify_token
+from app.utils.auth import verify_token_any_type
 from app.utils.sanitization import sanitize_string
 
 router = APIRouter()
@@ -72,9 +72,9 @@ async def get_current_user_from_session(
     """
     try:
         token = sanitize_string(credentials.credentials)
-        token_subject = verify_token(token)
-        
-        if token_subject is None:
+        result = verify_token_any_type(token)
+
+        if result is None:
             logger.error("invalid_token", token_part=token[:10] + "...")
             raise HTTPException(
                 status_code=401,
@@ -82,39 +82,41 @@ async def get_current_user_from_session(
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        token_subject = sanitize_string(token_subject)
+        subject, token_type = result
 
-        # Try to get it as a session first
-        session = await database_service.sessions.get_session(token_subject)
-        
-        if session:
-            user = await database_service.users.get_user(session.user_id)
-            if user is None:
-                logger.error("user_not_found_from_session", session_id=token_subject)
-                raise HTTPException(
-                    status_code=404,
-                    detail="User not found",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-        else:
-            # Token might be a user token
-            try:
-                user_id = int(token_subject)
-                user = await database_service.users.get_user(user_id)
-                if user is None:
-                    logger.error("user_not_found", user_id=user_id)
-                    raise HTTPException(
-                        status_code=404,
-                        detail="User not found",
-                        headers={"WWW-Authenticate": "Bearer"},
-                    )
-            except ValueError:
-                logger.error("invalid_token_subject", subject=token_subject)
+        if token_type == "session":
+            subject = sanitize_string(subject)
+            session = await database_service.sessions.get_session(subject)
+            if session is None:
                 raise HTTPException(
                     status_code=401,
                     detail="Invalid authentication credentials",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
+            user = await database_service.users.get_user(session.user_id)
+        elif token_type == "user":
+            try:
+                user_id = int(subject)
+            except (ValueError, TypeError):
+                raise HTTPException(
+                    status_code=401,
+                    detail="Invalid authentication credentials",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            user = await database_service.users.get_user(user_id)
+        else:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid authentication credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        if user is None:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid authentication credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
         # Verify user is approved
         if not user.is_approved:

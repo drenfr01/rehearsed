@@ -2,6 +2,9 @@
 
 import os
 
+# Must be set before any app imports so Settings() sees the test environment
+os.environ["APP_ENV"] = "test"
+
 import uuid
 from typing import (
     AsyncGenerator,
@@ -41,9 +44,6 @@ from app.models.session import Session as ChatSession
 from app.models.user import User
 from app.services.database import DatabaseService
 
-
-# Set test environment
-os.environ["APP_ENV"] = "test"
 
 from langfuse import Langfuse
 

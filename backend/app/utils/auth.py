@@ -21,6 +21,7 @@ def create_access_token(
     expires_delta: Optional[timedelta] = None,
     extra_claims: Optional[dict] = None,
 ) -> Token:
+    """Create a signed JWT with a typed claim and optional extra claims."""
     if token_type not in VALID_TOKEN_TYPES:
         raise ValueError(f"token_type must be one of {VALID_TOKEN_TYPES}")
 
@@ -69,6 +70,7 @@ def _decode_payload(token: str) -> Optional[dict]:
 
 
 def verify_token(token: str, expected_type: str) -> Optional[str]:
+    """Verify a JWT and return the subject if the type claim matches *expected_type*."""
     payload = _decode_payload(token)
     if payload is None:
         return None
@@ -84,6 +86,7 @@ def verify_token(token: str, expected_type: str) -> Optional[str]:
 
 
 def verify_token_any_type(token: str) -> Optional[tuple[str, str]]:
+    """Verify a JWT and return ``(subject, token_type)`` for any valid token type."""
     payload = _decode_payload(token)
     if payload is None:
         return None

@@ -155,3 +155,10 @@ class SessionResponse(BaseModel):
         # Remove any potentially harmful characters
         sanitized = re.sub(r'[<>{}[\]()\'"`]', "", v)
         return sanitized
+
+
+class SessionListItem(BaseModel):
+    """Response model for session list items (no token)."""
+
+    session_id: str = Field(..., description="The unique identifier for the chat session")
+    name: str = Field(default="", description="Name of the session", max_length=100)

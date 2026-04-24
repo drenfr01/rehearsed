@@ -5,6 +5,7 @@ and token verification.
 """
 
 import uuid
+from datetime import timedelta
 from typing import List
 
 from fastapi import (
@@ -27,6 +28,7 @@ from app.models.session import Session
 from app.models.user import User
 from app.schemas.auth import (
     RegistrationResponse,
+    SessionListItem,
     SessionResponse,
     TokenResponse,
     UserCreate,
@@ -36,6 +38,7 @@ from app.services.database.base import DatabaseService
 from app.utils.auth import (
     create_access_token,
     verify_token,
+    verify_token_any_type,
 )
 from app.utils.sanitization import (
     sanitize_email,
@@ -67,8 +70,7 @@ async def get_current_user(
         # Sanitize token
         token = sanitize_string(credentials.credentials)
 
-        # Note: this only works for user ID tokens, not session ID tokens
-        user_id = verify_token(token)
+        user_id = verify_token(token, expected_type="user")
         if user_id is None:
             logger.error("invalid_token", token_part=token[:10] + "...")
             raise HTTPException(
@@ -118,7 +120,7 @@ async def get_current_session(
         # Sanitize token
         token = sanitize_string(credentials.credentials)
 
-        session_id = verify_token(token)
+        session_id = verify_token(token, expected_type="session")
         if session_id is None:
             logger.error("session_id_not_found", token_part=token[:10] + "...")
             raise HTTPException(
@@ -148,6 +150,71 @@ async def get_current_session(
             detail="Invalid token format",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+async def get_current_user_from_any_token(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    database_service: DatabaseService = Depends(get_database_service),
+) -> User:
+    """Resolve a User from either a user token or a session token.
+
+    Used by endpoints that may be called both right after login (user token)
+    and from within an active session (session token), e.g. POST /auth/session
+    and GET /auth/sessions.
+    """
+    try:
+        token = sanitize_string(credentials.credentials)
+    except ValueError as ve:
+        logger.error("token_validation_failed", error=str(ve), exc_info=True)
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    result = verify_token_any_type(token)
+    if result is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    subject, token_type = result
+
+    if token_type == "user":
+        try:
+            user_id = int(subject)
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid authentication credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        user = await database_service.users.get_user(user_id)
+    elif token_type == "session":
+        session = await database_service.sessions.get_session(subject)
+        if session is None:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid authentication credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        user = await database_service.users.get_user(session.user_id)
+    else:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user
 
 
 @router.post("/register", response_model=RegistrationResponse, status_code=201)
@@ -260,7 +327,11 @@ async def login(
                 detail="Your account is pending admin approval",
             )
 
-        token = create_access_token(str(user.id))
+        token = create_access_token(
+            str(user.id),
+            token_type="user",
+            expires_delta=timedelta(minutes=settings.JWT_USER_TOKEN_EXPIRE_MINUTES),
+        )
         return TokenResponse(access_token=token.access_token, token_type="bearer", expires_at=token.expires_at, is_admin=user.is_admin)
     except HTTPException:
         raise
@@ -271,13 +342,13 @@ async def login(
 
 @router.post("/session", response_model=SessionResponse)
 async def create_session(
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_from_any_token),
     database_service: DatabaseService = Depends(get_database_service),
 ):
     """Create a new chat session for the authenticated user.
 
     Args:
-        user: The authenticated user
+        user: The authenticated user (resolved from user or session token)
         database_service: The database service instance.
 
     Returns:
@@ -290,8 +361,12 @@ async def create_session(
         # Create session in database
         session = await database_service.sessions.create_session(session_id, user.id)
 
-        # Create access token for the session
-        token = create_access_token(session_id)
+        # Create access token for the session with is_admin claim
+        token = create_access_token(
+            session_id,
+            token_type="session",
+            extra_claims={"is_admin": user.is_admin},
+        )
 
         logger.info(
             "session_created",
@@ -338,8 +413,13 @@ async def update_session_name(
         # Update the session name
         session = await database_service.sessions.update_session_name(sanitized_session_id, sanitized_name)
 
-        # Create a new token (not strictly necessary but maintains consistency)
-        token = create_access_token(sanitized_session_id)
+        # Re-mint session token with is_admin claim
+        user = await database_service.users.get_user(current_session.user_id)
+        token = create_access_token(
+            sanitized_session_id,
+            token_type="session",
+            extra_claims={"is_admin": user.is_admin if user else False},
+        )
 
         return SessionResponse(session_id=sanitized_session_id, name=session.name, token=token)
     except ValueError as ve:
@@ -381,27 +461,26 @@ async def delete_session(
         raise HTTPException(status_code=422, detail=str(ve))
 
 
-@router.get("/sessions", response_model=List[SessionResponse])
+@router.get("/sessions", response_model=List[SessionListItem])
 async def get_user_sessions(
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_from_any_token),
     database_service: DatabaseService = Depends(get_database_service),
 ):
     """Get all session IDs for the authenticated user.
 
     Args:
-        user: The authenticated user
+        user: The authenticated user (resolved from user or session token)
         database_service: The database service instance.
 
     Returns:
-        List[SessionResponse]: List of session IDs
+        List[SessionListItem]: List of sessions (without tokens)
     """
     try:
         sessions = await database_service.sessions.get_user_sessions(user.id)
         return [
-            SessionResponse(
+            SessionListItem(
                 session_id=sanitize_string(session.id),
                 name=sanitize_string(session.name),
-                token=create_access_token(session.id),
             )
             for session in sessions
         ]

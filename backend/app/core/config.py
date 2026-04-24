@@ -160,7 +160,8 @@ class Settings:
         # JWT Configuration
         self.JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "")
         self.JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
-        self.JWT_ACCESS_TOKEN_EXPIRE_DAYS = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_DAYS", "30"))
+        self.JWT_ACCESS_TOKEN_EXPIRE_DAYS = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_DAYS", "7"))
+        self.JWT_USER_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_USER_TOKEN_EXPIRE_MINUTES", "15"))
 
         # Logging Configuration
         self.LOG_DIR = Path(os.getenv("LOG_DIR", "../logs/backend"))
@@ -237,6 +238,13 @@ class Settings:
 
         # Apply environment-specific settings
         self.apply_environment_settings()
+
+        if self.ENVIRONMENT != Environment.TEST:
+            if not self.JWT_SECRET_KEY or len(self.JWT_SECRET_KEY) < 32:
+                raise ValueError(
+                    "JWT_SECRET_KEY must be set to a value of at least "
+                    "32 characters in non-test environments"
+                )
 
     def apply_environment_settings(self):
         """Apply environment-specific settings based on the current environment."""

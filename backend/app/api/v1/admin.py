@@ -69,11 +69,9 @@ async def get_current_admin_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     database_service: DatabaseService = Depends(get_database_service),
 ) -> User:
-    """Get the current admin user from the token.
+    """Get the current admin user from a session token.
 
-    This function works with both session tokens and user tokens:
-    - Session token (most common): Contains session_id, looks up session, then gets user
-    - User token (after login, before session): Contains user_id directly
+    Only session tokens are accepted — user tokens are rejected.
 
     Args:
         credentials: The HTTP authorization credentials containing the JWT token.
@@ -86,13 +84,10 @@ async def get_current_admin_user(
         HTTPException: If the token is invalid, session/user is not found, or user is not an admin.
     """
     try:
-        # Sanitize token
         token = sanitize_string(credentials.credentials)
 
-        # The token contains either a user_id (from login) or session_id (from create_session)
-        # Most requests use session tokens, so we'll try that first
-        token_subject = verify_token(token)
-        if token_subject is None:
+        session_id = verify_token(token, expected_type="session")
+        if session_id is None:
             logger.error("invalid_token", token_part=token[:10] + "...")
             raise HTTPException(
                 status_code=401,
@@ -100,51 +95,26 @@ async def get_current_admin_user(
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # Sanitize the token subject
-        token_subject = sanitize_string(token_subject)
+        session_id = sanitize_string(session_id)
+        session = await database_service.sessions.get_session(session_id)
+        if session is None:
+            raise HTTPException(
+                status_code=401,
+                detail="Session not found",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
-        # Try to get it as a session first (most common case after login)
-        session = await database_service.sessions.get_session(token_subject)
-        
-        if session:
-            # Token is a session token - get user from session
-            user = await database_service.users.get_user(session.user_id)
-            if user is None:
-                logger.error("user_not_found_from_session", session_id=token_subject, user_id=session.user_id)
-                raise HTTPException(
-                    status_code=404,
-                    detail="User not found",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-        else:
-            # Token might be a user token (from login, before session created)
-            # Try to parse it as a user_id
-            try:
-                user_id = int(token_subject)
-                user = await database_service.users.get_user(user_id)
-                if user is None:
-                    logger.error("user_not_found", user_id=user_id)
-                    raise HTTPException(
-                        status_code=404,
-                        detail="User not found",
-                        headers={"WWW-Authenticate": "Bearer"},
-                    )
-            except ValueError:
-                # Not a session and not a valid user_id
-                logger.error("invalid_token_subject", subject=token_subject)
-                raise HTTPException(
-                    status_code=401,
-                    detail="Invalid authentication credentials",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
+        user = await database_service.users.get_user(session.user_id)
+        if user is None:
+            raise HTTPException(
+                status_code=404,
+                detail="User not found",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
-        # Verify user is an admin
         if not user.is_admin:
             logger.warning("unauthorized_admin_access_attempt", user_id=user.id)
-            raise HTTPException(
-                status_code=403,
-                detail="Admin access required",
-            )
+            raise HTTPException(status_code=403, detail="Admin access required")
 
         return user
     except HTTPException:
@@ -312,7 +282,7 @@ async def create_user(
             is_admin=user.is_admin,
             is_approved=user.is_approved,
             created_at=user.created_at,
-            token=create_access_token(str(user.id)),
+            token=create_access_token(str(user.id), token_type="user"),
         )
     except HTTPException:
         raise

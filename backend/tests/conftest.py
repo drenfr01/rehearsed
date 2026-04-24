@@ -179,7 +179,7 @@ def auth_token(test_chat_session: ChatSession) -> str:
     """Create a JWT token for a test user using session ID."""
     from app.utils.auth import create_access_token
 
-    token = create_access_token(str(test_chat_session.id))
+    token = create_access_token(str(test_chat_session.id), token_type="session")
     return token.access_token
 
 
@@ -189,13 +189,12 @@ def admin_token(test_admin_user: User, db_session: Session) -> str:
     from app.utils.auth import create_access_token
     import uuid
 
-    # Create a session for the admin user
     admin_session = ChatSession(id=str(uuid.uuid4()), user_id=test_admin_user.id, name="Admin Session")
     db_session.add(admin_session)
     db_session.commit()
     db_session.refresh(admin_session)
 
-    token = create_access_token(str(admin_session.id))
+    token = create_access_token(str(admin_session.id), token_type="session")
     return token.access_token
 
 

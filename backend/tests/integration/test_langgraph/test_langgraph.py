@@ -105,16 +105,12 @@ def mock_graph():
 @pytest.fixture
 def langgraph_agent_with_mocked_llm(mock_llm):
     """Create a LangGraphAgent instance with mocked LLM."""
-    with patch("app.core.langgraph.graph_entry.ChatGoogleGenerativeAI") as mock_llm_class:
-        mock_llm_class.return_value.bind_tools.return_value = mock_llm
-        
-        agent = LangGraphAgent()
-        # Directly set all 4 mocked LLMs
-        agent._llm_student = mock_llm
-        agent._llm_student_choice = mock_llm
-        agent._llm_inline_feedback = mock_llm
-        agent._llm_summary_feedback = mock_llm
-        return agent
+    agent = LangGraphAgent()
+    agent._llm_student = mock_llm
+    agent._llm_student_choice = mock_llm
+    agent._llm_inline_feedback = mock_llm
+    agent._llm_summary_feedback = mock_llm
+    return agent
 
 
 @pytest.mark.integration
@@ -124,13 +120,12 @@ class TestLangGraphAgent:
 
     async def test_llm_property_lazy_loading(self, mock_llm):
         """Test that LLM is lazy-loaded on first access."""
-        with patch("app.core.langgraph.graph_entry.ChatGoogleGenerativeAI") as mock_llm_class:
-            mock_llm_class.return_value.bind_tools.return_value = mock_llm
-            
+        with patch("app.core.langgraph.graph_entry.create_chat_llm") as mock_factory:
+            mock_factory.return_value = mock_llm
+
             agent = LangGraphAgent()
             assert agent._llm_student is None
-            
-            # Access llm property should initialize the student LLM
+
             llm = agent.llm
             assert llm is not None
             assert agent._llm_student is not None

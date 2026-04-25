@@ -95,7 +95,7 @@ def create_chat_llm(
 
 | File | Current behavior | After |
 |------|-----------------|-------|
-| `graph_entry.py` `_create_llm` | Constructs `ChatGoogleGenerativeAI` with Vertex kwargs and its own `_get_model_kwargs` | Delegates to `create_chat_llm`. Remove local `_create_llm`, `_get_model_kwargs`, and `ChatGoogleGenerativeAI` import. |
+| `graph_entry.py` `_create_llm` | Constructs `ChatGoogleGenerativeAI` with Vertex kwargs and its own `_get_model_kwargs` | Delete `_create_llm` and `_get_model_kwargs`. Replace all call sites with direct `create_chat_llm(...)` calls. Remove `ChatGoogleGenerativeAI` import. |
 | `graph_entry.py` `_chat` fallback | Mutates `self.llm.model` on the shared singleton (see 3.1.1 below) | Creates a throwaway instance via `create_chat_llm` for the final retry. |
 | `summary_feedback.py` `llm=None` path | Hardcodes `ChatGoogleGenerativeAI(model="gemini-3-pro-preview", ...)` | Resolves model name from DB via `get_model_name_for_agent("summary_feedback")` with `settings.LLM_MODEL` fallback, then calls `create_chat_llm`. |
 | `graph.py` | Unused `ChatGoogleGenerativeAI` import | Remove import. No other changes (already typed as `BaseChatModel`). |
@@ -113,24 +113,31 @@ if settings.ENVIRONMENT == Environment.PRODUCTION and attempt == max_retries - 2
 
 `self.llm` is the `_llm_student` singleton shared across all scenarios and requests. Mutating its `.model` attribute permanently switches every subsequent LLM call to the fallback model for the lifetime of the process. The only recovery is a full restart.
 
-**Fix:** Use the factory to create a local, throwaway LLM instance for the retry. A `current_llm` local variable starts as `self.llm`; on fallback, it is reassigned to a fresh `create_chat_llm(...)` instance. The shared singleton is never touched:
+**Fix:** Use the factory to create a local, throwaway LLM instance for the retry. A `current_llm` local variable starts as `self.llm`; on fallback, it is reassigned to a fresh `create_chat_llm(...)` instance. The shared singleton is never touched.
+
+`prepare_messages` must also use `current_llm` rather than `self.llm`. It passes the LLM as a `token_counter` to LangChain's `trim_messages`, so if the fallback fires and a different model is used for invocation, the token counts would be computed against the wrong tokenizer. Moving `prepare_messages` inside the loop and passing `current_llm` keeps token counting and invocation consistent. This is safe because `prepare_messages` is a pure function and cheap relative to the LLM call.
+
+The fallback model name is read from `settings.LLM_FALLBACK_MODEL` (see 3.2) rather than hardcoded, so it can be changed via an env-var update and restart.
 
 ```python
 current_llm = self.llm
+max_retries = settings.MAX_LLM_CALL_RETRIES
 
 for attempt in range(max_retries):
     try:
-        result = await current_llm.ainvoke(...)
-        return result
+        messages = prepare_messages(state.messages, current_llm)
+        result = await current_llm.ainvoke(dump_messages(messages))
+        return {"messages": [result]}
     except Exception:
         if settings.ENVIRONMENT == Environment.PRODUCTION and attempt == max_retries - 2:
-            current_llm = create_chat_llm("gemini-3-flash-preview", bind_tools=True)
+            current_llm = create_chat_llm(settings.LLM_FALLBACK_MODEL, bind_tools=True)
         continue
 ```
 
-Also fixes two incidental issues in the same method:
-- The fallback model name has a stale `models/` prefix (`models/gemini-3-flash-preview`) that doesn't match the naming convention used everywhere else — corrected to `gemini-3-flash-preview`.
+Also fixes three incidental issues in the same method:
+- The fallback model name has a stale `models/` prefix (`models/gemini-3-flash-preview`) that doesn't match the naming convention used everywhere else — now read from `settings.LLM_FALLBACK_MODEL`.
 - The success log reports `model=settings.LLM_MODEL` instead of the model that actually produced the response — corrected to `model=current_llm.model`.
+- `prepare_messages` was called once before the loop with `self.llm`, creating a tokenizer mismatch if the fallback model was used for invocation — now called per-attempt with `current_llm`.
 
 #### 3.1.2 LLM instance lifecycle: 4 singletons, not per-scenario
 
@@ -149,6 +156,7 @@ Instead, these model names become environment variables in `app/core/config.py`,
 **New settings in `app/core/config.py`:**
 
 ```python
+self.LLM_FALLBACK_MODEL = os.getenv("LLM_FALLBACK_MODEL", "gemini-3-flash-preview")
 self.GEMINI_LIVE_MODEL = os.getenv("GEMINI_LIVE_MODEL", "gemini-live-2.5-flash-native-audio")
 self.TTS_MODEL = os.getenv("TTS_MODEL", "gemini-2.5-flash-tts")
 ```
@@ -176,12 +184,12 @@ Area 2 (env-var config)
 
 **Area 1 — LLM chat factory:**
 1. Create `app/core/llm.py` with `_get_model_kwargs` and `create_chat_llm`.
-2. Refactor `graph_entry.py`: replace `_create_llm` and `_get_model_kwargs` with calls to the factory.
+2. Refactor `graph_entry.py`: delete `_create_llm` and `_get_model_kwargs`, replace all call sites with direct `create_chat_llm(...)` calls.
 3. Refactor `summary_feedback.py` `llm=None` fallback to use the factory with DB-resolved model name.
 4. Remove unused `ChatGoogleGenerativeAI` import from `graph.py`.
 
 **Area 2 — Environment-variable model config:**
-1. Add `GEMINI_LIVE_MODEL` and `TTS_MODEL` to `app/core/config.py`.
+1. Add `LLM_FALLBACK_MODEL`, `GEMINI_LIVE_MODEL`, and `TTS_MODEL` to `app/core/config.py`.
 2. Add the new env vars to `.env`, `.env.development`, and `.env.production`.
 3. Refactor `gemini_live.py` to use `settings.GEMINI_LIVE_MODEL` instead of the module constant.
 4. Refactor `gemini_text_to_speech.py` to default to `settings.TTS_MODEL`.
@@ -193,9 +201,9 @@ Area 2 (env-var config)
 | File | Change type |
 |------|-------------|
 | `app/core/llm.py` | New — factory function with environment-specific kwargs |
-| `app/core/langgraph/graph_entry.py` | Modified — delegate to factory, remove local `_create_llm` and `_get_model_kwargs` |
+| `app/core/langgraph/graph_entry.py` | Modified — replace all `_create_llm` call sites with direct `create_chat_llm` calls, delete `_create_llm` and `_get_model_kwargs` |
 | `app/core/langgraph/graph.py` | Modified — remove unused import |
 | `app/services/summary_feedback.py` | Modified — use factory with DB-resolved model |
-| `app/core/config.py` | Modified — add `GEMINI_LIVE_MODEL` and `TTS_MODEL` settings |
+| `app/core/config.py` | Modified — add `LLM_FALLBACK_MODEL`, `GEMINI_LIVE_MODEL`, and `TTS_MODEL` settings |
 | `app/services/gemini_live.py` | Modified — use `settings.GEMINI_LIVE_MODEL`, remove module constant |
 | `app/services/gemini_text_to_speech.py` | Modified — default to `settings.TTS_MODEL` |

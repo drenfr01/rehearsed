@@ -95,7 +95,7 @@ Also remove the `tools` import since it's no longer used directly in this file:
 from app.core.langgraph.tools import tools
 ```
 
-**1.2b — Replace `_create_llm`.** Replace the method (currently lines 71–85):
+**1.2b — Delete `_create_llm` and update all call sites.** Remove the entire method (currently lines 71–85):
 
 ```python
 def _create_llm(self, model_name: str, bind_tools_flag: bool = False) -> ChatGoogleGenerativeAI:
@@ -115,21 +115,72 @@ def _create_llm(self, model_name: str, bind_tools_flag: bool = False) -> ChatGoo
     return llm
 ```
 
-with a thin delegator:
+Replace every `self._create_llm(...)` call site with a direct `create_chat_llm(...)` call. Note the kwarg rename: `bind_tools_flag` becomes `bind_tools`.
+
+Lazy properties (4 call sites):
 
 ```python
-def _create_llm(self, model_name: str, bind_tools_flag: bool = False) -> BaseChatModel:
-    """Create a chat LLM instance via the centralized factory."""
-    return create_chat_llm(model_name, bind_tools=bind_tools_flag)
+@property
+def llm_student(self):
+    if self._llm_student is None:
+        self._llm_student = create_chat_llm(settings.LLM_MODEL, bind_tools=True)
+        logger.info("llm_student_initialized", model=settings.LLM_MODEL, environment=settings.ENVIRONMENT.value)
+    return self._llm_student
+
+@property
+def llm_answering_student(self):
+    if self._llm_student_choice is None:
+        self._llm_student_choice = create_chat_llm(settings.LLM_ANSWERING_STUDENT_MODEL)
+        logger.info("llm_student_choice_initialized", model=settings.LLM_ANSWERING_STUDENT_MODEL, environment=settings.ENVIRONMENT.value)
+    return self._llm_student_choice
+
+@property
+def llm_inline_feedback(self):
+    if self._llm_inline_feedback is None:
+        self._llm_inline_feedback = create_chat_llm(settings.LLM_MODEL)
+        logger.info("llm_inline_feedback_initialized", model=settings.LLM_MODEL, environment=settings.ENVIRONMENT.value)
+    return self._llm_inline_feedback
+
+@property
+def llm_summary_feedback(self):
+    if self._llm_summary_feedback is None:
+        self._llm_summary_feedback = create_chat_llm(settings.LLM_MODEL)
+        logger.info("llm_summary_feedback_initialized", model=settings.LLM_MODEL, environment=settings.ENVIRONMENT.value)
+    return self._llm_summary_feedback
 ```
 
-Add `BaseChatModel` to the existing `langchain_core.messages` import block, or add a standalone import:
+`_ensure_llms_from_config` (4 call sites):
+
+```python
+async def _ensure_llms_from_config(self) -> None:
+    if self._llm_student is None:
+        model = await self._resolve_model_name("student_agent", settings.LLM_MODEL)
+        self._llm_student = create_chat_llm(model, bind_tools=True)
+        logger.info("llm_student_initialized_from_config", model=model)
+
+    if self._llm_student_choice is None:
+        model = await self._resolve_model_name("student_choice_agent", settings.LLM_ANSWERING_STUDENT_MODEL)
+        self._llm_student_choice = create_chat_llm(model)
+        logger.info("llm_student_choice_initialized_from_config", model=model)
+
+    if self._llm_inline_feedback is None:
+        model = await self._resolve_model_name("inline_feedback", settings.LLM_MODEL)
+        self._llm_inline_feedback = create_chat_llm(model)
+        logger.info("llm_inline_feedback_initialized_from_config", model=model)
+
+    if self._llm_summary_feedback is None:
+        model = await self._resolve_model_name("summary_feedback", settings.LLM_MODEL)
+        self._llm_summary_feedback = create_chat_llm(model)
+        logger.info("llm_summary_feedback_initialized_from_config", model=model)
+```
+
+Add `BaseChatModel` import for the type hints:
 
 ```python
 from langchain_core.language_models import BaseChatModel
 ```
 
-This preserves all call sites that reference `self._create_llm(...)` — the lazy properties, `_ensure_llms_from_config`, and `rebuild_graph` all continue working unchanged.
+After this step, `_create_llm` no longer exists — every consumer calls the factory directly, eliminating the unnecessary indirection layer.
 
 **1.2c — Delete `_get_model_kwargs`.** Remove the entire method (currently lines 185–203):
 
@@ -155,7 +206,7 @@ def _get_model_kwargs(self) -> Dict[str, Any]:
     return model_kwargs
 ```
 
-With `_create_llm` now delegating to the factory, this method has no remaining callers.
+With `_create_llm` deleted and all call sites using the factory directly, this method has no remaining callers.
 
 **1.2d — Clean up `__init__` type hints.** The four `Optional[ChatGoogleGenerativeAI]` annotations in `__init__` (lines 60–63) should change to `Optional[BaseChatModel]`:
 
@@ -166,16 +217,17 @@ self._llm_inline_feedback: Optional[BaseChatModel] = None
 self._llm_summary_feedback: Optional[BaseChatModel] = None
 ```
 
-After this step, `ChatGoogleGenerativeAI` no longer appears anywhere in `graph_entry.py`.
+After this step, neither `ChatGoogleGenerativeAI` nor `_create_llm` appear anywhere in `graph_entry.py`.
 
 ### Step 1.3: Fix `_chat` fallback bug
 
 Replace the `_chat` method body (currently lines 256–307). The key changes are:
 
 1. Introduce a `current_llm` local variable initialized to `self.llm`.
-2. On fallback, create a throwaway via `create_chat_llm` instead of mutating the singleton.
-3. Fix the stale `models/` prefix on the fallback model name.
-4. Fix the success log to report the actual model used.
+2. Move `prepare_messages` inside the retry loop, passing `current_llm` instead of `self.llm`. This keeps token counting consistent with the model used for invocation — `prepare_messages` passes the LLM as a `token_counter` to LangChain's `trim_messages`, so using a different model for counting vs invocation would produce incorrect trim boundaries.
+3. On fallback, create a throwaway via `create_chat_llm` instead of mutating the singleton. The fallback model name comes from `settings.LLM_FALLBACK_MODEL` (added in Step 2.1) rather than a hardcoded string.
+4. Fix the stale `models/` prefix on the fallback model name.
+5. Fix the success log to report the actual model used.
 
 Replace:
 
@@ -247,13 +299,12 @@ async def _chat(self, state: GraphState) -> dict:
     Returns:
         dict: Updated state with new messages.
     """
-    messages = prepare_messages(state.messages, self.llm)
     current_llm = self.llm
-
     max_retries = settings.MAX_LLM_CALL_RETRIES
 
     for attempt in range(max_retries):
         try:
+            messages = prepare_messages(state.messages, current_llm)
             with llm_inference_duration_seconds.labels(model=current_llm.model).time():
                 generated_state = {"messages": [await current_llm.ainvoke(dump_messages(messages))]}
             logger.info(
@@ -274,11 +325,12 @@ async def _chat(self, state: GraphState) -> dict:
             )
 
             if settings.ENVIRONMENT == Environment.PRODUCTION and attempt == max_retries - 2:
-                fallback_model = "gemini-3-flash-preview"
                 logger.warning(
-                    "using_fallback_model", model=fallback_model, environment=settings.ENVIRONMENT.value
+                    "using_fallback_model",
+                    model=settings.LLM_FALLBACK_MODEL,
+                    environment=settings.ENVIRONMENT.value,
                 )
-                current_llm = create_chat_llm(fallback_model, bind_tools=True)
+                current_llm = create_chat_llm(settings.LLM_FALLBACK_MODEL, bind_tools=True)
 
             continue
 
@@ -361,15 +413,17 @@ No other changes needed — the builder already types its LLM parameters as `Bas
 In the LangGraph Configuration block, after the `MAX_LLM_CALL_RETRIES` line (currently line 158), add:
 
 ```python
+self.LLM_FALLBACK_MODEL = os.getenv("LLM_FALLBACK_MODEL", "gemini-3-flash-preview")
 self.GEMINI_LIVE_MODEL = os.getenv("GEMINI_LIVE_MODEL", "gemini-live-2.5-flash-native-audio")
 self.TTS_MODEL = os.getenv("TTS_MODEL", "gemini-2.5-flash-tts")
 ```
 
 ### Step 2.2: Add env vars to `.env` files
 
-Add these two lines to `backend/.env`, `backend/.env.development`, and `backend/.env.production` (in the GCP configuration area, after the `GOOGLE_CLOUD_LOCATION` line):
+Add these three lines to `backend/.env`, `backend/.env.development`, and `backend/.env.production` (in the GCP configuration area, after the `GOOGLE_CLOUD_LOCATION` line):
 
 ```
+LLM_FALLBACK_MODEL="gemini-3-flash-preview"
 GEMINI_LIVE_MODEL="gemini-live-2.5-flash-native-audio"
 TTS_MODEL="gemini-2.5-flash-tts"
 ```
@@ -491,6 +545,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from app.core.config import Environment
+from app.core.llm import _get_model_kwargs, create_chat_llm
+
 
 @pytest.mark.unit
 class TestGetModelKwargs:
@@ -498,18 +555,12 @@ class TestGetModelKwargs:
 
     def test_development_kwargs(self):
         with patch("app.core.llm.settings") as mock_settings:
-            mock_settings.ENVIRONMENT = "development"
-            # Import after patching
-            from app.core.llm import _get_model_kwargs, Environment
-
             mock_settings.ENVIRONMENT = Environment.DEVELOPMENT
             result = _get_model_kwargs()
             assert result == {"top_p": 0.8}
 
     def test_production_kwargs(self):
         with patch("app.core.llm.settings") as mock_settings:
-            from app.core.llm import _get_model_kwargs, Environment
-
             mock_settings.ENVIRONMENT = Environment.PRODUCTION
             result = _get_model_kwargs()
             assert result == {
@@ -520,16 +571,12 @@ class TestGetModelKwargs:
 
     def test_test_env_returns_empty(self):
         with patch("app.core.llm.settings") as mock_settings:
-            from app.core.llm import _get_model_kwargs, Environment
-
             mock_settings.ENVIRONMENT = Environment.TEST
             result = _get_model_kwargs()
             assert result == {}
 
     def test_staging_returns_empty(self):
         with patch("app.core.llm.settings") as mock_settings:
-            from app.core.llm import _get_model_kwargs, Environment
-
             mock_settings.ENVIRONMENT = Environment.STAGING
             result = _get_model_kwargs()
             assert result == {}
@@ -550,8 +597,6 @@ class TestCreateChatLlm:
             mock_settings.GOOGLE_CLOUD_LOCATION = "us-central1"
             mock_settings.MAX_TOKENS = 200000
             mock_llm_class.return_value = MagicMock()
-
-            from app.core.llm import create_chat_llm
 
             create_chat_llm("gemini-3-flash-preview")
 
@@ -578,8 +623,6 @@ class TestCreateChatLlm:
             mock_instance = MagicMock()
             mock_llm_class.return_value = mock_instance
 
-            from app.core.llm import create_chat_llm
-
             create_chat_llm("gemini-3-flash-preview", bind_tools=True)
 
             mock_instance.bind_tools.assert_called_once()
@@ -596,8 +639,6 @@ class TestCreateChatLlm:
             mock_settings.MAX_TOKENS = 200000
             mock_instance = MagicMock()
             mock_llm_class.return_value = mock_instance
-
-            from app.core.llm import create_chat_llm
 
             create_chat_llm("gemini-3-flash-preview")
 
@@ -648,8 +689,6 @@ async def test_generate_summary_feedback_uses_correct_llm_params(
         mock_llm_instance.with_structured_output.return_value = mock_chain
         mock_factory.return_value = mock_llm_instance
 
-        from app.services.summary_feedback import generate_summary_feedback
-
         await generate_summary_feedback(1, sample_conversation)
 
         mock_factory.assert_called_once_with("gemini-3.1-pro-preview")
@@ -657,6 +696,8 @@ async def test_generate_summary_feedback_uses_correct_llm_params(
             "summary_feedback"
         )
 ```
+
+The test file already imports `generate_summary_feedback` at the top level (the existing tests use it). No in-block import needed.
 
 **3.2c — Add a test for DB resolution fallback:**
 
@@ -686,8 +727,6 @@ async def test_generate_summary_feedback_falls_back_on_db_error(
         mock_llm_instance = MagicMock()
         mock_llm_instance.with_structured_output.return_value = mock_chain
         mock_factory.return_value = mock_llm_instance
-
-        from app.services.summary_feedback import generate_summary_feedback
 
         await generate_summary_feedback(1, sample_conversation)
 
@@ -729,11 +768,11 @@ with:
 
 ```python
 def test_constants(self):
-    from app.core.config import settings
-
     assert settings.GEMINI_LIVE_MODEL == "gemini-live-2.5-flash-native-audio"
     assert GEMINI_LIVE_LOCATION == "us-central1"
 ```
+
+Add `from app.core.config import settings` to the test file's top-level imports if not already present.
 
 ### Step 3.4: `backend/tests/unit/test_services/test_gemini_text_to_speech.py`
 

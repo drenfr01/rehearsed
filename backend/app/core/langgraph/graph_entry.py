@@ -3,7 +3,6 @@
 import asyncio
 import uuid
 from typing import (
-    Any,
     AsyncGenerator,
     Dict,
     Literal,
@@ -17,7 +16,7 @@ from langchain_core.messages import (
     ToolMessage,
     convert_to_openai_messages,
 )
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.language_models import BaseChatModel
 from langfuse import observe, propagate_attributes
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command, StateSnapshot
@@ -30,6 +29,7 @@ from app.core.config import (
 )
 from app.core.langgraph.graph import LangGraphBuilder
 from app.core.langgraph.tools import tools
+from app.core.llm import create_chat_llm
 from app.core.logging import logger
 from app.core.metrics import llm_inference_duration_seconds
 from app.core.prompts import SYSTEM_PROMPT
@@ -57,32 +57,16 @@ class LangGraphAgent:
 
     def __init__(self):
         """Initialize the LangGraph Agent with necessary components."""
-        self._llm_student: Optional[ChatGoogleGenerativeAI] = None
-        self._llm_student_choice: Optional[ChatGoogleGenerativeAI] = None
-        self._llm_inline_feedback: Optional[ChatGoogleGenerativeAI] = None
-        self._llm_summary_feedback: Optional[ChatGoogleGenerativeAI] = None
+        self._llm_student: Optional[BaseChatModel] = None
+        self._llm_student_choice: Optional[BaseChatModel] = None
+        self._llm_inline_feedback: Optional[BaseChatModel] = None
+        self._llm_summary_feedback: Optional[BaseChatModel] = None
         self.tools_by_name = {tool.name: tool for tool in tools}
         self._connection_pool: Optional[AsyncConnectionPool] = None
         # Store graphs per scenario_id for dynamic agent support
         self._graphs: Dict[int, CompiledStateGraph] = {}
         # Keep _graph for backwards compatibility (default scenario)
         self._current_scenario_id: Optional[int] = None
-
-    def _create_llm(self, model_name: str, bind_tools_flag: bool = False) -> ChatGoogleGenerativeAI:
-        """Create a ChatGoogleGenerativeAI instance for a given model name."""
-        llm = ChatGoogleGenerativeAI(
-            model=model_name,
-            temperature=settings.DEFAULT_LLM_TEMPERATURE,
-            project=settings.GOOGLE_CLOUD_PROJECT,
-            location=settings.GOOGLE_CLOUD_LOCATION,
-            max_tokens=settings.MAX_TOKENS,
-            vertexai=True,
-            google_api_key=None,
-            **self._get_model_kwargs(),
-        )
-        if bind_tools_flag:
-            llm = llm.bind_tools(tools)
-        return llm
 
     async def _resolve_model_name(self, agent_type: str, fallback: str) -> str:
         """Look up the configured model name for an agent type from the database.
@@ -106,7 +90,7 @@ class LangGraphAgent:
     def llm_student(self):
         """Lazy-load the student agent LLM."""
         if self._llm_student is None:
-            self._llm_student = self._create_llm(settings.LLM_MODEL, bind_tools_flag=True)
+            self._llm_student = create_chat_llm(settings.LLM_MODEL, bind_tools=True)
             logger.info("llm_student_initialized", model=settings.LLM_MODEL, environment=settings.ENVIRONMENT.value)
         return self._llm_student
 
@@ -114,7 +98,7 @@ class LangGraphAgent:
     def llm_answering_student(self):
         """Lazy-load the student-choice LLM."""
         if self._llm_student_choice is None:
-            self._llm_student_choice = self._create_llm(settings.LLM_ANSWERING_STUDENT_MODEL)
+            self._llm_student_choice = create_chat_llm(settings.LLM_ANSWERING_STUDENT_MODEL)
             logger.info("llm_student_choice_initialized", model=settings.LLM_ANSWERING_STUDENT_MODEL, environment=settings.ENVIRONMENT.value)
         return self._llm_student_choice
 
@@ -122,7 +106,7 @@ class LangGraphAgent:
     def llm_inline_feedback(self):
         """Lazy-load the inline feedback LLM."""
         if self._llm_inline_feedback is None:
-            self._llm_inline_feedback = self._create_llm(settings.LLM_MODEL)
+            self._llm_inline_feedback = create_chat_llm(settings.LLM_MODEL)
             logger.info("llm_inline_feedback_initialized", model=settings.LLM_MODEL, environment=settings.ENVIRONMENT.value)
         return self._llm_inline_feedback
 
@@ -130,7 +114,7 @@ class LangGraphAgent:
     def llm_summary_feedback(self):
         """Lazy-load the summary feedback LLM."""
         if self._llm_summary_feedback is None:
-            self._llm_summary_feedback = self._create_llm(settings.LLM_MODEL)
+            self._llm_summary_feedback = create_chat_llm(settings.LLM_MODEL)
             logger.info("llm_summary_feedback_initialized", model=settings.LLM_MODEL, environment=settings.ENVIRONMENT.value)
         return self._llm_summary_feedback
 
@@ -141,22 +125,22 @@ class LangGraphAgent:
         """
         if self._llm_student is None:
             model = await self._resolve_model_name("student_agent", settings.LLM_MODEL)
-            self._llm_student = self._create_llm(model, bind_tools_flag=True)
+            self._llm_student = create_chat_llm(model, bind_tools=True)
             logger.info("llm_student_initialized_from_config", model=model)
 
         if self._llm_student_choice is None:
             model = await self._resolve_model_name("student_choice_agent", settings.LLM_ANSWERING_STUDENT_MODEL)
-            self._llm_student_choice = self._create_llm(model)
+            self._llm_student_choice = create_chat_llm(model)
             logger.info("llm_student_choice_initialized_from_config", model=model)
 
         if self._llm_inline_feedback is None:
             model = await self._resolve_model_name("inline_feedback", settings.LLM_MODEL)
-            self._llm_inline_feedback = self._create_llm(model)
+            self._llm_inline_feedback = create_chat_llm(model)
             logger.info("llm_inline_feedback_initialized_from_config", model=model)
 
         if self._llm_summary_feedback is None:
             model = await self._resolve_model_name("summary_feedback", settings.LLM_MODEL)
-            self._llm_summary_feedback = self._create_llm(model)
+            self._llm_summary_feedback = create_chat_llm(model)
             logger.info("llm_summary_feedback_initialized_from_config", model=model)
 
     def invalidate_llms(self) -> None:
@@ -181,26 +165,6 @@ class LangGraphAgent:
                 pass
             self._connection_pool = None
         self._graphs.clear()
-
-    def _get_model_kwargs(self) -> Dict[str, Any]:
-        """Get environment-specific model kwargs.
-
-        Returns:
-            Dict[str, Any]: Additional model arguments based on environment
-        """
-        model_kwargs = {}
-
-        # Development - we can use lower speeds for cost savings
-        if settings.ENVIRONMENT == Environment.DEVELOPMENT:
-            model_kwargs["top_p"] = 0.8
-
-        # Production - use higher quality settings
-        elif settings.ENVIRONMENT == Environment.PRODUCTION:
-            model_kwargs["top_p"] = 0.95
-            model_kwargs["presence_penalty"] = 0.1
-            model_kwargs["frequency_penalty"] = 0.1
-
-        return model_kwargs
 
     @observe(name="get_connection_pool")
     async def _get_connection_pool(self) -> AsyncConnectionPool:
@@ -263,44 +227,38 @@ class LangGraphAgent:
         Returns:
             dict: Updated state with new messages.
         """
-        messages = prepare_messages(state.messages, self.llm)
-
-        llm_calls_num = 0
-
-        # Configure retry attempts based on environment
+        current_llm = self.llm
         max_retries = settings.MAX_LLM_CALL_RETRIES
 
         for attempt in range(max_retries):
             try:
-                with llm_inference_duration_seconds.labels(model=self.llm.model).time():
-                    generated_state = {"messages": [await self.llm.ainvoke(dump_messages(messages))]}
+                messages = prepare_messages(state.messages, current_llm)
+                with llm_inference_duration_seconds.labels(model=current_llm.model).time():
+                    generated_state = {"messages": [await current_llm.ainvoke(dump_messages(messages))]}
                 logger.info(
                     "llm_response_generated",
                     session_id=state.session_id,
-                    llm_calls_num=llm_calls_num + 1,
-                    model=settings.LLM_MODEL,
+                    attempt=attempt + 1,
+                    model=current_llm.model,
                     environment=settings.ENVIRONMENT.value,
                 )
                 return generated_state
-            # TODO: make this a specific exception
             except Exception as e:
                 logger.error(
                     "llm_call_failed",
-                    llm_calls_num=llm_calls_num,
                     attempt=attempt + 1,
                     max_retries=max_retries,
                     error=str(e),
                     environment=settings.ENVIRONMENT.value,
                 )
-                llm_calls_num += 1
 
-                # In production, we might want to fall back to a more reliable model
                 if settings.ENVIRONMENT == Environment.PRODUCTION and attempt == max_retries - 2:
-                    fallback_model = "models/gemini-3-flash-preview"
                     logger.warning(
-                        "using_fallback_model", model=fallback_model, environment=settings.ENVIRONMENT.value
+                        "using_fallback_model",
+                        model=settings.LLM_FALLBACK_MODEL,
+                        environment=settings.ENVIRONMENT.value,
                     )
-                    self.llm.model = fallback_model
+                    current_llm = create_chat_llm(settings.LLM_FALLBACK_MODEL, bind_tools=True)
 
                 continue
 

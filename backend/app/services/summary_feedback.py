@@ -6,9 +6,8 @@ Used by both the langgraph classroom flow and one-on-one Gemini Live sessions.
 from typing import Union
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
-
 from app.core.config import settings
+from app.core.llm import create_chat_llm
 from app.core.logging import logger
 from app.core.prompts.feedback import format_feedback_instructions
 from app.schemas.graph import SummaryFeedbackResponse
@@ -59,15 +58,18 @@ async def generate_summary_feedback(
             langchain_messages.append(AIMessage(content=text))
 
     if llm is None:
-        llm = ChatGoogleGenerativeAI(
-            model="gemini-3-pro-preview",
-            temperature=settings.DEFAULT_LLM_TEMPERATURE,
-            project=settings.GOOGLE_CLOUD_PROJECT,
-            location=settings.GOOGLE_CLOUD_LOCATION,
-            max_tokens=settings.MAX_TOKENS,
-            vertexai=True,
-            google_api_key=None,
-        )
+        model_name = settings.LLM_MODEL
+        try:
+            resolved = await database_service.agent_llm_config.get_model_name_for_agent(
+                "summary_feedback"
+            )
+            if resolved:
+                model_name = resolved
+        except Exception as e:
+            logger.warning(
+                "summary_feedback_model_resolution_failed", error=str(e)
+            )
+        llm = create_chat_llm(model_name)
 
     response = await llm.with_structured_output(
         SummaryFeedbackResponse, method="json_schema", include_raw=True

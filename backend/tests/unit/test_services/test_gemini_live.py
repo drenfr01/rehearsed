@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from app.core.config import settings
 from app.services.gemini_live import (
     GEMINI_LIVE_LOCATION,
-    GEMINI_LIVE_MODEL,
     GeminiLiveSession,
     build_one_on_one_system_prompt,
 )
@@ -291,5 +291,5 @@ class TestGeminiLiveSession:
         session._log_audio_debug(b"")
 
     def test_constants(self):
-        assert GEMINI_LIVE_MODEL == "gemini-live-2.5-flash-native-audio"
+        assert settings.GEMINI_LIVE_MODEL == "gemini-live-2.5-flash-native-audio"
         assert GEMINI_LIVE_LOCATION == "us-central1"

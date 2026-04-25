@@ -2,6 +2,8 @@
 
 from google.cloud import texttospeech
 
+from app.core.config import settings
+
 
 class GeminiTextToSpeech:
     """Service for synthesizing speech using Google Cloud Text-to-Speech."""
@@ -31,7 +33,7 @@ class GeminiTextToSpeech:
         prompt: str,
         text: str,
         voice_name: str,
-        model_name: str = "gemini-2.5-flash-tts",
+        model_name: str | None = None,
     ) -> bytes:
         """Asynchronously synthesize speech from the input text and return bytes.
         
@@ -39,11 +41,13 @@ class GeminiTextToSpeech:
             prompt: Styling instructions on how to synthesize the content in the text field.
             text: The text to synthesize.
             voice_name: The name of the voice to use for synthesis.
-            model_name: The name of the model to use for synthesis. Defaults to "gemini-2.5-flash-tts".
+            model_name: The model to use for synthesis. Defaults to settings.TTS_MODEL.
 
         Returns:
             bytes: The audio content as bytes.
         """
+        if model_name is None:
+            model_name = settings.TTS_MODEL
         synthesis_input = texttospeech.SynthesisInput(text=text, prompt=prompt)
 
         voice = texttospeech.VoiceSelectionParams(

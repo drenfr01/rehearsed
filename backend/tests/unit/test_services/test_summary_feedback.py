@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.schemas.graph import SummaryFeedbackResponse
+from app.services.summary_feedback import generate_summary_feedback
 
 
 @pytest.mark.unit
@@ -52,11 +53,14 @@ class TestGenerateSummaryFeedback:
                 "app.services.summary_feedback.database_service"
             ) as mock_db,
             patch(
-                "app.services.summary_feedback.ChatGoogleGenerativeAI"
-            ) as mock_llm_class,
+                "app.services.summary_feedback.create_chat_llm"
+            ) as mock_factory,
         ):
             mock_db.feedback.get_feedback_by_type = AsyncMock(
                 return_value=mock_feedback_config
+            )
+            mock_db.agent_llm_config.get_model_name_for_agent = AsyncMock(
+                return_value=None
             )
 
             mock_chain = AsyncMock()
@@ -65,9 +69,7 @@ class TestGenerateSummaryFeedback:
             )
             mock_llm_instance = MagicMock()
             mock_llm_instance.with_structured_output.return_value = mock_chain
-            mock_llm_class.return_value = mock_llm_instance
-
-            from app.services.summary_feedback import generate_summary_feedback
+            mock_factory.return_value = mock_llm_instance
 
             result = await generate_summary_feedback(1, sample_conversation)
 
@@ -80,8 +82,6 @@ class TestGenerateSummaryFeedback:
         """Test fallback when no feedback configuration exists."""
         with patch("app.services.summary_feedback.database_service") as mock_db:
             mock_db.feedback.get_feedback_by_type = AsyncMock(return_value=None)
-
-            from app.services.summary_feedback import generate_summary_feedback
 
             result = await generate_summary_feedback(999, sample_conversation)
 
@@ -97,11 +97,14 @@ class TestGenerateSummaryFeedback:
                 "app.services.summary_feedback.database_service"
             ) as mock_db,
             patch(
-                "app.services.summary_feedback.ChatGoogleGenerativeAI"
-            ) as mock_llm_class,
+                "app.services.summary_feedback.create_chat_llm"
+            ) as mock_factory,
         ):
             mock_db.feedback.get_feedback_by_type = AsyncMock(
                 return_value=mock_feedback_config
+            )
+            mock_db.agent_llm_config.get_model_name_for_agent = AsyncMock(
+                return_value=None
             )
 
             mock_chain = AsyncMock()
@@ -110,9 +113,7 @@ class TestGenerateSummaryFeedback:
             )
             mock_llm_instance = MagicMock()
             mock_llm_instance.with_structured_output.return_value = mock_chain
-            mock_llm_class.return_value = mock_llm_instance
-
-            from app.services.summary_feedback import generate_summary_feedback
+            mock_factory.return_value = mock_llm_instance
 
             result = await generate_summary_feedback(1, sample_conversation)
 
@@ -135,11 +136,14 @@ class TestGenerateSummaryFeedback:
                 "app.services.summary_feedback.database_service"
             ) as mock_db,
             patch(
-                "app.services.summary_feedback.ChatGoogleGenerativeAI"
-            ) as mock_llm_class,
+                "app.services.summary_feedback.create_chat_llm"
+            ) as mock_factory,
         ):
             mock_db.feedback.get_feedback_by_type = AsyncMock(
                 return_value=mock_feedback_config
+            )
+            mock_db.agent_llm_config.get_model_name_for_agent = AsyncMock(
+                return_value=None
             )
 
             mock_chain = AsyncMock()
@@ -148,9 +152,7 @@ class TestGenerateSummaryFeedback:
             )
             mock_llm_instance = MagicMock()
             mock_llm_instance.with_structured_output.return_value = mock_chain
-            mock_llm_class.return_value = mock_llm_instance
-
-            from app.services.summary_feedback import generate_summary_feedback
+            mock_factory.return_value = mock_llm_instance
 
             result = await generate_summary_feedback(1, conversation_with_empty)
 
@@ -162,23 +164,16 @@ class TestGenerateSummaryFeedback:
     async def test_generate_summary_feedback_uses_correct_llm_params(
         self, mock_feedback_config, sample_conversation, mock_summary_response
     ):
-        """Test that the LLM is configured with correct parameters."""
+        """Test that the factory is called with the DB-resolved model name."""
         with (
-            patch(
-                "app.services.summary_feedback.database_service"
-            ) as mock_db,
-            patch(
-                "app.services.summary_feedback.ChatGoogleGenerativeAI"
-            ) as mock_llm_class,
-            patch("app.services.summary_feedback.settings") as mock_settings,
+            patch("app.services.summary_feedback.database_service") as mock_db,
+            patch("app.services.summary_feedback.create_chat_llm") as mock_factory,
         ):
-            mock_settings.DEFAULT_LLM_TEMPERATURE = 0.2
-            mock_settings.GOOGLE_CLOUD_PROJECT = "test-project"
-            mock_settings.GOOGLE_CLOUD_LOCATION = "us-central1"
-            mock_settings.MAX_TOKENS = 200000
-
             mock_db.feedback.get_feedback_by_type = AsyncMock(
                 return_value=mock_feedback_config
+            )
+            mock_db.agent_llm_config.get_model_name_for_agent = AsyncMock(
+                return_value="gemini-3.1-pro-preview"
             )
 
             mock_chain = AsyncMock()
@@ -187,18 +182,41 @@ class TestGenerateSummaryFeedback:
             )
             mock_llm_instance = MagicMock()
             mock_llm_instance.with_structured_output.return_value = mock_chain
-            mock_llm_class.return_value = mock_llm_instance
-
-            from app.services.summary_feedback import generate_summary_feedback
+            mock_factory.return_value = mock_llm_instance
 
             await generate_summary_feedback(1, sample_conversation)
 
-            mock_llm_class.assert_called_once_with(
-                model="gemini-3-pro-preview",
-                temperature=0.2,
-                project="test-project",
-                location="us-central1",
-                max_tokens=200000,
-                vertexai=True,
-                google_api_key=None,
+            mock_factory.assert_called_once_with("gemini-3.1-pro-preview")
+            mock_db.agent_llm_config.get_model_name_for_agent.assert_called_once_with(
+                "summary_feedback"
             )
+
+    async def test_generate_summary_feedback_falls_back_on_db_error(
+        self, mock_feedback_config, sample_conversation, mock_summary_response
+    ):
+        """Test that settings.LLM_MODEL is used when DB resolution fails."""
+        with (
+            patch("app.services.summary_feedback.database_service") as mock_db,
+            patch("app.services.summary_feedback.create_chat_llm") as mock_factory,
+            patch("app.services.summary_feedback.settings") as mock_settings,
+        ):
+            mock_settings.LLM_MODEL = "gemini-3-flash-preview"
+
+            mock_db.feedback.get_feedback_by_type = AsyncMock(
+                return_value=mock_feedback_config
+            )
+            mock_db.agent_llm_config.get_model_name_for_agent = AsyncMock(
+                side_effect=Exception("DB error")
+            )
+
+            mock_chain = AsyncMock()
+            mock_chain.ainvoke = AsyncMock(
+                return_value={"parsed": mock_summary_response, "raw": ""}
+            )
+            mock_llm_instance = MagicMock()
+            mock_llm_instance.with_structured_output.return_value = mock_chain
+            mock_factory.return_value = mock_llm_instance
+
+            await generate_summary_feedback(1, sample_conversation)
+
+            mock_factory.assert_called_once_with("gemini-3-flash-preview")

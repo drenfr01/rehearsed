@@ -156,6 +156,9 @@ class Settings:
         self.DEFAULT_LLM_TEMPERATURE = float(os.getenv("DEFAULT_LLM_TEMPERATURE", "0.2"))
         self.MAX_TOKENS = int(os.getenv("MAX_TOKENS", "200000"))
         self.MAX_LLM_CALL_RETRIES = int(os.getenv("MAX_LLM_CALL_RETRIES", "3"))
+        self.LLM_FALLBACK_MODEL = os.getenv("LLM_FALLBACK_MODEL", "gemini-3-flash-preview")
+        self.GEMINI_LIVE_MODEL = os.getenv("GEMINI_LIVE_MODEL", "gemini-live-2.5-flash-native-audio")
+        self.TTS_MODEL = os.getenv("TTS_MODEL", "gemini-2.5-flash-tts")
 
         # JWT Configuration
         self.JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "")

@@ -19,8 +19,8 @@ from app.api.v1.deps import get_database_service
 from app.core.logging import logger
 from app.schemas.graph import SummaryFeedbackResponse
 from app.services.database.base import DatabaseService
+from app.core.config import settings
 from app.services.gemini_live import (
-    GEMINI_LIVE_MODEL,
     GeminiLiveSession,
     build_one_on_one_system_prompt,
 )
@@ -144,7 +144,7 @@ async def _handle_gemini_session(
                             "scenario_name": scenario.name,
                             "agent_id": agent_id,
                             "agent_name": agent.name,
-                            "model": GEMINI_LIVE_MODEL,
+                            "model": settings.GEMINI_LIVE_MODEL,
                         }
                     )
 
@@ -205,7 +205,7 @@ async def _handle_gemini_session(
                                         with _langfuse.start_as_current_observation(
                                             as_type="generation",
                                             name="voice_turn",
-                                            model=GEMINI_LIVE_MODEL,
+                                            model=settings.GEMINI_LIVE_MODEL,
                                         ) as gen:
                                             gen.update(
                                                 input=user_text or None,

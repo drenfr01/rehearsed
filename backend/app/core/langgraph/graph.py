@@ -9,7 +9,6 @@ from langchain_core.messages import (
     HumanMessage,
     SystemMessage,
 )
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langfuse import get_client, observe
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph.state import (

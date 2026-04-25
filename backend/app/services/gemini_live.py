@@ -23,7 +23,6 @@ from google.genai.types import (
 from app.core.config import Environment, settings
 from app.core.logging import logger
 
-GEMINI_LIVE_MODEL = "gemini-live-2.5-flash-native-audio"
 GEMINI_LIVE_LOCATION = "us-central1"
 
 
@@ -73,7 +72,7 @@ class GeminiLiveSession:
 
         config = self._build_config()
         self._context_manager = self._client.aio.live.connect(
-            model=GEMINI_LIVE_MODEL,
+            model=settings.GEMINI_LIVE_MODEL,
             config=config,
         )
         self._session = await self._context_manager.__aenter__()
@@ -81,7 +80,7 @@ class GeminiLiveSession:
         logger.info(
             "gemini_live_session_connected",
             session_id=self.session_id,
-            model=GEMINI_LIVE_MODEL,
+            model=settings.GEMINI_LIVE_MODEL,
         )
 
     _audio_chunk_count = 0

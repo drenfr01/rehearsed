@@ -53,6 +53,6 @@ describe('authGuard', () => {
     spyOn(router, 'navigate');
     const result = TestBed.runInInjectionContext(() => authGuard(mockRoute, mockState));
     expect(result).toBeFalse();
-    expect(router.navigate).toHaveBeenCalledWith(['/login']);
+    expect(router.navigate).toHaveBeenCalledWith(['/']);
   });
 });

@@ -1,6 +1,6 @@
 import { Component, DestroyRef, inject, signal, OnInit } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
-import { ChatGraphService } from '../../core/services/chat-graph.service';
+import { ChatOrchestrator } from '../../core/services/chat-orchestrator.service';
 import { Message } from '../../core/models/chat-graph.model';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -28,7 +28,7 @@ import { gcsUriToHttpUrl } from '../../core/utils/gcs-uri.util';
 export class ScenarioOverview implements OnInit {
   private router = inject(Router);
   private destroyRef = inject(DestroyRef);
-  private chatGraphService = inject(ChatGraphService);
+  private chatOrchestrator = inject(ChatOrchestrator);
   protected isLoading = signal(false);
   protected error = signal<string>('');
   private scenarioService = inject(ScenarioService);
@@ -93,7 +93,7 @@ export class ScenarioOverview implements OnInit {
     }
     
     // Sending initial graph request, hence the true flag
-    const subscription = this.chatGraphService.sendGraphRequest({
+    const subscription = this.chatOrchestrator.sendChatRequest({
         messages: [newMessage],
         is_resumption: false,
         resumption_text: '',

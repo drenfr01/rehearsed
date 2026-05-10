@@ -69,7 +69,7 @@ describe('OneOnOneFeedbackDialog', () => {
     it('should generate and save a PDF from feedbackData', async () => {
       const mockPdf = jasmine.createSpyObj(
         'jsPDF',
-        ['setFont', 'setFontSize', 'text', 'splitTextToSize', 'addPage', 'save'],
+        ['setFont', 'setFontSize', 'text', 'splitTextToSize', 'addPage', 'save', 'setDrawColor', 'line'],
         { internal: { pageSize: { getWidth: () => 210, getHeight: () => 297 } } },
       );
       mockPdf.splitTextToSize.and.callFake((t: string) => [t]);

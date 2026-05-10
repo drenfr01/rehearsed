@@ -107,7 +107,7 @@
 
           <!-- Messages Container -->
           <div class="messages-container">
-            @for (message of messages(); track $index) {
+            @for (message of messages(); track message.turnId ?? $index) {
               <div class="message-wrapper" [class.user-message]="message.role === 'user'" [class.assistant-message]="message.role === 'assistant'">
                 @if (message.role === 'user') {
                   <div class="message-content-wrapper">
@@ -118,6 +118,37 @@
                       {{ message.content }}
                     </div>
                   </div>
+                  <!-- Per-turn inline feedback card -->
+                  @if (message.turnId) {
+                    @let entry = getFeedbackForTurn(message.turnId);
+                    @if (entry) {
+                      <div class="inline-feedback-card" [class.expanded]="isFeedbackExpanded(message.turnId!)">
+                        <button class="feedback-card-header" (click)="toggleFeedbackExpanded(message.turnId!)">
+                          <mat-icon class="feedback-card-icon">feedback</mat-icon>
+                          <span class="feedback-card-label">Coach Feedback</span>
+                          @if (entry.status === 'pending') {
+                            <mat-icon class="feedback-status-icon hourglass-icon">hourglass_empty</mat-icon>
+                          }
+                          <mat-icon class="feedback-expand-icon">
+                            {{ isFeedbackExpanded(message.turnId!) ? 'expand_less' : 'expand_more' }}
+                          </mat-icon>
+                        </button>
+                        @if (isFeedbackExpanded(message.turnId!)) {
+                          <div class="feedback-card-body">
+                            @if (entry.status === 'pending') {
+                              <p class="feedback-loading-text">Generating feedback...</p>
+                            } @else if (entry.status === 'failed') {
+                              <p class="feedback-failed-text">Feedback unavailable for this turn.</p>
+                            } @else {
+                              @for (line of entry.feedback; track $index) {
+                                <p class="feedback-line">{{ line }}</p>
+                              }
+                            }
+                          </div>
+                        }
+                      </div>
+                    }
+                  }
                 } @else {
                   <div class="message-content-wrapper">
                     @if (getStudentAvatarUrl(message.student_name)) {
@@ -172,17 +203,20 @@
             <h3>Immediate Feedback</h3>
           </div>
           <div class="feedback-content">
-            @if (inlineFeedback().length > 0) {
-              @for (feedback of inlineFeedback(); track $index) {
-                <div class="feedback-item">
-                  <div class="feedback-text">{{ feedback }}</div>
+            @if (feedbackHistory().length > 0) {
+              @for (entry of feedbackHistory(); track entry.turnId) {
+                <div class="feedback-item" [class.feedback-pending]="entry.status === 'pending'">
+                  @if (entry.status === 'pending') {
+                    <div class="feedback-text feedback-loading-text">Generating feedback...</div>
+                  } @else if (entry.status === 'failed') {
+                    <div class="feedback-text feedback-failed-text">Feedback unavailable.</div>
+                  } @else {
+                    @for (line of entry.feedback; track $index) {
+                      <div class="feedback-text">{{ line }}</div>
+                    }
+                  }
                 </div>
               }
-            } @else if (feedbackStatus() === 'pending') {
-              <div class="no-feedback feedback-loading">
-                <mat-icon class="empty-feedback-icon hourglass-icon">hourglass_empty</mat-icon>
-                <p>Generating feedback...</p>
-              </div>
             } @else {
               <div class="no-feedback">
                 <mat-icon class="empty-feedback-icon">info_outline</mat-icon>

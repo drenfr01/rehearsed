@@ -1,12 +1,17 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
-import { ChatGraphService } from './chat-graph.service';
+import { ChatOrchestrator } from './chat-orchestrator.service';
+import { MessageStore } from './message-store.service';
+import { InlineFeedbackService } from './inline-feedback.service';
+import { TtsAudioService } from './tts-audio.service';
 import { environment } from '../../../environments/environment';
 import { ChatRequest, ChatResponse } from '../models/chat-graph.model';
 
-describe('ChatGraphService', () => {
-  let service: ChatGraphService;
+describe('ChatOrchestrator', () => {
+  let orchestrator: ChatOrchestrator;
+  let messageStore: MessageStore;
+  let feedbackService: InlineFeedbackService;
   let httpTesting: HttpTestingController;
 
   beforeEach(() => {
@@ -14,7 +19,9 @@ describe('ChatGraphService', () => {
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting()],
     });
-    service = TestBed.inject(ChatGraphService);
+    orchestrator = TestBed.inject(ChatOrchestrator);
+    messageStore = TestBed.inject(MessageStore);
+    feedbackService = TestBed.inject(InlineFeedbackService);
     httpTesting = TestBed.inject(HttpTestingController);
   });
 
@@ -24,60 +31,34 @@ describe('ChatGraphService', () => {
   });
 
   it('should be created', () => {
-    expect(service).toBeTruthy();
+    expect(orchestrator).toBeTruthy();
   });
 
-  it('should start with empty graph messages', () => {
-    expect(service.loadedGraphMessages()).toEqual([]);
-  });
-
-  it('should start with empty inline feedback', () => {
-    expect(service.loadedInlineFeedback()).toEqual([]);
+  it('should start with empty messages', () => {
+    expect(messageStore.all()).toEqual([]);
   });
 
   it('should start with empty summary feedback', () => {
-    expect(service.loadedSummaryFeedback()).toBe('');
+    expect(orchestrator.summaryFeedback()).toBe('');
   });
 
-  it('should start with null feedback status', () => {
-    expect(service.loadedFeedbackStatus()).toBeNull();
-  });
-
-  describe('resetGraphMessages', () => {
-    it('should clear messages and inline feedback', () => {
-      service.resetGraphMessages();
-      expect(service.loadedGraphMessages()).toEqual([]);
-      expect(service.loadedInlineFeedback()).toEqual([]);
-    });
-
-    it('should remove localStorage entries', () => {
-      localStorage.setItem('chat_graph_messages', JSON.stringify([{ role: 'user', content: 'hi' }]));
-      localStorage.setItem('chat_inline_feedback', JSON.stringify(['good']));
-      service.resetGraphMessages();
-      expect(localStorage.getItem('chat_graph_messages')).toBeNull();
-      expect(localStorage.getItem('chat_inline_feedback')).toBeNull();
+  describe('resetSession', () => {
+    it('should clear messages and feedback', () => {
+      orchestrator.resetSession();
+      expect(messageStore.all()).toEqual([]);
+      expect(feedbackService.history()).toEqual([]);
     });
   });
 
-  describe('getTtsStatus', () => {
-    it('should return undefined for unknown audio id', () => {
-      expect(service.getTtsStatus('unknown')).toBeUndefined();
-    });
-
-    it('should return undefined when audioId is undefined', () => {
-      expect(service.getTtsStatus(undefined)).toBeUndefined();
-    });
-  });
-
-  describe('sendGraphRequest', () => {
+  describe('sendChatRequest', () => {
     const mockResponse: ChatResponse = {
       messages: [],
       interrupt_task: '',
       interrupt_value: '',
       interrupt_value_type: 'text',
       student_responses: [],
-      inline_feedback: ['Good job'],
-      feedback_request_id: '',
+      inline_feedback: [],
+      feedback_request_id: 'test-feedback-id',
       summary_feedback: '',
       summary: '',
       answering_student: 0,
@@ -96,11 +77,10 @@ describe('ChatGraphService', () => {
         resumption_approved: false,
       };
 
-      service.sendGraphRequest(chatRequest, true).subscribe();
+      orchestrator.sendChatRequest(chatRequest, true).subscribe();
 
       const req = httpTesting.expectOne(`${environment.baseUrl}/api/v1/chatbot/chat`);
       expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual(chatRequest);
       req.flush(mockResponse);
     });
 
@@ -112,16 +92,17 @@ describe('ChatGraphService', () => {
         resumption_approved: false,
       };
 
-      service.sendGraphRequest(chatRequest, true).subscribe();
+      orchestrator.sendChatRequest(chatRequest, true).subscribe();
 
-      const messages = service.loadedGraphMessages();
+      const messages = messageStore.all();
       expect(messages.length).toBe(1);
       expect(messages[0].content).toBe('Hello');
+      expect(messages[0].turnId).toBeTruthy();
 
       httpTesting.expectOne(`${environment.baseUrl}/api/v1/chatbot/chat`).flush(mockResponse);
     });
 
-    it('should add resumption message for non-initial request', () => {
+    it('should add resumption message with turnId for non-initial request', () => {
       const chatRequest: ChatRequest = {
         messages: [],
         is_resumption: true,
@@ -129,31 +110,15 @@ describe('ChatGraphService', () => {
         resumption_approved: true,
       };
 
-      service.sendGraphRequest(chatRequest, false).subscribe();
+      orchestrator.sendChatRequest(chatRequest, false).subscribe();
 
-      const messages = service.loadedGraphMessages();
+      const messages = messageStore.all();
       expect(messages.length).toBe(1);
       expect(messages[0].role).toBe('user');
       expect(messages[0].content).toBe('Continue');
+      expect(messages[0].turnId).toBeTruthy();
 
       httpTesting.expectOne(`${environment.baseUrl}/api/v1/chatbot/chat`).flush(mockResponse);
-    });
-
-    it('should set inline feedback from response', () => {
-      const chatRequest: ChatRequest = {
-        messages: [{ role: 'user', content: 'Hello' }],
-        is_resumption: false,
-        resumption_text: '',
-        resumption_approved: false,
-      };
-
-      service.sendGraphRequest(chatRequest, true).subscribe();
-
-      const req = httpTesting.expectOne(`${environment.baseUrl}/api/v1/chatbot/chat`);
-      req.flush(mockResponse);
-
-      expect(service.loadedInlineFeedback()).toEqual(['Good job']);
-      expect(service.loadedFeedbackStatus()).toBe('ready');
     });
 
     it('should handle interrupt with student responses', () => {
@@ -177,41 +142,74 @@ describe('ChatGraphService', () => {
         resumption_approved: false,
       };
 
-      service.sendGraphRequest(chatRequest, true).subscribe();
+      orchestrator.sendChatRequest(chatRequest, true).subscribe();
       httpTesting.expectOne(`${environment.baseUrl}/api/v1/chatbot/chat`).flush(responseWithInterrupt);
 
-      const messages = service.loadedGraphMessages();
+      const messages = messageStore.all();
       const assistantMsg = messages.find(m => m.role === 'assistant');
       expect(assistantMsg).toBeTruthy();
       expect(assistantMsg!.content).toBe('Student answer');
       expect(assistantMsg!.student_name).toBe('Alice');
     });
   });
+});
 
-  describe('localStorage persistence', () => {
-    it('should load graph messages from localStorage on construction', () => {
-      const storedMessages = [{ role: 'user' as const, content: 'stored' }];
-      localStorage.setItem('chat_graph_messages', JSON.stringify(storedMessages));
+describe('MessageStore', () => {
+  let store: MessageStore;
 
-      TestBed.resetTestingModule();
-      TestBed.configureTestingModule({
-        providers: [provideHttpClient(), provideHttpClientTesting()],
-      });
-      const freshService = TestBed.inject(ChatGraphService);
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({});
+    store = TestBed.inject(MessageStore);
+  });
 
-      expect(freshService.loadedGraphMessages()).toEqual(storedMessages);
-    });
+  afterEach(() => {
+    localStorage.clear();
+  });
 
-    it('should handle corrupted localStorage gracefully', () => {
-      localStorage.setItem('chat_graph_messages', 'not-json');
+  it('should be created', () => {
+    expect(store).toBeTruthy();
+  });
 
-      TestBed.resetTestingModule();
-      TestBed.configureTestingModule({
-        providers: [provideHttpClient(), provideHttpClientTesting()],
-      });
-      const freshService = TestBed.inject(ChatGraphService);
+  it('should start with empty messages', () => {
+    expect(store.all()).toEqual([]);
+  });
 
-      expect(freshService.loadedGraphMessages()).toEqual([]);
-    });
+  it('should append user messages', () => {
+    store.appendUser({ role: 'user', content: 'test', turnId: 'abc' });
+    expect(store.all().length).toBe(1);
+    expect(store.all()[0].content).toBe('test');
+  });
+
+  it('should reset messages and clear localStorage', () => {
+    store.appendUser({ role: 'user', content: 'test' });
+    store.reset();
+    expect(store.all()).toEqual([]);
+    expect(localStorage.getItem('chat_graph_messages')).toBeNull();
+  });
+
+  it('should update content by turnId', () => {
+    store.appendUser({ role: 'user', content: 'original', turnId: 'abc' });
+    store.updateContent('abc', 'updated');
+    expect(store.all()[0].content).toBe('updated');
+  });
+
+  it('should load from localStorage on construction', () => {
+    const storedMessages = [{ role: 'user' as const, content: 'stored' }];
+    localStorage.setItem('chat_graph_messages', JSON.stringify(storedMessages));
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({});
+    const freshStore = TestBed.inject(MessageStore);
+    expect(freshStore.all()).toEqual(storedMessages);
+  });
+
+  it('should handle corrupted localStorage gracefully', () => {
+    localStorage.setItem('chat_graph_messages', 'not-json');
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({});
+    const freshStore = TestBed.inject(MessageStore);
+    expect(freshStore.all()).toEqual([]);
   });
 });

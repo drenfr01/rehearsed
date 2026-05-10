@@ -133,6 +133,7 @@ async def generate_feedback_and_store(
     feedback_id: str,
     llm,
     session_id: str = None,
+    turn_id: str = "",
 ) -> None:
     """Background task: generate inline feedback and store in cache.
     
@@ -142,6 +143,7 @@ async def generate_feedback_and_store(
         feedback_id: Unique ID for this feedback request (must exist in cache as pending)
         llm: The LLM instance to use for generation
         session_id: The session ID for Langfuse tracking (optional, falls back to entry.session_id)
+        turn_id: Unique identifier for this conversation turn (for DB persistence)
     """
     from langchain_core.messages import SystemMessage
 
@@ -217,6 +219,14 @@ async def generate_feedback_and_store(
             
             feedback_cache.put_ready(feedback_id, entry_session_id, [feedback_text])
             logger.info("async_feedback_ready", feedback_id=feedback_id, session_id=entry_session_id)
+
+            if turn_id:
+                try:
+                    await database_service.session_feedback.update_status(
+                        id=feedback_id, status="ready", feedback=[feedback_text],
+                    )
+                except Exception as db_err:
+                    logger.error("session_feedback_db_update_failed", feedback_id=feedback_id, error=str(db_err))
             
         except Exception as e:
             logger.error(
@@ -227,3 +237,11 @@ async def generate_feedback_and_store(
                 exc_info=True,
             )
             feedback_cache.put_failed(feedback_id, entry_session_id, str(e))
+
+            if turn_id:
+                try:
+                    await database_service.session_feedback.update_status(
+                        id=feedback_id, status="failed",
+                    )
+                except Exception as db_err:
+                    logger.error("session_feedback_db_update_failed", feedback_id=feedback_id, error=str(db_err))

@@ -4,7 +4,7 @@ import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core'
 import { Observable, tap } from 'rxjs';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
-import { ChatGraphService } from './chat-graph.service';
+import { ChatOrchestrator } from './chat-orchestrator.service';
 
 @Injectable({
   providedIn: 'root',
@@ -13,7 +13,7 @@ export class AuthService {
   private router = inject(Router);
   private httpClient = inject(HttpClient);
   private destroyRef = inject(DestroyRef);
-  private chatGraph = inject(ChatGraphService);
+  private chatOrchestrator = inject(ChatOrchestrator);
 
   private tokenSignal = signal<string | null>(localStorage.getItem('token'));
   private isAdminSignal = signal<boolean>(this.readAdminFromToken());
@@ -95,7 +95,7 @@ export class AuthService {
     return this.httpClient.post<SessionResponse>(`${environment.baseUrl}/api/v1/auth/session`, {}).pipe(
       tap((response: SessionResponse) => {
         this.storeSessionToken(response.token.access_token);
-        this.chatGraph.resetGraphMessages();
+        this.chatOrchestrator.resetSession();
       })
     );
   }

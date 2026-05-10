@@ -1,10 +1,19 @@
-import { SummaryFeedbackResponse } from '../models/chat-graph.model';
+import { InlineFeedbackEntry, Message, SummaryFeedbackResponse } from '../models/chat-graph.model';
 
 const PAGE_MARGIN = 15;
 const TITLE_FONT_SIZE = 20;
+const SECTION_TITLE_FONT_SIZE = 16;
 const HEADER_FONT_SIZE = 14;
 const BODY_FONT_SIZE = 11;
+const SMALL_FONT_SIZE = 10;
 const LINE_HEIGHT_FACTOR = 1.5;
+const INDENT = 10;
+
+export interface PdfDownloadData {
+  summaryFeedback: SummaryFeedbackResponse | string | null;
+  transcript?: Message[];
+  inlineFeedback?: InlineFeedbackEntry[];
+}
 
 interface FeedbackSection {
   title: string;
@@ -20,20 +29,20 @@ export const pdfDeps = {
 
 function stripMarkdown(md: string): string {
   return md
-    .replace(/^#{1,6}\s+/gm, '')        // headings
-    .replace(/\*\*(.+?)\*\*/g, '$1')    // bold
-    .replace(/\*(.+?)\*/g, '$1')        // italic
-    .replace(/__(.+?)__/g, '$1')        // bold alt
-    .replace(/_(.+?)_/g, '$1')          // italic alt
-    .replace(/~~(.+?)~~/g, '$1')        // strikethrough
-    .replace(/`(.+?)`/g, '$1')          // inline code
-    .replace(/^\s*[-*+]\s+/gm, '  - ')  // unordered lists
-    .replace(/^\s*\d+\.\s+/gm, '  - ')  // ordered lists -> normalized
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // links
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1') // images
-    .replace(/^>\s?/gm, '')             // blockquotes
-    .replace(/^---+$/gm, '')            // horizontal rules
-    .replace(/\n{3,}/g, '\n\n')         // collapse excessive newlines
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/\*(.+?)\*/g, '$1')
+    .replace(/__(.+?)__/g, '$1')
+    .replace(/_(.+?)_/g, '$1')
+    .replace(/~~(.+?)~~/g, '$1')
+    .replace(/`(.+?)`/g, '$1')
+    .replace(/^\s*[-*+]\s+/gm, '  - ')
+    .replace(/^\s*\d+\.\s+/gm, '  - ')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+    .replace(/^>\s?/gm, '')
+    .replace(/^---+$/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
 
@@ -53,11 +62,32 @@ function lineHeightMm(fontSize: number): number {
   return (fontSize * LINE_HEIGHT_FACTOR * 25.4) / 72;
 }
 
+export function downloadFeedbackAsPdf(
+  data: PdfDownloadData,
+  filename?: string,
+): Promise<void>;
+export function downloadFeedbackAsPdf(
+  data: SummaryFeedbackResponse | string | null,
+  filename?: string,
+): Promise<void>;
 export async function downloadFeedbackAsPdf(
-  feedback: SummaryFeedbackResponse | string | null,
+  dataOrLegacy: PdfDownloadData | SummaryFeedbackResponse | string | null,
   filename = 'session-feedback.pdf',
 ): Promise<void> {
-  if (!feedback) return;
+  let pdfData: PdfDownloadData;
+
+  if (dataOrLegacy === null) return;
+
+  if (typeof dataOrLegacy === 'string') {
+    pdfData = { summaryFeedback: dataOrLegacy };
+  } else if ('summaryFeedback' in dataOrLegacy) {
+    pdfData = dataOrLegacy;
+  } else {
+    pdfData = { summaryFeedback: dataOrLegacy as SummaryFeedbackResponse };
+  }
+
+  const { summaryFeedback, transcript, inlineFeedback } = pdfData;
+  if (!summaryFeedback && (!transcript || transcript.length === 0)) return;
 
   const pdf = await pdfDeps.createPdf();
   const pageWidth = pdf.internal.pageSize.getWidth();
@@ -73,11 +103,11 @@ export async function downloadFeedbackAsPdf(
     }
   }
 
-  function renderLines(lines: string[], fontSize: number): void {
+  function renderLines(lines: string[], fontSize: number, x = PAGE_MARGIN): void {
     const lh = lineHeightMm(fontSize);
     for (const line of lines) {
       ensureSpace(lh);
-      pdf.text(line, PAGE_MARGIN, y);
+      pdf.text(line, x, y);
       y += lh;
     }
   }
@@ -85,32 +115,109 @@ export async function downloadFeedbackAsPdf(
   // Title
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(TITLE_FONT_SIZE);
-  pdf.text('Session Summary', pageWidth / 2, y, { align: 'center' });
+  pdf.text('Session Report', pageWidth / 2, y, { align: 'center' });
   y += lineHeightMm(TITLE_FONT_SIZE) + 4;
 
-  if (typeof feedback === 'string') {
-    const plain = stripMarkdown(feedback);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(BODY_FONT_SIZE);
-    const lines: string[] = pdf.splitTextToSize(plain, contentWidth);
-    renderLines(lines, BODY_FONT_SIZE);
-  } else {
-    const sections = buildSections(feedback);
-    for (const section of sections) {
-      // Section header
-      ensureSpace(lineHeightMm(HEADER_FONT_SIZE) + lineHeightMm(BODY_FONT_SIZE));
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(HEADER_FONT_SIZE);
-      pdf.text(section.title, PAGE_MARGIN, y);
-      y += lineHeightMm(HEADER_FONT_SIZE) + 1;
+  // Conversation section
+  if (transcript && transcript.length > 0) {
+    const feedbackByTurnId = new Map<string, InlineFeedbackEntry>();
+    if (inlineFeedback) {
+      for (const entry of inlineFeedback) {
+        feedbackByTurnId.set(entry.turnId, entry);
+      }
+    }
 
-      // Section body
-      const plain = stripMarkdown(section.body);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(SECTION_TITLE_FONT_SIZE);
+    ensureSpace(lineHeightMm(SECTION_TITLE_FONT_SIZE) + 2);
+    pdf.text('Conversation', PAGE_MARGIN, y);
+    y += lineHeightMm(SECTION_TITLE_FONT_SIZE) + 2;
+
+    // Separator line
+    pdf.setDrawColor(180, 180, 180);
+    pdf.line(PAGE_MARGIN, y, pageWidth - PAGE_MARGIN, y);
+    y += 3;
+
+    for (const message of transcript) {
+      const roleLabel =
+        message.role === 'user'
+          ? 'Teacher:'
+          : `Student (${message.student_name ?? 'Unknown'}):`;
+
+      // Role label
+      ensureSpace(lineHeightMm(BODY_FONT_SIZE) * 2);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(BODY_FONT_SIZE);
+      pdf.text(roleLabel, PAGE_MARGIN, y);
+      y += lineHeightMm(BODY_FONT_SIZE);
+
+      // Message content
+      const plain = stripMarkdown(message.content);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(BODY_FONT_SIZE);
+      const msgLines: string[] = pdf.splitTextToSize(plain, contentWidth - INDENT);
+      renderLines(msgLines, BODY_FONT_SIZE, PAGE_MARGIN + INDENT);
+
+      // Coach feedback for user messages
+      if (message.role === 'user' && message.turnId) {
+        const entry = feedbackByTurnId.get(message.turnId);
+        if (entry && entry.status === 'ready' && entry.feedback.length > 0) {
+          y += 1;
+          ensureSpace(lineHeightMm(SMALL_FONT_SIZE) * 2);
+          pdf.setFont('helvetica', 'bolditalic');
+          pdf.setFontSize(SMALL_FONT_SIZE);
+          pdf.text('Coach Feedback:', PAGE_MARGIN + INDENT, y);
+          y += lineHeightMm(SMALL_FONT_SIZE);
+
+          pdf.setFont('helvetica', 'italic');
+          for (const fb of entry.feedback) {
+            const fbPlain = stripMarkdown(fb);
+            const fbLines: string[] = pdf.splitTextToSize(fbPlain, contentWidth - INDENT * 2);
+            renderLines(fbLines, SMALL_FONT_SIZE, PAGE_MARGIN + INDENT * 2);
+          }
+        }
+      }
+
+      y += 2;
+    }
+
+    y += 4;
+  }
+
+  // Summary section
+  if (summaryFeedback) {
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(SECTION_TITLE_FONT_SIZE);
+    ensureSpace(lineHeightMm(SECTION_TITLE_FONT_SIZE) + 2);
+    pdf.text('Session Summary', PAGE_MARGIN, y);
+    y += lineHeightMm(SECTION_TITLE_FONT_SIZE) + 2;
+
+    pdf.setDrawColor(180, 180, 180);
+    pdf.line(PAGE_MARGIN, y, pageWidth - PAGE_MARGIN, y);
+    y += 3;
+
+    if (typeof summaryFeedback === 'string') {
+      const plain = stripMarkdown(summaryFeedback);
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(BODY_FONT_SIZE);
       const lines: string[] = pdf.splitTextToSize(plain, contentWidth);
       renderLines(lines, BODY_FONT_SIZE);
-      y += 4;
+    } else {
+      const sections = buildSections(summaryFeedback);
+      for (const section of sections) {
+        ensureSpace(lineHeightMm(HEADER_FONT_SIZE) + lineHeightMm(BODY_FONT_SIZE));
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(HEADER_FONT_SIZE);
+        pdf.text(section.title, PAGE_MARGIN, y);
+        y += lineHeightMm(HEADER_FONT_SIZE) + 1;
+
+        const plain = stripMarkdown(section.body);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(BODY_FONT_SIZE);
+        const lines: string[] = pdf.splitTextToSize(plain, contentWidth);
+        renderLines(lines, BODY_FONT_SIZE);
+        y += 4;
+      }
     }
   }
 

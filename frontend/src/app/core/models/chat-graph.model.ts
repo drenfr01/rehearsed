@@ -3,9 +3,17 @@ export type role = "user" | "assistant"
 export interface Message {
     role: role;
     content: string;
+    turnId?: string;
     student_name?: string;
     audio_base64?: string;
     audio_id?: string;
+}
+
+export interface InlineFeedbackEntry {
+    turnId: string;
+    feedback: string[];
+    status: FeedbackStatus;
+    feedbackRequestId?: string;
 }
 
 export interface Agent {
@@ -28,6 +36,7 @@ export interface ChatRequest {
     resumption_text: string;
     resumption_approved: boolean;
     audio_base64?: string;
+    turn_id?: string;
 }
 
 export interface StudentResponse {

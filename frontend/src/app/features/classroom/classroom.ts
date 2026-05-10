@@ -1,8 +1,11 @@
-import { Component, DestroyRef, inject, signal, ElementRef, ViewChild, OnInit, NgZone } from '@angular/core';
+import { Component, DestroyRef, inject, signal, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { ChatGraphService } from '../../core/services/chat-graph.service';
+import { ChatOrchestrator } from '../../core/services/chat-orchestrator.service';
+import { MessageStore } from '../../core/services/message-store.service';
+import { InlineFeedbackService } from '../../core/services/inline-feedback.service';
+import { TtsAudioService } from '../../core/services/tts-audio.service';
 import { ScenarioService } from '../../core/services/scenario.service';
-import { ChatRequest } from '../../core/models/chat-graph.model';
+import { ChatRequest, InlineFeedbackEntry } from '../../core/models/chat-graph.model';
 import { Agent } from '../../core/models/agent.model';
 import { firstValueFrom } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
@@ -40,47 +43,41 @@ export class Classroom implements OnInit {
 
   protected isLoading = signal(false);
   protected error = signal<string>('');
-  private chatGraphService = inject(ChatGraphService);
+  private chatOrchestrator = inject(ChatOrchestrator);
+  private messageStore = inject(MessageStore);
+  private feedbackService = inject(InlineFeedbackService);
+  private ttsService = inject(TtsAudioService);
   private scenarioService = inject(ScenarioService);
   private destroyRef = inject(DestroyRef);
   private router = inject(Router);
-  private ngZone = inject(NgZone);
   private dialog = inject(MatDialog);
   
-  // Map of agent name to their display_text_color
   private agentColorMap = signal<Map<string, string>>(new Map());
-  
-  // Map of agent name to Agent object for avatar access
   private agentMap = signal<Map<string, Agent>>(new Map());
 
   protected userInput = signal<string>('');
   protected isApproved = signal<boolean>(false);
 
-  // Audio playback state - track by message index
   protected playingMessageIndex = signal<number | null>(null);
   protected isPlaying = signal<boolean>(false);
   private audioElement: HTMLAudioElement | null = null;
   private loadedAudioUrls: Map<number, string> = new Map();
 
-  // Audio recording state
   protected isRecording = signal<boolean>(false);
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
   
-  // Recorded audio playback state
   protected recordedAudioUrl = signal<string | null>(null);
   protected isPlayingRecordedAudio = signal<boolean>(false);
   private recordedAudioElement: HTMLAudioElement | null = null;
 
-  // Expose readonly signals from the service
-  protected messages = this.chatGraphService.loadedGraphMessages;
-  protected inlineFeedback = this.chatGraphService.loadedInlineFeedback;
-  protected feedbackStatus = this.chatGraphService.loadedFeedbackStatus;
-  protected studentResponses = this.chatGraphService.loadedStudentResponses;
-  protected transcribedText = this.chatGraphService.loadedTranscribedText;
+  protected messages = this.messageStore.all;
+  protected feedbackHistory = this.feedbackService.history;
+  protected isAnyFeedbackPending = this.feedbackService.isAnyPending;
+  protected studentResponses = this.chatOrchestrator.studentResponses;
+  protected transcribedText = this.chatOrchestrator.transcribedText;
 
   constructor() {
-    // Cleanup audio element on destroy
     this.destroyRef.onDestroy(() => {
       this.cleanupAllAudio();
       this.cleanupRecordedAudio();
@@ -117,22 +114,18 @@ export class Classroom implements OnInit {
     this.destroyRef.onDestroy(() => subscription.unsubscribe());
   }
   
-  // Get avatar URL for a student by name
   getStudentAvatarUrl(studentName: string | undefined): string {
     if (!studentName) return '';
     const agent = this.agentMap().get(studentName);
     if (agent && agent.avatar_gcs_uri) {
-      // If it's a GCS URI (starts with gs://), convert it to HTTP URL
       if (agent.avatar_gcs_uri.startsWith('gs://')) {
         return gcsUriToHttpUrl(agent.avatar_gcs_uri);
       }
-      // Otherwise, treat it as a public filename and prepend /
       return `/${agent.avatar_gcs_uri}`;
     }
     return '';
   }
   
-  // Get color class for an agent by name
   getAgentColorClass(studentName: string | undefined): string {
     if (!studentName) return 'agent-teal';
     
@@ -150,9 +143,30 @@ export class Classroom implements OnInit {
     
     return colorMap[color.toLowerCase()] || 'agent-teal';
   }
+
+  getFeedbackForTurn(turnId: string | undefined): InlineFeedbackEntry | undefined {
+    if (!turnId) return undefined;
+    return this.feedbackHistory().find(e => e.turnId === turnId);
+  }
+
+  protected feedbackExpandedMap = signal<Map<string, boolean>>(new Map());
+
+  isFeedbackExpanded(turnId: string): boolean {
+    const map = this.feedbackExpandedMap();
+    if (map.has(turnId)) return map.get(turnId)!;
+    // Default: the latest pending/ready entry is expanded
+    const history = this.feedbackHistory();
+    const lastEntry = history[history.length - 1];
+    return lastEntry?.turnId === turnId;
+  }
+
+  toggleFeedbackExpanded(turnId: string): void {
+    const map = new Map(this.feedbackExpandedMap());
+    map.set(turnId, !this.isFeedbackExpanded(turnId));
+    this.feedbackExpandedMap.set(map);
+  }
   
   private async getOrCreateAudioUrl(messageIndex: number, base64Audio: string): Promise<string | null> {
-    // Check if we already have a URL for this message
     if (this.loadedAudioUrls.has(messageIndex)) {
       return this.loadedAudioUrls.get(messageIndex)!;
     }
@@ -162,7 +176,6 @@ export class Classroom implements OnInit {
     }
     
     try {
-      // Convert base64 to blob
       const binaryString = atob(base64Audio);
       const len = binaryString.length;
       const bytes = new Uint8Array(len);
@@ -174,7 +187,6 @@ export class Classroom implements OnInit {
       const blob = new Blob([bytes], { type: 'audio/mp3' });
       const audioUrl = URL.createObjectURL(blob);
       
-      // Cache the URL
       this.loadedAudioUrls.set(messageIndex, audioUrl);
       return audioUrl;
     } catch (error) {
@@ -188,7 +200,6 @@ export class Classroom implements OnInit {
       this.audioElement.pause();
       this.audioElement = null;
     }
-    // Revoke all cached URLs
     this.loadedAudioUrls.forEach(url => URL.revokeObjectURL(url));
     this.loadedAudioUrls.clear();
     this.isPlaying.set(false);
@@ -198,7 +209,6 @@ export class Classroom implements OnInit {
   async togglePlayPauseForMessage(messageIndex: number, audioBase64: string | undefined, audioId: string | undefined) {
     const currentlyPlaying = this.playingMessageIndex();
     
-    // If clicking on the same message that's playing, toggle pause/play
     if (currentlyPlaying === messageIndex && this.audioElement) {
       if (this.isPlaying()) {
         this.audioElement.pause();
@@ -210,16 +220,14 @@ export class Classroom implements OnInit {
       return;
     }
     
-    // Stop any currently playing audio
     if (this.audioElement) {
       this.audioElement.pause();
     }
 
     let resolvedAudioBase64 = audioBase64;
-    // If audio hasn't arrived yet, fetch/poll for it on demand.
     if ((!resolvedAudioBase64 || resolvedAudioBase64.trim().length === 0) && audioId) {
       try {
-        resolvedAudioBase64 = await firstValueFrom(this.chatGraphService.ensureTtsAudio(audioId), { defaultValue: '' });
+        resolvedAudioBase64 = await firstValueFrom(this.ttsService.ensureAudio(audioId), { defaultValue: '' });
       } catch (error) {
         console.error('Audio not ready or failed to fetch:', error);
         return;
@@ -230,21 +238,18 @@ export class Classroom implements OnInit {
       }
     }
     
-    // Get or create the audio URL for this message
     const audioUrl = await this.getOrCreateAudioUrl(messageIndex, resolvedAudioBase64 || '');
     if (!audioUrl) {
       console.error('Could not load audio for message', messageIndex);
       return;
     }
     
-    // Create new audio element
     this.audioElement = new Audio(audioUrl);
     this.audioElement.onended = () => {
       this.isPlaying.set(false);
       this.playingMessageIndex.set(null);
     };
     
-    // Play the audio
     try {
       await this.audioElement.play();
       this.isPlaying.set(true);
@@ -263,7 +268,7 @@ export class Classroom implements OnInit {
   getAudioState(message: { audio_base64?: string; audio_id?: string }): 'ready' | 'pending' | 'failed' | 'none' {
     if (message.audio_base64 && message.audio_base64.length > 0) return 'ready';
     if (!message.audio_id) return 'none';
-    return this.chatGraphService.getTtsStatus(message.audio_id) || 'pending';
+    return this.ttsService.getStatus(message.audio_id) || 'pending';
   }
 
   isAudioButtonDisabled(message: { audio_base64?: string; audio_id?: string }): boolean {
@@ -291,7 +296,6 @@ export class Classroom implements OnInit {
     );
   }
 
-  // Audio recording methods
   async toggleRecording() {
     if (this.isRecording()) {
       this.stopRecording();
@@ -304,7 +308,6 @@ export class Classroom implements OnInit {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
-      // Use webm format with opus codec for best compatibility
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
         ? 'audio/webm;codecs=opus' 
         : 'audio/webm';
@@ -319,32 +322,24 @@ export class Classroom implements OnInit {
       };
 
       this.mediaRecorder.onstop = async () => {
-        // Stop all tracks to release the microphone
         stream.getTracks().forEach(track => track.stop());
         
         if (this.recordedChunks.length > 0) {
           const audioBlob = new Blob(this.recordedChunks, { type: mimeType });
           
-          // Store the recorded audio URL for playback
           this.cleanupRecordedAudio();
           const audioUrl = URL.createObjectURL(audioBlob);
-          this.ngZone.run(() => {
-            this.recordedAudioUrl.set(audioUrl);
-          });
+          this.recordedAudioUrl.set(audioUrl);
           
           await this.sendAudioMessage(audioBlob);
         }
       };
 
       this.mediaRecorder.start();
-      this.ngZone.run(() => {
-        this.isRecording.set(true);
-      });
+      this.isRecording.set(true);
     } catch (error) {
       console.error('Failed to start recording:', error);
-      this.ngZone.run(() => {
-        this.error.set('Could not access microphone. Please check permissions.');
-      });
+      this.error.set('Could not access microphone. Please check permissions.');
     }
   }
 
@@ -381,9 +376,7 @@ export class Classroom implements OnInit {
     if (!this.recordedAudioElement) {
       this.recordedAudioElement = new Audio(audioUrl);
       this.recordedAudioElement.onended = () => {
-        this.ngZone.run(() => {
-          this.isPlayingRecordedAudio.set(false);
-        });
+        this.isPlayingRecordedAudio.set(false);
       };
     }
 
@@ -396,7 +389,6 @@ export class Classroom implements OnInit {
   }
 
   private async sendAudioMessage(audioBlob: Blob) {
-    // Convert blob to base64
     const arrayBuffer = await audioBlob.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
     let binary = '';
@@ -410,13 +402,13 @@ export class Classroom implements OnInit {
 
     const newChatRequest: ChatRequest = {
       is_resumption: true,
-      resumption_text: '', // Will be filled by speech-to-text on backend
+      resumption_text: '',
       resumption_approved: this.isApproved(),
       messages: [],
       audio_base64: audioBase64,
     };
 
-    const subscription = this.chatGraphService.sendGraphRequest(newChatRequest, false).subscribe({
+    const subscription = this.chatOrchestrator.sendChatRequest(newChatRequest, false).subscribe({
       error: (error: Error) => {
         this.error.set(error.message);
         this.isLoading.set(false);
@@ -440,7 +432,7 @@ export class Classroom implements OnInit {
       resumption_approved: this.isApproved()!,
       messages: [],
     }
-    const subscription = this.chatGraphService.sendGraphRequest(newChatRequest, false).subscribe({
+    const subscription = this.chatOrchestrator.sendChatRequest(newChatRequest, false).subscribe({
       error: (error: Error) => {
         this.error.set(error.message);
         this.isLoading.set(false);
@@ -465,11 +457,10 @@ export class Classroom implements OnInit {
       resumption_approved: this.isApproved()!,
       messages: [],
     }
-    const subscription = this.chatGraphService.sendGraphRequest(endScenarioRequest, false).subscribe({
+    const subscription = this.chatOrchestrator.sendChatRequest(endScenarioRequest, false).subscribe({
       next: () => {
-        // Wait a bit for summary feedback to be set, then check and open dialog
         setTimeout(() => {
-          const summaryFeedback = this.chatGraphService.loadedSummaryFeedback();
+          const summaryFeedback = this.chatOrchestrator.summaryFeedback();
           if (summaryFeedback) {
             const hasFeedback = typeof summaryFeedback === 'string' 
               ? summaryFeedback.trim().length > 0
@@ -505,4 +496,3 @@ export class Classroom implements OnInit {
     });
   }
 }
-

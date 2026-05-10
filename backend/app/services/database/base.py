@@ -17,6 +17,7 @@ from app.services.database.feedback import FeedbackRepository
 from app.services.database.llm_model import LlmModelRepository
 from app.services.database.scenario import ScenarioRepository
 from app.services.database.session import SessionRepository
+from app.services.database.session_feedback import SessionFeedbackRepository
 from app.services.database.user import UserRepository
 
 
@@ -42,8 +43,9 @@ class DatabaseService:
         self._feedback = None
         self._llm_models = None
         self._agent_llm_config = None
+        self._session_feedback = None
         
-        logger.info("database_service_initialized", repositories=["users", "sessions", "scenarios", "agents", "avatars", "feedback", "llm_models", "agent_llm_config"])
+        logger.info("database_service_initialized", repositories=["users", "sessions", "scenarios", "agents", "avatars", "feedback", "llm_models", "agent_llm_config", "session_feedback"])
     
     def _get_connection_url(self) -> str:
         """Get the database connection URL based on environment.
@@ -125,6 +127,7 @@ class DatabaseService:
         self._feedback = FeedbackRepository(engine)
         self._llm_models = LlmModelRepository(engine)
         self._agent_llm_config = AgentLlmConfigRepository(engine)
+        self._session_feedback = SessionFeedbackRepository(engine)
 
     @property
     def engine(self) -> Engine:
@@ -194,6 +197,11 @@ class DatabaseService:
     def agent_llm_config(self):
         """Get the agent LLM config repository."""
         return self._agent_llm_config
+
+    @property
+    def session_feedback(self):
+        """Get the session feedback repository."""
+        return self._session_feedback
     
     def get_session_maker(self):
         """Get a session maker for creating database sessions.

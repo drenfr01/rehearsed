@@ -73,6 +73,7 @@ class ChatRequest(BaseModel):
     is_resumption: bool = Field(default=False, description="Whether the conversation is being resumed")
     resumption_text: str = Field(default="", description="The text to resume the conversation")
     audio_base64: str | None = Field(default=None, description="Optional base64-encoded audio bytes for speech-to-text transcription")
+    turn_id: str = Field(default="", description="Unique identifier for this turn, used to link feedback to messages")
 
 
 class ChatResponse(BaseModel):
@@ -111,3 +112,18 @@ class StreamResponse(BaseModel):
 
     content: str = Field(default="", description="The content of the current chunk")
     done: bool = Field(default=False, description="Whether the stream is complete")
+
+
+class SessionFeedbackEntryResponse(BaseModel):
+    """Response model for a single feedback entry."""
+
+    turn_id: str
+    feedback: List[str]
+    status: str
+    created_at: str
+
+
+class SessionFeedbackResponse(BaseModel):
+    """Response model for all feedback entries in a session."""
+
+    feedback_entries: List[SessionFeedbackEntryResponse]

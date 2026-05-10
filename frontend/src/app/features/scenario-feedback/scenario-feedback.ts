@@ -1,7 +1,7 @@
 import { Component, inject, computed, input } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { CommonModule } from '@angular/common';
-import { ChatGraphService } from '../../core/services/chat-graph.service';
+import { ChatOrchestrator } from '../../core/services/chat-orchestrator.service';
 import { marked } from 'marked';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { SummaryFeedbackResponse } from '../../core/models/chat-graph.model';
@@ -16,13 +16,13 @@ import { SummaryFeedbackResponse } from '../../core/models/chat-graph.model';
   styleUrl: './scenario-feedback.css',
 })
 export class ScenarioFeedback {
-  private chatGraphService = inject(ChatGraphService);
+  private chatOrchestrator = inject(ChatOrchestrator);
   private sanitizer = inject(DomSanitizer);
 
   feedbackData = input<SummaryFeedbackResponse | string | null>(null);
 
   protected summaryFeedback = computed(() => {
-    return this.feedbackData() ?? this.chatGraphService.loadedSummaryFeedback();
+    return this.feedbackData() ?? this.chatOrchestrator.summaryFeedback();
   });
 
   // Check if feedback is structured or a string

@@ -5,11 +5,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { ScenarioFeedback } from '../scenario-feedback/scenario-feedback';
-import { SummaryFeedbackResponse } from '../../core/models/chat-graph.model';
+import { SummaryFeedbackResponse, Message } from '../../core/models/chat-graph.model';
 import { downloadFeedbackAsPdf } from '../../core/utils/pdf-download.util';
 
 export interface OneOnOneFeedbackDialogData {
   feedback: SummaryFeedbackResponse | string;
+  transcript?: Message[];
 }
 
 @Component({
@@ -34,7 +35,10 @@ export class OneOnOneFeedbackDialog {
   protected feedbackData: SummaryFeedbackResponse | string | null = this.data.feedback;
 
   async onDownloadSession() {
-    await downloadFeedbackAsPdf(this.feedbackData, 'session-feedback.pdf');
+    await downloadFeedbackAsPdf({
+      summaryFeedback: this.feedbackData,
+      transcript: this.data.transcript,
+    });
   }
 
   onNewSession() {

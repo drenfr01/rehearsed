@@ -419,6 +419,7 @@ class LangGraphAgent:
         user_id: str,
         scenario_id: int,
         tts_service: GeminiTextToSpeech,
+        turn_id: str = "",
     ) -> ChatResponse:
         """Get a resumption response from the LLM.
         
@@ -471,9 +472,19 @@ class LangGraphAgent:
                         scenario_id=scenario_id,
                         messages=current_messages,
                     )
-                    # Fire feedback task immediately (runs in parallel with graph)
+                    if turn_id:
+                        try:
+                            await database_service.session_feedback.upsert_entry(
+                                id=feedback_id,
+                                session_id=session_id,
+                                turn_id=turn_id,
+                                feedback_request_id=feedback_id,
+                                status="pending",
+                            )
+                        except Exception as db_err:
+                            logger.warning("session_feedback_db_create_failed", error=str(db_err), feedback_id=feedback_id)
                     asyncio.create_task(
-                        generate_feedback_and_store(feedback_id, self.llm_inline_feedback, session_id)
+                        generate_feedback_and_store(feedback_id, self.llm_inline_feedback, session_id, turn_id=turn_id)
                     )
                     feedback_started_early = True
                     logger.info("async_feedback_started_early", feedback_id=feedback_id, session_id=session_id)
@@ -499,8 +510,19 @@ class LangGraphAgent:
                         scenario_id=scenario_id,
                         messages=response["messages"],
                     )
+                    if turn_id:
+                        try:
+                            await database_service.session_feedback.upsert_entry(
+                                id=feedback_id,
+                                session_id=session_id,
+                                turn_id=turn_id,
+                                feedback_request_id=feedback_id,
+                                status="pending",
+                            )
+                        except Exception as db_err:
+                            logger.warning("session_feedback_db_create_failed", error=str(db_err), feedback_id=feedback_id)
                     asyncio.create_task(
-                        generate_feedback_and_store(feedback_id, self.llm_inline_feedback, session_id)
+                        generate_feedback_and_store(feedback_id, self.llm_inline_feedback, session_id, turn_id=turn_id)
                     )
                     logger.info("async_feedback_started_fallback", feedback_id=feedback_id, session_id=session_id)
                 
@@ -520,6 +542,7 @@ class LangGraphAgent:
         user_id: str,
         scenario_id: int,
         tts_service: GeminiTextToSpeech,
+        turn_id: str = "",
     ) -> ChatResponse:
         """Get a response from the LLM.
 
@@ -549,9 +572,19 @@ class LangGraphAgent:
                 scenario_id=scenario_id,
                 messages=langchain_messages,
             )
-            # Fire feedback task immediately (runs in parallel with graph)
+            if turn_id:
+                try:
+                    await database_service.session_feedback.upsert_entry(
+                        id=feedback_id,
+                        session_id=session_id,
+                        turn_id=turn_id,
+                        feedback_request_id=feedback_id,
+                        status="pending",
+                    )
+                except Exception as db_err:
+                    logger.warning("session_feedback_db_create_failed", error=str(db_err), feedback_id=feedback_id)
             _ = asyncio.create_task(
-                generate_feedback_and_store(feedback_id, self.llm_inline_feedback, session_id)
+                generate_feedback_and_store(feedback_id, self.llm_inline_feedback, session_id, turn_id=turn_id)
             )
             logger.info("async_feedback_started_early", feedback_id=feedback_id, session_id=session_id)
             

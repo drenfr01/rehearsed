@@ -5,7 +5,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { ScenarioFeedback } from '../../../features/scenario-feedback/scenario-feedback';
-import { ChatGraphService } from '../../../core/services/chat-graph.service';
+import { ChatOrchestrator } from '../../../core/services/chat-orchestrator.service';
+import { MessageStore } from '../../../core/services/message-store.service';
+import { InlineFeedbackService } from '../../../core/services/inline-feedback.service';
 import { SummaryFeedbackResponse } from '../../../core/models/chat-graph.model';
 import { downloadFeedbackAsPdf } from '../../../core/utils/pdf-download.util';
 
@@ -24,23 +26,29 @@ import { downloadFeedbackAsPdf } from '../../../core/utils/pdf-download.util';
 export class ScenarioFeedbackDialog {
   private dialogRef = inject(MatDialogRef<ScenarioFeedbackDialog>);
   private router = inject(Router);
-  private chatGraphService = inject(ChatGraphService);
+  private chatOrchestrator = inject(ChatOrchestrator);
+  private messageStore = inject(MessageStore);
+  private feedbackService = inject(InlineFeedbackService);
 
   protected feedbackData: SummaryFeedbackResponse | string | null = null;
 
   async onDownloadSession() {
-    const data = this.feedbackData ?? this.chatGraphService.loadedSummaryFeedback();
-    await downloadFeedbackAsPdf(data, 'session-feedback.pdf');
+    const summary = this.feedbackData ?? this.chatOrchestrator.summaryFeedback();
+    await downloadFeedbackAsPdf({
+      summaryFeedback: summary || null,
+      transcript: this.messageStore.all(),
+      inlineFeedback: this.feedbackService.history(),
+    });
   }
 
   onNewSession() {
-    this.chatGraphService.resetGraphMessages();
+    this.chatOrchestrator.resetSession();
     this.dialogRef.close();
     this.router.navigate(['/app/scenario-selection']);
   }
 
   onReturnHome() {
-    this.chatGraphService.resetGraphMessages();
+    this.chatOrchestrator.resetSession();
     this.dialogRef.close();
     this.router.navigate(['/app']);
   }

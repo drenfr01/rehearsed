@@ -111,7 +111,8 @@ async def chat(
                 session.id, 
                 user_id=session.user_id, 
                 scenario_id=database_service.scenarios.get_current_scenario().id,
-                tts_service=text_to_speech_service
+                tts_service=text_to_speech_service,
+                turn_id=chat_request.turn_id,
                 )
         else:
             result: ChatResponse = await agent.get_response(
@@ -119,7 +120,8 @@ async def chat(
                 session.id, 
                 user_id=session.user_id, 
                 scenario_id=database_service.scenarios.get_current_scenario().id,
-                tts_service=text_to_speech_service
+                tts_service=text_to_speech_service,
+                turn_id=chat_request.turn_id,
                 )
         
         # Include transcribed text in response if audio was provided
@@ -314,6 +316,32 @@ async def clear_chat_history(
     except Exception as e:
         logger.error("clear_chat_history_failed", session_id=session.id, error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/session/{session_id}/feedback")
+@limiter.limit(settings.RATE_LIMIT_ENDPOINTS["messages"][0])
+async def get_session_feedback(
+    request: Request,
+    session_id: str,
+    session: Session = Depends(get_current_session),
+    database_service: DatabaseService = Depends(get_database_service),
+):
+    """Get all inline feedback entries for a session."""
+    if session.id != session_id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this session's feedback")
+
+    entries = await database_service.session_feedback.get_by_session(session_id)
+    return {
+        "feedback_entries": [
+            {
+                "turn_id": e.turn_id,
+                "feedback": e.feedback,
+                "status": e.status,
+                "created_at": e.created_at.isoformat(),
+            }
+            for e in entries
+        ]
+    }
 
 
 @router.get("/feedback/{feedback_id}")

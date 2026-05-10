@@ -156,8 +156,14 @@ export class OneOnOneConversation implements OnInit, OnDestroy {
   }
 
   private openFeedbackDialog(feedback: SummaryFeedbackResponse | string) {
+    const transcript = this.geminiLive.transcript().map(entry => ({
+      role: entry.role === 'user' ? 'user' as const : 'assistant' as const,
+      content: entry.text,
+      student_name: entry.role === 'agent' ? this.agent()?.name : undefined,
+    }));
+
     const dialogRef = this.dialog.open(OneOnOneFeedbackDialog, {
-      data: { feedback },
+      data: { feedback, transcript },
       width: '90vw',
       maxWidth: '1200px',
       height: '90vh',

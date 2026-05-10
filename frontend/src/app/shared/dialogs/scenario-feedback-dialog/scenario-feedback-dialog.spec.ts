@@ -4,7 +4,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
 import { MatDialogRef } from '@angular/material/dialog';
 import { ScenarioFeedbackDialog } from './scenario-feedback-dialog';
-import { ChatGraphService } from '../../../core/services/chat-graph.service';
+import { ChatOrchestrator } from '../../../core/services/chat-orchestrator.service';
 import { pdfDeps } from '../../../core/utils/pdf-download.util';
 
 describe('ScenarioFeedbackDialog', () => {
@@ -12,7 +12,7 @@ describe('ScenarioFeedbackDialog', () => {
   let fixture: ComponentFixture<ScenarioFeedbackDialog>;
   let dialogRefSpy: jasmine.SpyObj<MatDialogRef<ScenarioFeedbackDialog>>;
   let router: Router;
-  let chatGraphService: ChatGraphService;
+  let chatOrchestrator: ChatOrchestrator;
 
   beforeEach(async () => {
     localStorage.clear();
@@ -29,9 +29,9 @@ describe('ScenarioFeedbackDialog', () => {
     }).compileComponents();
 
     router = TestBed.inject(Router);
-    chatGraphService = TestBed.inject(ChatGraphService);
+    chatOrchestrator = TestBed.inject(ChatOrchestrator);
     spyOn(router, 'navigate');
-    spyOn(chatGraphService, 'resetGraphMessages');
+    spyOn(chatOrchestrator, 'resetSession');
 
     fixture = TestBed.createComponent(ScenarioFeedbackDialog);
     component = fixture.componentInstance;
@@ -49,18 +49,18 @@ describe('ScenarioFeedbackDialog', () => {
   });
 
   describe('onNewSession', () => {
-    it('should reset messages, close dialog, and navigate to scenario selection', () => {
+    it('should reset session, close dialog, and navigate to scenario selection', () => {
       component.onNewSession();
-      expect(chatGraphService.resetGraphMessages).toHaveBeenCalled();
+      expect(chatOrchestrator.resetSession).toHaveBeenCalled();
       expect(dialogRefSpy.close).toHaveBeenCalled();
       expect(router.navigate).toHaveBeenCalledWith(['/app/scenario-selection']);
     });
   });
 
   describe('onReturnHome', () => {
-    it('should reset messages, close dialog, and navigate to home', () => {
+    it('should reset session, close dialog, and navigate to home', () => {
       component.onReturnHome();
-      expect(chatGraphService.resetGraphMessages).toHaveBeenCalled();
+      expect(chatOrchestrator.resetSession).toHaveBeenCalled();
       expect(dialogRefSpy.close).toHaveBeenCalled();
       expect(router.navigate).toHaveBeenCalledWith(['/app']);
     });
@@ -70,7 +70,7 @@ describe('ScenarioFeedbackDialog', () => {
     it('should generate and save a PDF', async () => {
       const mockPdf = jasmine.createSpyObj(
         'jsPDF',
-        ['setFont', 'setFontSize', 'text', 'splitTextToSize', 'addPage', 'save'],
+        ['setFont', 'setFontSize', 'text', 'splitTextToSize', 'addPage', 'save', 'setDrawColor', 'line'],
         { internal: { pageSize: { getWidth: () => 210, getHeight: () => 297 } } },
       );
       mockPdf.splitTextToSize.and.callFake((t: string) => [t]);

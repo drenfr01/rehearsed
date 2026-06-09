@@ -3,6 +3,7 @@
 from typing import (
     TYPE_CHECKING,
     List,
+    Optional,
 )
 
 from sqlmodel import (
@@ -23,6 +24,7 @@ class Session(BaseModel, table=True):
         id: The primary key
         user_id: Foreign key to the user
         name: Name of the session (defaults to empty string)
+        scenario_id: The scenario currently selected for this session (nullable)
         created_at: When the session was created
         messages: Relationship to session messages
         user: Relationship to the session owner
@@ -31,4 +33,7 @@ class Session(BaseModel, table=True):
     id: str = Field(primary_key=True)
     user_id: int = Field(foreign_key="user.id")
     name: str = Field(default="")
+    # Intentionally not a FK: scenarios can be deleted while sessions still
+    # reference them; consumers must re-validate the scenario at use time.
+    scenario_id: Optional[int] = Field(default=None)
     user: "User" = Relationship(back_populates="sessions")

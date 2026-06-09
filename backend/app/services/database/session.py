@@ -91,6 +91,31 @@ class SessionRepository:
             sessions = session.exec(statement).all()
             return sessions
 
+    async def set_session_scenario(self, session_id: str, scenario_id: int) -> ChatSession:
+        """Set the active scenario for a session.
+
+        Args:
+            session_id: The ID of the session to update
+            scenario_id: The ID of the scenario to make active for this session
+
+        Returns:
+            ChatSession: The updated session
+
+        Raises:
+            HTTPException: If session is not found
+        """
+        with Session(self.engine) as session:
+            chat_session = session.get(ChatSession, session_id)
+            if not chat_session:
+                raise HTTPException(status_code=404, detail="Session not found")
+
+            chat_session.scenario_id = scenario_id
+            session.add(chat_session)
+            session.commit()
+            session.refresh(chat_session)
+            logger.info("session_scenario_updated", session_id=session_id, scenario_id=scenario_id)
+            return chat_session
+
     async def update_session_name(self, session_id: str, name: str) -> ChatSession:
         """Update a session's name.
 

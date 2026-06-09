@@ -18,7 +18,7 @@ from fastapi import (
 from fastapi.responses import StreamingResponse
 
 from app.api.v1.auth import get_current_session
-from app.api.v1.deps import get_database_service, get_text_to_speech_service
+from app.api.v1.deps import get_text_to_speech_service
 from app.core.config import settings
 from app.core.langgraph.graph_entry import LangGraphAgent
 from app.core.limiter import limiter
@@ -30,7 +30,6 @@ from app.schemas.chat import (
     ChatResponse,
     StreamResponse,
 )
-from app.services.database.base import DatabaseService
 from app.services.feedback_cache import feedback_cache
 from app.services.gemini_text_to_speech import GeminiTextToSpeech
 from app.services.speech_to_text import SpeechToTextService
@@ -41,6 +40,26 @@ agent = LangGraphAgent()
 speech_to_text_service = SpeechToTextService()
 
 
+def get_session_scenario_id(session: Session) -> int:
+    """Get the active scenario ID for a session, or raise a 400 if none is set.
+
+    Args:
+        session: The authenticated chat session.
+
+    Returns:
+        int: The scenario ID associated with the session.
+
+    Raises:
+        HTTPException: If no scenario has been set for the session.
+    """
+    if session.scenario_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="No scenario is set for this session. Please select a scenario first.",
+        )
+    return session.scenario_id
+
+
 @router.post("/chat", response_model=ChatResponse)
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["chat"][0])
 async def chat(
@@ -48,7 +67,6 @@ async def chat(
     chat_request: ChatRequest,
     background_tasks: BackgroundTasks,
     session: Session = Depends(get_current_session),
-    database_service: DatabaseService = Depends(get_database_service),
     text_to_speech_service: GeminiTextToSpeech = Depends(get_text_to_speech_service),
 ):
     """Process a chat request using LangGraph.
@@ -58,7 +76,6 @@ async def chat(
         chat_request: The chat request containing messages.
         background_tasks: The background tasks to run.
         session: The current session from the auth token.
-        database_service: The database service instance.
         text_to_speech_service: The text-to-speech service instance.
 
     Returns:
@@ -105,12 +122,14 @@ async def chat(
                 )
                 raise HTTPException(status_code=400, detail="Invalid audio data encoding")
 
+        scenario_id = get_session_scenario_id(session)
+
         if chat_request.is_resumption:
             result: ChatResponse = await agent.get_resumption_response(
                 resumption_text, 
                 session.id, 
                 user_id=session.user_id, 
-                scenario_id=database_service.scenarios.get_current_scenario().id,
+                scenario_id=scenario_id,
                 tts_service=text_to_speech_service
                 )
         else:
@@ -118,7 +137,7 @@ async def chat(
                 chat_request.messages, 
                 session.id, 
                 user_id=session.user_id, 
-                scenario_id=database_service.scenarios.get_current_scenario().id,
+                scenario_id=scenario_id,
                 tts_service=text_to_speech_service
                 )
         
@@ -181,7 +200,6 @@ async def chat_stream(
     request: Request,
     chat_request: ChatRequest,
     session: Session = Depends(get_current_session),
-    database_service: DatabaseService = Depends(get_database_service),
     text_to_speech_service: GeminiTextToSpeech = Depends(get_text_to_speech_service),
 ):
     """Process a chat request using LangGraph with streaming response.
@@ -190,7 +208,6 @@ async def chat_stream(
         request: The FastAPI request object for rate limiting.
         chat_request: The chat request containing messages.
         session: The current session from the auth token.
-        database_service: The database service instance.
         text_to_speech_service: The text-to-speech service instance.
 
     Returns:
@@ -206,6 +223,8 @@ async def chat_stream(
             message_count=len(chat_request.messages),
         )
 
+        scenario_id = get_session_scenario_id(session)
+
         async def event_generator():
             """Generate streaming events.
 
@@ -219,7 +238,7 @@ async def chat_stream(
                 full_response = ""
                 with llm_stream_duration_seconds.labels(model=agent.llm.model_name).time():
                     async for chunk in agent.get_stream_response(
-                        chat_request.messages, session.id, user_id=session.user_id, scenario_id=chat_request.scenario_id, tts_service=text_to_speech_service
+                        chat_request.messages, session.id, user_id=session.user_id, scenario_id=scenario_id, tts_service=text_to_speech_service
                     ):
                         full_response += chunk
                         response = StreamResponse(content=chunk, done=False)
@@ -241,6 +260,8 @@ async def chat_stream(
 
         return StreamingResponse(event_generator(), media_type="text/event-stream")
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(
             "stream_chat_request_failed",
@@ -256,7 +277,6 @@ async def chat_stream(
 async def get_session_messages(
     request: Request,
     session: Session = Depends(get_current_session),
-    database_service: DatabaseService = Depends(get_database_service),
     text_to_speech_service: GeminiTextToSpeech = Depends(get_text_to_speech_service),
 ):
     """Get all messages for a session.
@@ -264,7 +284,6 @@ async def get_session_messages(
     Args:
         request: The FastAPI request object for rate limiting.
         session: The current session from the auth token.
-        database_service: The database service instance.
         text_to_speech_service: The text-to-speech service instance.
 
     Returns:
@@ -274,20 +293,15 @@ async def get_session_messages(
         HTTPException: If there's an error retrieving the messages.
     """
     try:
-        # Get scenario_id from the current scenario
-        current_scenario = database_service.scenarios.get_current_scenario()
-        if current_scenario is None:
-            raise ValueError("No scenario is currently set. Please set a scenario before retrieving messages.")
-        scenario_id = current_scenario.id
+        scenario_id = get_session_scenario_id(session)
         messages = await agent.get_chat_history(
             session.id, 
             scenario_id=scenario_id,
             tts_service=text_to_speech_service
         )
         return ChatResponse(messages=messages)
-    except ValueError as e:
-        logger.error("get_messages_failed", session_id=session.id, error=str(e), exc_info=True)
-        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("get_messages_failed", session_id=session.id, error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

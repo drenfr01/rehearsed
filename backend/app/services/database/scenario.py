@@ -21,33 +21,11 @@ class ScenarioRepository:
             engine: The SQLModel Engine instance
         """
         self._engine = engine
-        # TODO: potentially move this to a separate service
-        self.current_scenario: Scenario | None = None
     
     @property
     def engine(self) -> Engine:
         """Get the database engine."""
         return self._engine
-    
-    def get_current_scenario(self) -> Scenario:
-        """Return the scenario data for the currently set scenario.
-
-        Returns:
-            The scenario data for the current scenario.
-        """
-        return self.current_scenario
-
-    def set_scenario(self, scenario_id: int) -> None:
-        """Set the scenario data for the currently set scenario.
-
-        Args:
-            scenario_id: The ID of the scenario to set.
-        """
-        with Session(self.engine) as session:
-            statement = select(Scenario).where(Scenario.id == scenario_id)
-            scenario = session.exec(statement).one()
-            self.current_scenario = scenario
-            return scenario
 
     async def get_all_scenarios(self) -> list[Scenario]:
         """Get all scenarios in the system.

@@ -17,11 +17,13 @@ from fastapi.security import (
     HTTPBearer,
 )
 
+from app.api.v1.auth import get_current_session
 from app.api.v1.deps import get_database_service
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.logging import logger
 from app.models.scenario import Scenario
+from app.models.session import Session as ChatSession
 from app.models.user import User
 from app.schemas.agent import AgentPersonalityResponse, AgentResponse
 from app.schemas.scenario import (
@@ -174,31 +176,47 @@ async def get_scenario_by_id(
 async def set_current_scenario_by_id(
     request: Request,
     scenario_request: ScenarioRequest,
+    session: ChatSession = Depends(get_current_session),
     database_service: DatabaseService = Depends(get_database_service),
 ) -> Scenario:
-    """Return a scenario by its ID.
+    """Set the active scenario for the authenticated session.
 
     Args:
         request: The FastAPI request object for rate limiting.
         scenario_request: The request object containing the scenario ID.
+        session: The current session from the auth token.
         database_service: The database service instance.
 
     Returns:
         Scenario: The scenario that was set.
 
     Raises:
-        HTTPException: If there's an error processing the request.
+        HTTPException: If the scenario is not found, the user doesn't have
+            access to it, or there's an error processing the request.
     """
     try:
         logger.info(
             "set_current_scenario_by_id_request_received",
+            session_id=session.id,
+            scenario_id=scenario_request.scenario_id,
         )
 
-        return database_service.scenarios.set_scenario(scenario_request.scenario_id)
-        
+        scenario = await database_service.scenarios.get_scenario(scenario_request.scenario_id)
+        if not scenario:
+            raise HTTPException(status_code=404, detail="Scenario not found")
+
+        # Global scenarios are available to everyone; user-local only to their owner
+        if scenario.owner_id is not None and scenario.owner_id != session.user_id:
+            raise HTTPException(status_code=403, detail="Access denied to this scenario")
+
+        await database_service.sessions.set_session_scenario(session.id, scenario.id)
+        return scenario
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("set_current_scenario_by_id_request_failed", error=str(e), exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to set scenario")
 
 
 @router.get("/{scenario_id}/agents", response_model=List[AgentResponse])

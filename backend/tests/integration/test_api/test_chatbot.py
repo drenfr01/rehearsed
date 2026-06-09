@@ -24,10 +24,6 @@ class TestChat:
         mock_text_to_speech_service,
     ):
         """Test successful chat request."""
-        # Set the current scenario
-        from app.services.database import database_service
-        database_service.scenarios.set_scenario(test_scenario.id)
-
         response = await async_client.post(
             "/api/v1/chatbot/chat",
             headers=authenticated_headers,
@@ -54,10 +50,6 @@ class TestChat:
         mock_text_to_speech_service,
     ):
         """Test chat request with audio transcription."""
-        # Set the current scenario
-        from app.services.database import database_service
-        database_service.scenarios.set_scenario(test_scenario.id)
-
         # Create fake audio bytes and encode to base64
         fake_audio = b"fake audio content"
         audio_base64 = base64.b64encode(fake_audio).decode("utf-8")
@@ -90,10 +82,6 @@ class TestChat:
         mock_text_to_speech_service,
     ):
         """Test chat resumption request."""
-        # Set the current scenario
-        from app.services.database import database_service
-        database_service.scenarios.set_scenario(test_scenario.id)
-
         response = await async_client.post(
             "/api/v1/chatbot/chat",
             headers=authenticated_headers,
@@ -118,10 +106,6 @@ class TestChat:
         mock_text_to_speech_service,
     ):
         """Test chat request with invalid audio encoding."""
-        # Set the current scenario
-        from app.services.database import database_service
-        database_service.scenarios.set_scenario(test_scenario.id)
-
         response = await async_client.post(
             "/api/v1/chatbot/chat",
             headers=authenticated_headers,
@@ -144,10 +128,6 @@ class TestChat:
         mock_text_to_speech_service,
     ):
         """Test chat request with audio that returns empty transcription."""
-        # Set the current scenario
-        from app.services.database import database_service
-        database_service.scenarios.set_scenario(test_scenario.id)
-
         # Create fake audio bytes and encode to base64
         fake_audio = b"fake audio content"
         audio_base64 = base64.b64encode(fake_audio).decode("utf-8")
@@ -169,6 +149,36 @@ class TestChat:
         assert response.status_code == 400
         assert "Could not transcribe audio" in response.json()["detail"]
 
+    async def test_chat_no_scenario_set(
+        self,
+        async_client: AsyncClient,
+        db_session,
+        test_user,
+        mock_langgraph_agent,
+        mock_text_to_speech_service,
+    ):
+        """Test chat request with a session that has no scenario selected."""
+        import uuid
+
+        from app.models.session import Session as ChatSession
+        from app.utils.auth import create_access_token
+
+        session = ChatSession(id=str(uuid.uuid4()), user_id=test_user.id, name="No Scenario")
+        db_session.add(session)
+        db_session.commit()
+        token = create_access_token(session.id, token_type="session").access_token
+
+        response = await async_client.post(
+            "/api/v1/chatbot/chat",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "messages": [{"role": "user", "content": "Hello"}],
+                "is_resumption": False,
+            },
+        )
+        assert response.status_code == 400
+        assert "No scenario is set" in response.json()["detail"]
+
     async def test_chat_unauthorized(
         self,
         async_client: AsyncClient,
@@ -177,10 +187,6 @@ class TestChat:
         mock_text_to_speech_service,
     ):
         """Test chat request without authentication."""
-        # Set the current scenario
-        from app.services.database import database_service
-        database_service.scenarios.set_scenario(test_scenario.id)
-
         response = await async_client.post(
             "/api/v1/chatbot/chat",
             json={
@@ -205,10 +211,6 @@ class TestChatStream:
         mock_text_to_speech_service,
     ):
         """Test successful streaming chat request."""
-        # Set the current scenario
-        from app.services.database import database_service
-        database_service.scenarios.set_scenario(test_scenario.id)
-
         response = await async_client.post(
             "/api/v1/chatbot/chat/stream",
             headers=authenticated_headers,
@@ -235,10 +237,6 @@ class TestChatStream:
         mock_text_to_speech_service,
     ):
         """Test streaming chat request without authentication."""
-        # Set the current scenario
-        from app.services.database import database_service
-        database_service.scenarios.set_scenario(test_scenario.id)
-
         response = await async_client.post(
             "/api/v1/chatbot/chat/stream",
             json={
@@ -262,10 +260,6 @@ class TestGetMessages:
         mock_langgraph_agent,
     ):
         """Test successful get messages request."""
-        # Set the current scenario
-        from app.services.database import database_service
-        database_service.scenarios.set_scenario(test_scenario.id)
-        
         response = await async_client.get(
             "/api/v1/chatbot/messages",
             headers=authenticated_headers,

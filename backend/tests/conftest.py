@@ -353,11 +353,16 @@ def test_agent(db_session: Session, test_scenario: Scenario, test_agent_personal
 
 
 @pytest.fixture
-def test_chat_session(db_session: Session, test_user: User) -> ChatSession:
-    """Create a test chat session."""
+def test_chat_session(db_session: Session, test_user: User, test_scenario: Scenario) -> ChatSession:
+    """Create a test chat session with the test scenario selected."""
     import uuid
 
-    session = ChatSession(id=str(uuid.uuid4()), user_id=test_user.id, name="Test Session")
+    session = ChatSession(
+        id=str(uuid.uuid4()),
+        user_id=test_user.id,
+        name="Test Session",
+        scenario_id=test_scenario.id,
+    )
     db_session.add(session)
     db_session.commit()
     db_session.refresh(session)

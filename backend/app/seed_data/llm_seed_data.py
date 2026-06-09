@@ -7,6 +7,7 @@ from app.models.llm_model import LlmModel
 from app.services.database import database_service
 
 LLM_MODEL_NAMES = [
+    "gemini-3.5-flash",
     "gemini-3.1-pro-preview",
     "gemini-3.1-flash-lite-preview",
     "gemini-3-flash-preview",
@@ -21,26 +22,32 @@ DEFAULT_AGENT_LLM_MAP = {
 
 
 def seed_llm_data():
-    """Seed LLM models and default agent-LLM configurations."""
-    with Session(database_service.engine) as session:
-        existing = session.exec(select(LlmModel)).first()
-        if existing:
-            return
+    """Seed LLM models and default agent-LLM configurations.
 
-        # Seed models
+    Model seeding is idempotent per name so that newly released models added
+    to ``LLM_MODEL_NAMES`` appear on existing databases at next startup.
+    Default agent configs are only seeded when none exist, so admin-configured
+    selections are never overwritten.
+    """
+    with Session(database_service.engine) as session:
+        # Seed any missing models
         models = {}
         for name in LLM_MODEL_NAMES:
-            model = LlmModel(name=name)
-            session.add(model)
-            session.flush()
+            model = session.exec(select(LlmModel).where(LlmModel.name == name)).first()
+            if model is None:
+                model = LlmModel(name=name)
+                session.add(model)
+                session.flush()
             models[name] = model
 
-        # Seed default configs
-        for agent_type, model_name in DEFAULT_AGENT_LLM_MAP.items():
-            config = AgentLlmConfig(
-                agent_type=agent_type,
-                llm_model_id=models[model_name].id,
-            )
-            session.add(config)
+        # Seed default configs only on a fresh database
+        existing_config = session.exec(select(AgentLlmConfig)).first()
+        if existing_config is None:
+            for agent_type, model_name in DEFAULT_AGENT_LLM_MAP.items():
+                config = AgentLlmConfig(
+                    agent_type=agent_type,
+                    llm_model_id=models[model_name].id,
+                )
+                session.add(config)
 
         session.commit()

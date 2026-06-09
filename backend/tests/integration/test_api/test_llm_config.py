@@ -5,12 +5,13 @@ from sqlmodel import Session, select
 
 from app.models.agent_llm_config import AgentLlmConfig, AgentType
 from app.models.llm_model import LlmModel
+from app.seed_data.llm_seed_data import LLM_MODEL_NAMES
 
 
 @pytest.fixture
 def seed_llm_models(db_session: Session):
     """Seed LLM models for testing (idempotent)."""
-    for name in ["gemini-3.1-pro-preview", "gemini-3.1-flash-lite-preview", "gemini-3-flash-preview"]:
+    for name in LLM_MODEL_NAMES:
         existing = db_session.exec(select(LlmModel).where(LlmModel.name == name)).first()
         if not existing:
             db_session.add(LlmModel(name=name))
@@ -52,11 +53,11 @@ class TestGetLlmModels:
         response = await async_client.get("/api/v1/llm-models", headers=admin_headers)
         assert response.status_code == 200
         data = response.json()
-        assert len(data) == 3
+        assert len(data) == len(LLM_MODEL_NAMES)
         names = [m["name"] for m in data]
-        assert "gemini-3.1-pro-preview" in names
-        assert "gemini-3.1-flash-lite-preview" in names
-        assert "gemini-3-flash-preview" in names
+        for expected_name in LLM_MODEL_NAMES:
+            assert expected_name in names
+        assert "gemini-3.5-flash" in names
 
 
 @pytest.mark.integration

@@ -149,7 +149,7 @@ rehearsed/
 
 These are acknowledged gaps in the current design (see chat/PR discussions for detail):
 
-- **No schema migrations** — tables are created via `SQLModel.metadata.create_all()`; `backend/schema.sql` is stale. Alembic is the intended path (entrypoint hook is stubbed).
+- **Migrations are transitional** — fresh databases still get their schema from `SQLModel.metadata.create_all()` at startup; Alembic (`backend/migrations/`) handles incremental changes to existing databases. Migrations are run as an explicit deploy step (`make migrate ENV=<environment>`), not on container startup, and are written defensively (no-op if the target table doesn't exist yet). Long term, the schema should be fully owned by Alembic and `create_all()` removed. `backend/schema.sql` is stale.
 - **No token revocation** — logout is client-side only; session JWTs remain valid until expiry. Tokens live in `localStorage` (XSS exposure); HttpOnly cookies are deferred (see auth redesign doc).
 - **Singleton state** (`LangGraphAgent`, caches) assumes a single backend instance; horizontal scaling on Cloud Run requires externalizing or making this state safe.
 

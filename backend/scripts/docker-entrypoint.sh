@@ -79,8 +79,8 @@ echo "Database User: $( [[ -n ${POSTGRES_USER:-${DB_USER:-}} ]] && echo 'set' ||
 echo "LLM Model: ${LLM_MODEL:-Not set}"
 echo "Debug Mode: ${DEBUG:-false}"
 
-# Run database migrations if necessary
-# e.g., alembic upgrade head
+# Database migrations are NOT run on startup.
+# Run them as a deploy step instead: `make migrate ENV=<environment>`
 
 # Execute the CMD
 exec "$@"

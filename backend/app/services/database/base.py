@@ -20,6 +20,30 @@ from app.services.database.session import SessionRepository
 from app.services.database.user import UserRepository
 
 
+def get_connection_url() -> str:
+    """Get the database connection URL based on environment.
+
+    Used by both the application's DatabaseService and Alembic migrations.
+
+    Returns:
+        Connection URL string
+    """
+    # Check for test database URL first (for testing with SQLite)
+    test_db_url = os.getenv("TEST_DATABASE_URL")
+    if test_db_url:
+        return test_db_url
+
+    if settings.ENVIRONMENT == Environment.PRODUCTION:
+        return (
+            f"postgresql+psycopg2://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}"
+            f"@/rehearsed?host=/cloudsql/{settings.POSTGRES_HOST}"
+        )
+    return (
+        f"postgresql://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}"
+        f"@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}"
+    )
+
+
 class DatabaseService:
     """Database service with connection pool management and model registry.
     
@@ -51,21 +75,7 @@ class DatabaseService:
         Returns:
             Connection URL string
         """
-        # Check for test database URL first (for testing with SQLite)
-        test_db_url = os.getenv("TEST_DATABASE_URL")
-        if test_db_url:
-            return test_db_url
-        
-        if settings.ENVIRONMENT == Environment.PRODUCTION:
-            return (
-                f"postgresql+psycopg2://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}"
-                f"@/rehearsed?host=/cloudsql/{settings.POSTGRES_HOST}"
-            )
-        else:
-            return (
-                f"postgresql://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}"
-                f"@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}"
-            )
+        return get_connection_url()
     
     def _initialize_engine(self) -> None:
         """Initialize the database engine if it hasn't been initialized yet."""

@@ -1,0 +1,366 @@
+error[invalid-argument-type]: Argument to bound method `Select.join` is incorrect
+  --> app/services/database/agent_llm_config.py:51:39
+   |
+51 |                 .join(AgentLlmConfig, AgentLlmConfig.llm_model_id == LlmModel.id)
+   |                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Expected `SQLCoreOperations[Any] | _HasClauseElement[Any] | TypedColumnsClauseRole[Any] | ... omitted 4 union elements`, found `bool`
+   |
+info: type `bool` is not assignable to any element of the union `SQLCoreOperations[Any] | _HasClauseElement[Any] | TypedColumnsClauseRole[Any] | ... omitted 4 union elements`
+info: ├── type `bool` is not assignable to protocol `_HasClauseElement[Any]`
+info: │   └── protocol member `__clause_element__` is not defined on type `bool`
+info: └── ... omitted 6 union elements without additional context
+info: Method defined here
+    --> .venv/lib/python3.13/site-packages/sqlalchemy/sql/selectable.py:5541:9
+     |
+5541 |     def join(
+     |         ^^^^
+5542 |         self,
+5543 |         target: _JoinTargetArgument,
+5544 |         onclause: Optional[_OnClauseArgument] = None,
+     |         -------------------------------------------- Parameter declared here
+     |
+
+error[invalid-argument-type]: Argument to bound method `Select.join` is incorrect
+  --> app/services/database/agent_llm_config.py:61:33
+   |
+61 |                 .join(LlmModel, AgentLlmConfig.llm_model_id == LlmModel.id)
+   |                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Expected `SQLCoreOperations[Any] | _HasClauseElement[Any] | TypedColumnsClauseRole[Any] | ... omitted 4 union elements`, found `bool`
+   |
+info: type `bool` is not assignable to any element of the union `SQLCoreOperations[Any] | _HasClauseElement[Any] | TypedColumnsClauseRole[Any] | ... omitted 4 union elements`
+info: ├── type `bool` is not assignable to protocol `_HasClauseElement[Any]`
+info: │   └── protocol member `__clause_element__` is not defined on type `bool`
+info: └── ... omitted 6 union elements without additional context
+info: Method defined here
+    --> .venv/lib/python3.13/site-packages/sqlalchemy/sql/selectable.py:5541:9
+     |
+5541 |     def join(
+     |         ^^^^
+5542 |         self,
+5543 |         target: _JoinTargetArgument,
+5544 |         onclause: Optional[_OnClauseArgument] = None,
+     |         -------------------------------------------- Parameter declared here
+     |
+
+error[unresolved-attribute]: Object of type `Sequence[Unknown]` has no attribute `value`
+  --> app/services/database/agent_llm_config.py:64:21
+   |
+64 |             return {row[0].value: row[1] for row in results}
+   |                     ^^^^^^^^^^^^
+   |
+
+error[invalid-return-type]: Return type does not match returned value
+   --> app/services/database/base.py:147:16
+    |
+147 |         return self._engine
+    |                ^^^^^^^^^^^^ expected `Engine`, found `Engine | None`
+    |
+   ::: app/services/database/base.py:140:25
+    |
+140 |     def engine(self) -> Engine:
+    |                         ------ Expected `Engine` because of return type
+    |
+info: element `None` of union `Engine | None` is not assignable to `Engine`
+
+error[invalid-argument-type]: Argument to bound method `GenerativeSelect.order_by` is incorrect
+  --> app/services/database/feedback.py:72:51
+   |
+72 |             statement = select(Feedback).order_by(Feedback.created_at)
+   |                                                   ^^^^^^^^^^^^^^^^^^^ Expected `None | _NoArg | str | ... omitted 5 union elements`, found `datetime`
+   |
+info: type `datetime` is not assignable to any element of the union `None | _NoArg | str | ... omitted 5 union elements`
+info: ├── type `datetime` is not assignable to protocol `_HasClauseElement[Any]`
+info: │   └── protocol member `__clause_element__` is not defined on type `datetime`
+info: └── ... omitted 7 union elements without additional context
+info: Method defined here
+    --> .venv/lib/python3.13/site-packages/sqlalchemy/sql/selectable.py:4387:9
+     |
+4387 |       def order_by(
+     |           ^^^^^^^^
+4388 |           self,
+4389 | /         __first: Union[
+4390 | |             Literal[None, _NoArg.NO_ARG],
+4391 | |             _ColumnExpressionOrStrLabelArgument[Any],
+4392 | |         ] = _NoArg.NO_ARG,
+     | |_________________________- Parameter declared here
+     |
+
+error[invalid-return-type]: Return type does not match returned value
+  --> app/services/database/feedback.py:74:20
+   |
+74 |             return feedbacks
+   |                    ^^^^^^^^^ expected `list[Feedback]`, found `Sequence[Feedback]`
+   |
+  ::: app/services/database/feedback.py:65:41
+   |
+65 |     async def get_all_feedback(self) -> List[Feedback]:
+   |                                         -------------- Expected `list[Feedback]` because of return type
+   |
+
+error[unresolved-attribute]: Object of type `int | None` has no attribute `is_`
+   --> app/services/database/feedback.py:207:21
+    |
+207 |                 or_(Feedback.owner_id.is_(None), Feedback.owner_id == user_id)
+    |                     ^^^^^^^^^^^^^^^^^^^^^
+    |
+
+error[invalid-argument-type]: Argument to function `or_` is incorrect
+   --> app/services/database/feedback.py:207:50
+    |
+207 |                 or_(Feedback.owner_id.is_(None), Feedback.owner_id == user_id)
+    |                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Expected `SQLCoreOperations[bool] | _HasClauseElement[bool] | TypedColumnsClauseRole[bool] | (() -> ColumnElement[bool]) | LambdaElement`, found `bool`
+    |
+info: type `bool` is not assignable to any element of the union `SQLCoreOperations[bool] | _HasClauseElement[bool] | TypedColumnsClauseRole[bool] | (() -> ColumnElement[bool]) | LambdaElement`
+info: ├── type `bool` is not assignable to protocol `_HasClauseElement[bool]`
+info: │   └── protocol member `__clause_element__` is not defined on type `bool`
+info: └── ... omitted 4 union elements without additional context
+info: Function defined here
+    --> .venv/lib/python3.13/site-packages/sqlalchemy/sql/_elements_constructors.py:1400:5
+     |
+1400 | def or_(  # type: ignore[empty-body]
+     |     ^^^
+1401 |     initial_clause: Union[Literal[False], _ColumnExpressionArgument[bool]],
+1402 |     *clauses: _ColumnExpressionArgument[bool],
+     |     ----------------------------------------- Parameter declared here
+     |
+
+error[invalid-argument-type]: Argument to bound method `GenerativeSelect.order_by` is incorrect
+   --> app/services/database/feedback.py:208:24
+    |
+208 |             ).order_by(Feedback.created_at)
+    |                        ^^^^^^^^^^^^^^^^^^^ Expected `None | _NoArg | str | ... omitted 5 union elements`, found `datetime`
+    |
+info: type `datetime` is not assignable to any element of the union `None | _NoArg | str | ... omitted 5 union elements`
+info: ├── type `datetime` is not assignable to protocol `_HasClauseElement[Any]`
+info: │   └── protocol member `__clause_element__` is not defined on type `datetime`
+info: └── ... omitted 7 union elements without additional context
+info: Method defined here
+    --> .venv/lib/python3.13/site-packages/sqlalchemy/sql/selectable.py:4387:9
+     |
+4387 |       def order_by(
+     |           ^^^^^^^^
+4388 |           self,
+4389 | /         __first: Union[
+4390 | |             Literal[None, _NoArg.NO_ARG],
+4391 | |             _ColumnExpressionOrStrLabelArgument[Any],
+4392 | |         ] = _NoArg.NO_ARG,
+     | |_________________________- Parameter declared here
+     |
+
+error[invalid-argument-type]: Argument to bound method `GenerativeSelect.order_by` is incorrect
+   --> app/services/database/feedback.py:224:24
+    |
+224 |             ).order_by(Feedback.created_at)
+    |                        ^^^^^^^^^^^^^^^^^^^ Expected `None | _NoArg | str | ... omitted 5 union elements`, found `datetime`
+    |
+info: type `datetime` is not assignable to any element of the union `None | _NoArg | str | ... omitted 5 union elements`
+info: ├── type `datetime` is not assignable to protocol `_HasClauseElement[Any]`
+info: │   └── protocol member `__clause_element__` is not defined on type `datetime`
+info: └── ... omitted 7 union elements without additional context
+info: Method defined here
+    --> .venv/lib/python3.13/site-packages/sqlalchemy/sql/selectable.py:4387:9
+     |
+4387 |       def order_by(
+     |           ^^^^^^^^
+4388 |           self,
+4389 | /         __first: Union[
+4390 | |             Literal[None, _NoArg.NO_ARG],
+4391 | |             _ColumnExpressionOrStrLabelArgument[Any],
+4392 | |         ] = _NoArg.NO_ARG,
+     | |_________________________- Parameter declared here
+     |
+
+error[invalid-return-type]: Return type does not match returned value
+  --> app/services/database/scenario.py:39:20
+   |
+39 |             return scenarios
+   |                    ^^^^^^^^^ expected `list[Scenario]`, found `Sequence[Scenario]`
+   |
+  ::: app/services/database/scenario.py:30:42
+   |
+30 |     async def get_all_scenarios(self) -> list[Scenario]:
+   |                                          -------------- Expected `list[Scenario]` because of return type
+   |
+
+error[unresolved-attribute]: Object of type `int | None` has no attribute `is_`
+   --> app/services/database/scenario.py:172:21
+    |
+172 |                 or_(Scenario.owner_id.is_(None), Scenario.owner_id == user_id)
+    |                     ^^^^^^^^^^^^^^^^^^^^^
+    |
+
+error[invalid-argument-type]: Argument to function `or_` is incorrect
+   --> app/services/database/scenario.py:172:50
+    |
+172 |                 or_(Scenario.owner_id.is_(None), Scenario.owner_id == user_id)
+    |                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Expected `SQLCoreOperations[bool] | _HasClauseElement[bool] | TypedColumnsClauseRole[bool] | (() -> ColumnElement[bool]) | LambdaElement`, found `bool`
+    |
+info: type `bool` is not assignable to any element of the union `SQLCoreOperations[bool] | _HasClauseElement[bool] | TypedColumnsClauseRole[bool] | (() -> ColumnElement[bool]) | LambdaElement`
+info: ├── type `bool` is not assignable to protocol `_HasClauseElement[bool]`
+info: │   └── protocol member `__clause_element__` is not defined on type `bool`
+info: └── ... omitted 4 union elements without additional context
+info: Function defined here
+    --> .venv/lib/python3.13/site-packages/sqlalchemy/sql/_elements_constructors.py:1400:5
+     |
+1400 | def or_(  # type: ignore[empty-body]
+     |     ^^^
+1401 |     initial_clause: Union[Literal[False], _ColumnExpressionArgument[bool]],
+1402 |     *clauses: _ColumnExpressionArgument[bool],
+     |     ----------------------------------------- Parameter declared here
+     |
+
+error[invalid-argument-type]: Argument to bound method `GenerativeSelect.order_by` is incorrect
+   --> app/services/database/scenario.py:173:24
+    |
+173 |             ).order_by(Scenario.created_at)
+    |                        ^^^^^^^^^^^^^^^^^^^ Expected `None | _NoArg | str | ... omitted 5 union elements`, found `datetime`
+    |
+info: type `datetime` is not assignable to any element of the union `None | _NoArg | str | ... omitted 5 union elements`
+info: ├── type `datetime` is not assignable to protocol `_HasClauseElement[Any]`
+info: │   └── protocol member `__clause_element__` is not defined on type `datetime`
+info: └── ... omitted 7 union elements without additional context
+info: Method defined here
+    --> .venv/lib/python3.13/site-packages/sqlalchemy/sql/selectable.py:4387:9
+     |
+4387 |       def order_by(
+     |           ^^^^^^^^
+4388 |           self,
+4389 | /         __first: Union[
+4390 | |             Literal[None, _NoArg.NO_ARG],
+4391 | |             _ColumnExpressionOrStrLabelArgument[Any],
+4392 | |         ] = _NoArg.NO_ARG,
+     | |_________________________- Parameter declared here
+     |
+
+error[invalid-argument-type]: Argument to bound method `GenerativeSelect.order_by` is incorrect
+   --> app/services/database/scenario.py:189:24
+    |
+189 |             ).order_by(Scenario.created_at)
+    |                        ^^^^^^^^^^^^^^^^^^^ Expected `None | _NoArg | str | ... omitted 5 union elements`, found `datetime`
+    |
+info: type `datetime` is not assignable to any element of the union `None | _NoArg | str | ... omitted 5 union elements`
+info: ├── type `datetime` is not assignable to protocol `_HasClauseElement[Any]`
+info: │   └── protocol member `__clause_element__` is not defined on type `datetime`
+info: └── ... omitted 7 union elements without additional context
+info: Method defined here
+    --> .venv/lib/python3.13/site-packages/sqlalchemy/sql/selectable.py:4387:9
+     |
+4387 |       def order_by(
+     |           ^^^^^^^^
+4388 |           self,
+4389 | /         __first: Union[
+4390 | |             Literal[None, _NoArg.NO_ARG],
+4391 | |             _ColumnExpressionOrStrLabelArgument[Any],
+4392 | |         ] = _NoArg.NO_ARG,
+     | |_________________________- Parameter declared here
+     |
+
+error[invalid-argument-type]: Argument to bound method `GenerativeSelect.order_by` is incorrect
+  --> app/services/database/session.py:90:92
+   |
+90 |             statement = select(ChatSession).where(ChatSession.user_id == user_id).order_by(ChatSession.created_at)
+   |                                                                                            ^^^^^^^^^^^^^^^^^^^^^^ Expected `None | _NoArg | str | ... omitted 5 union elements`, found `datetime`
+   |
+info: type `datetime` is not assignable to any element of the union `None | _NoArg | str | ... omitted 5 union elements`
+info: ├── type `datetime` is not assignable to protocol `_HasClauseElement[Any]`
+info: │   └── protocol member `__clause_element__` is not defined on type `datetime`
+info: └── ... omitted 7 union elements without additional context
+info: Method defined here
+    --> .venv/lib/python3.13/site-packages/sqlalchemy/sql/selectable.py:4387:9
+     |
+4387 |       def order_by(
+     |           ^^^^^^^^
+4388 |           self,
+4389 | /         __first: Union[
+4390 | |             Literal[None, _NoArg.NO_ARG],
+4391 | |             _ColumnExpressionOrStrLabelArgument[Any],
+4392 | |         ] = _NoArg.NO_ARG,
+     | |_________________________- Parameter declared here
+     |
+
+error[invalid-return-type]: Return type does not match returned value
+  --> app/services/database/session.py:92:20
+   |
+92 |             return sessions
+   |                    ^^^^^^^^ expected `list[Session]`, found `Sequence[Session]`
+   |
+  ::: app/services/database/session.py:80:56
+   |
+80 |     async def get_user_sessions(self, user_id: int) -> List[ChatSession]:
+   |                                                        ----------------- Expected `list[Session]` because of return type
+   |
+
+error[invalid-argument-type]: Argument to bound method `SelectBase.where` is incorrect
+   --> app/services/database/user.py:101:44
+    |
+101 |             statement = select(User).where(~User.is_approved).order_by(User.created_at)
+    |                                            ^^^^^^^^^^^^^^^^^ Expected `SQLCoreOperations[bool] | _HasClauseElement[bool] | TypedColumnsClauseRole[bool] | ... omitted 3 union elements`, found `int`
+    |
+info: type `int` is not assignable to any element of the union `SQLCoreOperations[bool] | _HasClauseElement[bool] | TypedColumnsClauseRole[bool] | ... omitted 3 union elements`
+info: ├── type `int` is not assignable to protocol `_HasClauseElement[bool]`
+info: │   └── protocol member `__clause_element__` is not defined on type `int`
+info: └── ... omitted 5 union elements without additional context
+info: Method defined here
+  --> .venv/lib/python3.13/site-packages/sqlmodel/sql/_expression_select_cls.py:20:9
+   |
+20 |     def where(self, *whereclause: Union[_ColumnExpressionArgument[bool], bool]) -> Self:
+   |         ^^^^^       ---------------------------------------------------------- Parameter declared here
+   |
+
+error[invalid-argument-type]: Argument to bound method `GenerativeSelect.order_by` is incorrect
+   --> app/services/database/user.py:101:72
+    |
+101 |             statement = select(User).where(~User.is_approved).order_by(User.created_at)
+    |                                                                        ^^^^^^^^^^^^^^^ Expected `None | _NoArg | str | ... omitted 5 union elements`, found `datetime`
+    |
+info: type `datetime` is not assignable to any element of the union `None | _NoArg | str | ... omitted 5 union elements`
+info: ├── type `datetime` is not assignable to protocol `_HasClauseElement[Any]`
+info: │   └── protocol member `__clause_element__` is not defined on type `datetime`
+info: └── ... omitted 7 union elements without additional context
+info: Method defined here
+    --> .venv/lib/python3.13/site-packages/sqlalchemy/sql/selectable.py:4387:9
+     |
+4387 |       def order_by(
+     |           ^^^^^^^^
+4388 |           self,
+4389 | /         __first: Union[
+4390 | |             Literal[None, _NoArg.NO_ARG],
+4391 | |             _ColumnExpressionOrStrLabelArgument[Any],
+4392 | |         ] = _NoArg.NO_ARG,
+     | |_________________________- Parameter declared here
+     |
+
+error[invalid-argument-type]: Argument to bound method `GenerativeSelect.order_by` is incorrect
+   --> app/services/database/user.py:136:47
+    |
+136 |             statement = select(User).order_by(User.created_at)
+    |                                               ^^^^^^^^^^^^^^^ Expected `None | _NoArg | str | ... omitted 5 union elements`, found `datetime`
+    |
+info: type `datetime` is not assignable to any element of the union `None | _NoArg | str | ... omitted 5 union elements`
+info: ├── type `datetime` is not assignable to protocol `_HasClauseElement[Any]`
+info: │   └── protocol member `__clause_element__` is not defined on type `datetime`
+info: └── ... omitted 7 union elements without additional context
+info: Method defined here
+    --> .venv/lib/python3.13/site-packages/sqlalchemy/sql/selectable.py:4387:9
+     |
+4387 |       def order_by(
+     |           ^^^^^^^^
+4388 |           self,
+4389 | /         __first: Union[
+4390 | |             Literal[None, _NoArg.NO_ARG],
+4391 | |             _ColumnExpressionOrStrLabelArgument[Any],
+4392 | |         ] = _NoArg.NO_ARG,
+     | |_________________________- Parameter declared here
+     |
+
+error[invalid-return-type]: Return type does not match returned value
+   --> app/services/database/user.py:138:20
+    |
+138 |             return users
+    |                    ^^^^^ expected `list[User]`, found `Sequence[User]`
+    |
+   ::: app/services/database/user.py:129:38
+    |
+129 |     async def get_all_users(self) -> List[User]:
+    |                                      ---------- Expected `list[User]` because of return type
+    |
+
+Found 21 diagnostics

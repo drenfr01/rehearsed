@@ -236,7 +236,7 @@ export class ChatGraphService {
         } else {
           console.log('Branch: no feedback handling (no inline_feedback and no feedback_request_id)');
         }
-        this.summaryFeedback.set(response.summary_feedback);
+        this.summaryFeedback.set(response.summary_feedback ?? '');
         this.studentResponses.set(response.student_responses);
         this.transcribedText.set(response.transcribed_text || '');
         
@@ -255,18 +255,19 @@ export class ChatGraphService {
           }
         }
         
-        if (response.interrupt_task && response.student_responses?.length > 0) {
+        const studentResponses = response.student_responses ?? [];
+        if (response.interrupt_task && studentResponses.length > 0) {
           // Always use the last (most recent) student response since student_responses is cumulative
-          const studentResponse = response.student_responses[response.student_responses.length - 1];
+          const studentResponse = studentResponses[studentResponses.length - 1];
           const responseMessage: Message = {
             role: 'assistant',
-            content: response.interrupt_value,
+            content: response.interrupt_value ?? '',
             student_name: studentResponse.student_details.name,
             audio_base64: studentResponse.audio_base64 || undefined,
             audio_id: studentResponse.audio_id || undefined,
           }
-          this.interruptionContent.set(response.interrupt_value);
-          this.interruptionType.set(response.interrupt_value_type);
+          this.interruptionContent.set(response.interrupt_value ?? '');
+          this.interruptionType.set(response.interrupt_value_type ?? '');
           this.graphMessages.set([...this.graphMessages(), responseMessage]);
 
           // Start background prefetch so audio becomes available ASAP (lazy, but prewarmed).
@@ -277,10 +278,10 @@ export class ChatGraphService {
           // Handle case where there's an interrupt but no student responses
           const responseMessage: Message = {
             role: 'assistant',
-            content: response.interrupt_value,
+            content: response.interrupt_value ?? '',
           }
-          this.interruptionContent.set(response.interrupt_value);
-          this.interruptionType.set(response.interrupt_value_type);
+          this.interruptionContent.set(response.interrupt_value ?? '');
+          this.interruptionType.set(response.interrupt_value_type ?? '');
           this.graphMessages.set([...this.graphMessages(), responseMessage]);
         }
       })

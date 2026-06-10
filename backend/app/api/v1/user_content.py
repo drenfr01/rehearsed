@@ -797,7 +797,8 @@ async def update_agent(
         # Invalidate affected graphs
         await langgraph_agent.invalidate_graph(updated_agent.scenario_id)
         if agent_data.scenario_id is not None and agent_data.scenario_id != old_scenario_id:
-            await langgraph_agent.invalidate_graph(old_scenario_id)
+            if old_scenario_id is not None:
+                await langgraph_agent.invalidate_graph(old_scenario_id)
 
         logger.info("user_updated_agent", user_id=user.id, agent_id=agent_id)
 

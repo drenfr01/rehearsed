@@ -1,7 +1,7 @@
 """This file contains the scenario seed data for the application."""
 import os
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 from yaml import safe_load
 
 from app.models.scenario import Scenario
@@ -44,7 +44,7 @@ def seed_scenario_data():
         # Only check for global scenarios (owner_id is None)
         # User-created scenarios should not prevent seeding global ones
         global_scenarios_exist = session.exec(
-            select(Scenario).where(Scenario.owner_id.is_(None))
+            select(Scenario).where(col(Scenario.owner_id).is_(None))
         ).first()
         if global_scenarios_exist:
             return

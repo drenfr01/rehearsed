@@ -1,19 +1,6 @@
-// Note: login request uses form data and session request is a blank JSON object, 
-// hence no interfaces
-export interface LoginResponse {
-    access_token: string;
-    token_type: string;
-    expires_at: string;
-    is_admin: boolean;
-}
-
-export interface SessionResponse {
-    session_id: string;
-    name: string;
-    token: LoginResponse;
-}
-
-export interface RegistrationResponse {
-    message: string;
-    email: string;
-}
+// Types are generated from the backend OpenAPI spec via HeyAPI (npm run generate:api).
+export type {
+  TokenResponse as LoginResponse,
+  SessionResponse,
+  RegistrationResponse,
+} from '../api';

@@ -5,7 +5,7 @@ from typing import List, Optional
 from fastapi import HTTPException
 from sqlalchemy import or_
 from sqlalchemy.engine import Engine
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from app.core.logging import logger
 from app.models.feedback import Feedback, FeedbackType
@@ -69,9 +69,9 @@ class FeedbackRepository:
             List[Feedback]: List of all feedback
         """
         with Session(self.engine) as session:
-            statement = select(Feedback).order_by(Feedback.created_at)
+            statement = select(Feedback).order_by(col(Feedback.created_at))
             feedbacks = session.exec(statement).all()
-            return feedbacks
+            return list(feedbacks)
 
     async def create_feedback(
         self,
@@ -204,8 +204,8 @@ class FeedbackRepository:
         """
         with Session(self.engine) as session:
             statement = select(Feedback).where(
-                or_(Feedback.owner_id.is_(None), Feedback.owner_id == user_id)
-            ).order_by(Feedback.created_at)
+                or_(col(Feedback.owner_id).is_(None), col(Feedback.owner_id) == user_id)
+            ).order_by(col(Feedback.created_at))
             feedbacks = session.exec(statement).all()
             return list(feedbacks)
 
@@ -221,7 +221,7 @@ class FeedbackRepository:
         with Session(self.engine) as session:
             statement = select(Feedback).where(
                 Feedback.owner_id == user_id
-            ).order_by(Feedback.created_at)
+            ).order_by(col(Feedback.created_at))
             feedbacks = session.exec(statement).all()
             return list(feedbacks)
 

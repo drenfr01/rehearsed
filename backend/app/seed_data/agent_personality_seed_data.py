@@ -1,6 +1,6 @@
 """This file contains the agent personality seed data for the application."""
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from app.models.agent import AgentPersonality
 from app.services.database import database_service
@@ -19,7 +19,7 @@ def seed_agent_personality_data():
         # Only check for global personalities (owner_id is None)
         # User-created personalities should not prevent seeding global ones
         global_personalities_exist = session.exec(
-            select(AgentPersonality).where(AgentPersonality.owner_id.is_(None))
+            select(AgentPersonality).where(col(AgentPersonality.owner_id).is_(None))
         ).first()
         if global_personalities_exist:
             return

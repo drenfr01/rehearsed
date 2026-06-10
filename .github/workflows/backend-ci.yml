@@ -38,6 +38,11 @@ jobs:
         run: |
           uv run ruff check app 
 
+      - name: Run type checker with ty
+        working-directory: backend
+        run: |
+          uv run ty check app
+
       - name: Byte compile python to check for syntax errors
         working-directory: backend/app
         run: |

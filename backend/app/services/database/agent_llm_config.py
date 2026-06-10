@@ -1,11 +1,11 @@
 """Agent-LLM configuration database repository."""
 
 from datetime import UTC, datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Sequence, Tuple, cast
 
 from fastapi import HTTPException
 from sqlalchemy.engine import Engine
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from app.core.logging import logger
 from app.models.agent_llm_config import AgentLlmConfig, AgentType
@@ -48,7 +48,7 @@ class AgentLlmConfigRepository:
         with Session(self.engine) as session:
             statement = (
                 select(LlmModel.name)
-                .join(AgentLlmConfig, AgentLlmConfig.llm_model_id == LlmModel.id)
+                .join(AgentLlmConfig, col(AgentLlmConfig.llm_model_id) == col(LlmModel.id))
                 .where(AgentLlmConfig.agent_type == agent_type)
             )
             return session.exec(statement).first()
@@ -58,10 +58,10 @@ class AgentLlmConfigRepository:
         with Session(self.engine) as session:
             statement = (
                 select(AgentLlmConfig.agent_type, LlmModel.name)
-                .join(LlmModel, AgentLlmConfig.llm_model_id == LlmModel.id)
+                .join(LlmModel, col(AgentLlmConfig.llm_model_id) == col(LlmModel.id))
             )
-            results = session.exec(statement).all()
-            return {row[0].value: row[1] for row in results}
+            results = cast(Sequence[Tuple[AgentType, str]], session.exec(statement).all())
+            return {agent_type.value: model_name for agent_type, model_name in results}
 
     async def update_config(self, agent_type: AgentType | str, llm_model_id: int) -> AgentLlmConfig:
         """Update (or create) the LLM mapping for an agent type.

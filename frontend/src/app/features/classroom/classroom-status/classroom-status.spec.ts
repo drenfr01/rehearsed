@@ -55,7 +55,7 @@ describe('ClassroomStatus', () => {
     const mockAgents: Agent[] = [{
       id: 'a1', name: 'Alice', scenario_id: 1, agent_personality_id: 1,
       voice: 'v', display_text_color: 'teal', objective: '', instructions: '',
-      constraints: '', context: '',
+      constraints: '', context: '', created_at: '2024-01-01T00:00:00Z',
     }];
     fixture.detectChanges();
     httpTesting.expectOne(`${environment.baseUrl}/api/v1/scenario/1/agents`).flush(mockAgents);

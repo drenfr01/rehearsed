@@ -1,0 +1,62 @@
+# Pre-commit hooks mirroring the GitHub Actions CI pipelines.
+#
+# Setup:
+#   uv tool install pre-commit   # or: pip install pre-commit / brew install pre-commit
+#   pre-commit install
+#
+# Backend hooks run only when files under backend/ change; frontend hooks run
+# only when files under frontend/ change (same as the CI path filters).
+
+repos:
+  - repo: local
+    hooks:
+      # --- Backend (mirrors .github/workflows/backend-ci.yml) ---
+      - id: backend-ruff
+        name: Backend lint (ruff)
+        entry: bash -c 'cd backend && uv run ruff check app'
+        language: system
+        files: ^backend/
+        pass_filenames: false
+
+      - id: backend-compileall
+        name: Backend syntax check (compileall)
+        entry: bash -c 'cd backend && uv run python -m compileall -q app'
+        language: system
+        files: ^backend/
+        pass_filenames: false
+
+      - id: backend-ty
+        name: Backend type check (ty)
+        entry: bash -c 'cd backend && uv run ty check app'
+        language: system
+        files: ^backend/
+        pass_filenames: false
+
+      - id: backend-pytest
+        name: Backend tests (pytest)
+        entry: bash -c 'cd backend && TEST_DATABASE_URL="sqlite:///:memory:" uv run pytest -q'
+        language: system
+        files: ^backend/
+        pass_filenames: false
+
+      # --- Frontend (mirrors .github/workflows/frontend-ci.yml) ---
+      - id: frontend-build
+        name: Frontend build (ng build)
+        entry: bash -c 'cd frontend && npm run build'
+        language: system
+        files: ^frontend/
+        pass_filenames: false
+
+      - id: frontend-test
+        name: Frontend unit tests (Karma)
+        entry: bash -c 'cd frontend && npm run test -- --watch=false --browsers=ChromeHeadless'
+        language: system
+        files: ^frontend/
+        pass_filenames: false
+
+      - id: frontend-e2e
+        name: Frontend E2E tests (Playwright)
+        entry: bash -c 'cd frontend && npm run e2e'
+        language: system
+        files: ^frontend/
+        pass_filenames: false

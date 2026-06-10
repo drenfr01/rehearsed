@@ -97,7 +97,6 @@ export class ScenarioOverview implements OnInit {
         messages: [newMessage],
         is_resumption: false,
         resumption_text: '',
-        resumption_approved: false,
     }, true).subscribe({
       error: (error: Error) => {
         this.error.set(error.message);

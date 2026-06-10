@@ -13,9 +13,10 @@ describe('EditAgentDialog', () => {
       id: 'a1', name: 'Alice', scenario_id: 1, agent_personality_id: 2,
       voice: 'Kore', display_text_color: 'teal', objective: 'teach',
       instructions: 'inst', constraints: 'con', context: 'ctx',
+      created_at: '2024-01-01T00:00:00Z',
     },
     scenarios: [{ id: 1, name: 'S1', description: 'd', overview: 'o', system_instructions: 'si', initial_prompt: 'ip', teaching_objectives: 'to' }],
-    personalities: [{ id: 2, name: 'Curious', personality_description: 'desc' }],
+    personalities: [{ id: 2, name: 'Curious', personality_description: 'desc', created_at: '2024-01-01T00:00:00Z' }],
     voices: [{ id: 1, voice_name: 'Kore' }],
     avatars: [{ id: 1, name: 'Ash', file_path: 'Ash.jpg' }, { id: 2, name: 'Sage', file_path: 'Sage.jpg' }],
   };

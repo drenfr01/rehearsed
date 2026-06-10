@@ -1,7 +1,7 @@
 """This file contains the graph builder for the application."""
 
 import uuid
-from typing import Callable, List, Optional
+from typing import Any, Callable, List, Optional, cast
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import (
@@ -54,7 +54,7 @@ class LangGraphBuilder:
     def __init__(
         self,
         llm: BaseChatModel,
-        connection_pool: AsyncConnectionPool,
+        connection_pool: Optional[AsyncConnectionPool],
         tts_service: GeminiTextToSpeech,
         llm_answering_student: Optional[BaseChatModel] = None,
         llm_inline_feedback: Optional[BaseChatModel] = None,
@@ -91,14 +91,15 @@ class LangGraphBuilder:
             pass
 
     @observe(name="build_graph")
-    async def build_graph(self, scenario_id: int) -> CompiledStateGraph:
+    async def build_graph(self, scenario_id: int) -> Optional[CompiledStateGraph]:
         """Build the LangGraph workflow for a specific scenario.
         
         Args:
             scenario_id: The ID of the scenario to build the graph for.
             
         Returns:
-            CompiledStateGraph: The compiled LangGraph workflow.
+            Optional[CompiledStateGraph]: The compiled LangGraph workflow, or None if
+            graph creation fails in production.
         """
         try:
             # Store scenario_id for use in feedback agents
@@ -153,7 +154,9 @@ class LangGraphBuilder:
     async def _setup_checkpointer(self) -> Optional[AsyncPostgresSaver]:
         """Setup the checkpointer for the graph."""
         if self._connection_pool:
-            checkpointer = AsyncPostgresSaver(self._connection_pool)
+            # cast: AsyncPostgresSaver's stubs expect dict-row connections, but it
+            # handles the pool's connections correctly at runtime.
+            checkpointer = AsyncPostgresSaver(cast(Any, self._connection_pool))
             await checkpointer.setup()
             return checkpointer
         else:
@@ -237,7 +240,7 @@ class LangGraphBuilder:
         captured_agent = agent
         
         @observe(name=f"student_{student_number}_agent")
-        async def handler(state: GraphState) -> GraphState:
+        async def handler(state: GraphState) -> dict[str, Any]:
             """Handle student agent node execution."""
             self._tag_span_with_model(self.llm, "student_agent")
             personality_description = (
@@ -275,7 +278,7 @@ class LangGraphBuilder:
             }
         return handler
 
-    async def _check_appropriate_response(self, state: GraphState) -> GraphState:
+    async def _check_appropriate_response(self, state: GraphState) -> dict[str, Any]:
         """Check if the human response is appropriate for a teacher."""
         return {
             "appropriate_response": True,
@@ -306,7 +309,7 @@ class LangGraphBuilder:
 
         # LLM call to select student
         structured_llm = self.llm_answering_student.with_structured_output(StudentChoiceResponse)
-        response = await structured_llm.ainvoke(system_message + state.messages)
+        response = cast(StudentChoiceResponse, await structured_llm.ainvoke(system_message + state.messages))
         
         # Ensure the student number is within valid range
         student_num = max(1, min(response.student_number, len(self._agents)))
@@ -364,10 +367,13 @@ class LangGraphBuilder:
         messages = [SystemMessage(content=system_instructions)]
         messages.extend(state.messages)  # Include full conversation history
         
-        # LLM invoke call
-        response = await target_llm.with_structured_output(
-            GeneralResponse, method="json_schema", include_raw=True
-        ).ainvoke(messages)
+        # LLM invoke call (include_raw=True makes ainvoke return a dict at runtime)
+        response = cast(
+            dict[str, Any],
+            await target_llm.with_structured_output(
+                GeneralResponse, method="json_schema", include_raw=True
+            ).ainvoke(messages),
+        )
 
         if response["parsed"] is None:
             logger.error(
@@ -389,7 +395,7 @@ class LangGraphBuilder:
         return llm_response
 
     @observe(name="inline_feedback_agent")
-    async def _inline_feedback_agent(self, state: GraphState) -> GraphState:
+    async def _inline_feedback_agent(self, state: GraphState) -> dict[str, Any]:
         """This node is used to call the inline feedback agent."""
         self._tag_span_with_model(self.llm_inline_feedback, "inline_feedback")
         # Database query for feedback config
@@ -416,11 +422,11 @@ class LangGraphBuilder:
         
         return {"inline_feedback": [result]}
 
-    async def _gather_new_human_response(self, state: GraphState) -> GraphState:
+    async def _gather_new_human_response(self, state: GraphState) -> dict[str, Any]:
         """This node is used to gather a new human response if the human response is not appropriate."""
         return {"summary": "New Human Response"}
 
-    async def _additional_user_input(self, state: GraphState) -> GraphState:
+    async def _additional_user_input(self, state: GraphState) -> dict[str, Any]:
         """This node is used to gather additional user input after the student agents have responded."""
         # Get the most recent student response (last one added)
         latest_response = state.student_responses[-1]
@@ -442,7 +448,7 @@ class LangGraphBuilder:
             HumanMessage(content=result["response"]),
         ]}
 
-    async def _check_if_goals_achieved(self, state: GraphState) -> GraphState:
+    async def _check_if_goals_achieved(self, state: GraphState) -> dict[str, Any]:
         """This node is used to check if the learning goals have been achieved."""
         # TODO: update this with real prompt
         if "goals achieved" in state.messages[-1].content.lower():
@@ -451,7 +457,7 @@ class LangGraphBuilder:
             return {"learning_goals_achieved": False}
 
     @observe(name="generate_summary_feedback")
-    async def _generate_summary_feedback(self, state: GraphState) -> GraphState:
+    async def _generate_summary_feedback(self, state: GraphState) -> dict[str, Any]:
         """Generate summary feedback for the entire conversation."""
         self._tag_span_with_model(self.llm_summary_feedback, "summary_feedback")
         from app.services.summary_feedback import generate_summary_feedback
@@ -468,7 +474,7 @@ class LangGraphBuilder:
         )
         return {"summary_feedback": result}
 
-    async def _route_appropriate_response(self, state: GraphState) -> GraphState:
+    async def _route_appropriate_response(self, state: GraphState) -> bool:
         """This node is used to route the conversation based on if the human response is appropriate.
 
         Note: having a routing function + a node is redundant here. But I can't figure out how to make a conditional edge either route to
@@ -479,7 +485,7 @@ class LangGraphBuilder:
         else:
             return False
 
-    async def _route_if_goals_achieved(self, state: GraphState) -> GraphState:
+    async def _route_if_goals_achieved(self, state: GraphState) -> bool:
         """This node is used to route the conversation based on if the learning goals have been achieved."""
         if state.learning_goals_achieved:
             return True

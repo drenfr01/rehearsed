@@ -1,18 +1,8 @@
-export interface User {
-  id: number;
-  email: string;
-  is_admin: boolean;
-  is_approved: boolean;
-  created_at: string;
-}
+// Types are generated from the backend OpenAPI spec via HeyAPI (npm run generate:api).
+import type { UpdateUserApiV1AdminUsersUserIdPutData } from '../api';
 
-export interface UserCreate {
-  email: string;
-  password: string;
-}
+export type { UserResponse as User, UserCreateWritable as UserCreate } from '../api';
 
-export interface UserUpdate {
-  email?: string;
-  is_admin?: boolean;
-}
-
+// The admin user update endpoint takes its fields as query parameters,
+// so the update payload type comes from the generated operation data.
+export type UserUpdate = NonNullable<UpdateUserApiV1AdminUsersUserIdPutData['query']>;

@@ -2,7 +2,7 @@
 
 import os
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 from yaml import safe_load
 
 from app.models.feedback import Feedback, FeedbackType
@@ -64,7 +64,7 @@ def seed_feedback_data():
         # Only check for global feedback (owner_id is None)
         # User-created feedback should not prevent seeding global ones
         global_feedback_exists = session.exec(
-            select(Feedback).where(Feedback.owner_id.is_(None))
+            select(Feedback).where(col(Feedback.owner_id).is_(None))
         ).first()
         if global_feedback_exists:
             return

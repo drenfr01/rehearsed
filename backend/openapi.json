@@ -1,0 +1,5093 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Rehearsed",
+    "description": "A production-ready FastAPI template with LangGraph and Langfuse integration",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Register",
+        "description": "Register a new user account (requires admin approval).\n\nCreates an unapproved user account that must be approved by an admin\nbefore the user can log in.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    user_data: User registration data containing email and password.\n    database_service: The database service instance.\n\nReturns:\n    RegistrationResponse: Success message and registered email.\n\nRaises:\n    HTTPException: If email is already registered or validation fails.",
+        "operationId": "register_api_v1_auth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login",
+        "description": "Login a user.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    username: User's email\n    password: User's password\n    grant_type: Must be \"password\"\n    database_service: The database service instance.\n\nReturns:\n    TokenResponse: Access token information\n\nRaises:\n    HTTPException: If credentials are invalid or account not approved",
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_login_api_v1_auth_login_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/session": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Create Session",
+        "description": "Create a new chat session for the authenticated user.\n\nArgs:\n    user: The authenticated user (resolved from user or session token)\n    database_service: The database service instance.\n\nReturns:\n    SessionResponse: The session ID, name, and access token",
+        "operationId": "create_session_api_v1_auth_session_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/session/{session_id}/name": {
+      "patch": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Update Session Name",
+        "description": "Update a session's name.\n\nArgs:\n    session_id: The ID of the session to update\n    name: The new name for the session\n    current_session: The current session from auth\n    database_service: The database service instance.\n\nReturns:\n    SessionResponse: The updated session information",
+        "operationId": "update_session_name_api_v1_auth_session__session_id__name_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_update_session_name_api_v1_auth_session__session_id__name_patch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/session/{session_id}": {
+      "delete": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Delete Session",
+        "description": "Delete a session for the authenticated user.\n\nArgs:\n    session_id: The ID of the session to delete\n    current_session: The current session from auth\n    database_service: The database service instance.\n\nReturns:\n    None",
+        "operationId": "delete_session_api_v1_auth_session__session_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/sessions": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Get User Sessions",
+        "description": "Get all session IDs for the authenticated user.\n\nArgs:\n    user: The authenticated user (resolved from user or session token)\n    database_service: The database service instance.\n\nReturns:\n    List[SessionListItem]: List of sessions (without tokens)",
+        "operationId": "get_user_sessions_api_v1_auth_sessions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SessionListItem"
+                  },
+                  "type": "array",
+                  "title": "Response Get User Sessions Api V1 Auth Sessions Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/chatbot/chat": {
+      "post": {
+        "tags": [
+          "chatbot"
+        ],
+        "summary": "Chat",
+        "description": "Process a chat request using LangGraph.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    chat_request: The chat request containing messages.\n    background_tasks: The background tasks to run.\n    session: The current session from the auth token.\n    text_to_speech_service: The text-to-speech service instance.\n\nReturns:\n    ChatResponse: The processed chat response.\n\nRaises:\n    HTTPException: If there's an error processing the request.",
+        "operationId": "chat_api_v1_chatbot_chat_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/chatbot/chat/stream": {
+      "post": {
+        "tags": [
+          "chatbot"
+        ],
+        "summary": "Chat Stream",
+        "description": "Process a chat request using LangGraph with streaming response.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    chat_request: The chat request containing messages.\n    session: The current session from the auth token.\n    text_to_speech_service: The text-to-speech service instance.\n\nReturns:\n    StreamingResponse: A streaming response of the chat completion.\n\nRaises:\n    HTTPException: If there's an error processing the request.",
+        "operationId": "chat_stream_api_v1_chatbot_chat_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/chatbot/messages": {
+      "get": {
+        "tags": [
+          "chatbot"
+        ],
+        "summary": "Get Session Messages",
+        "description": "Get all messages for a session.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    session: The current session from the auth token.\n    text_to_speech_service: The text-to-speech service instance.\n\nReturns:\n    ChatResponse: All messages in the session.\n\nRaises:\n    HTTPException: If there's an error retrieving the messages.",
+        "operationId": "get_session_messages_api_v1_chatbot_messages_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "chatbot"
+        ],
+        "summary": "Clear Chat History",
+        "description": "Clear all messages for a session.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    session: The current session from the auth token.\n\nReturns:\n    dict: A message indicating the chat history was cleared.",
+        "operationId": "clear_chat_history_api_v1_chatbot_messages_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/chatbot/feedback/{feedback_id}": {
+      "get": {
+        "tags": [
+          "chatbot"
+        ],
+        "summary": "Get Feedback",
+        "description": "Get async inline feedback by ID.\n\nThis endpoint is used for polling feedback that is generated asynchronously\nafter the chat response is returned.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    feedback_id: The unique ID of the feedback request.\n    session: The current session from the auth token.\n\nReturns:\n    dict: The feedback status and content if ready.\n        - status: \"pending\" | \"ready\" | \"failed\"\n        - feedback: List of feedback strings (empty if not ready)",
+        "operationId": "get_feedback_api_v1_chatbot_feedback__feedback_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "feedback_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Feedback Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/gemini-live/summary-feedback": {
+      "post": {
+        "tags": [
+          "gemini-live"
+        ],
+        "summary": "Get Summary Feedback",
+        "description": "Generate summary feedback for a Gemini Live conversation transcript.",
+        "operationId": "get_summary_feedback_api_v1_gemini_live_summary_feedback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SummaryFeedbackRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SummaryFeedbackApiResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/scenario/get-all": {
+      "get": {
+        "tags": [
+          "scenario"
+        ],
+        "summary": "Get All Scenarios",
+        "description": "Return a list of all scenarios available to the user.\n\nIf user is authenticated, returns global scenarios + user's local scenarios.\nIf user is not authenticated, returns only global scenarios.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    user: The optional authenticated user.\n    database_service: The database service instance.\n\nReturns:\n    List[ScenarioWithOwnerResponse]: A list of scenarios with ownership info.\n\nRaises:\n    HTTPException: If there's an error processing the request.",
+        "operationId": "get_all_scenarios_api_v1_scenario_get_all_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ScenarioWithOwnerResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Get All Scenarios Api V1 Scenario Get All Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/scenario/get-by-id/{scenario_id}": {
+      "get": {
+        "tags": [
+          "scenario"
+        ],
+        "summary": "Get Scenario By Id",
+        "description": "Return a scenario by its ID.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    scenario_id: The ID of the scenario to get.\n    database_service: The database service instance.\n\nReturns:\n    Scenario: The scenario with the given ID.\n\nRaises:\n    HTTPException: If there's an error processing the request.",
+        "operationId": "get_scenario_by_id_api_v1_scenario_get_by_id__scenario_id__get",
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Scenario Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Scenario"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scenario/set-current-by-id": {
+      "post": {
+        "tags": [
+          "scenario"
+        ],
+        "summary": "Set Current Scenario By Id",
+        "description": "Set the active scenario for the authenticated session.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    scenario_request: The request object containing the scenario ID.\n    session: The current session from the auth token.\n    database_service: The database service instance.\n\nReturns:\n    Scenario: The scenario that was set.\n\nRaises:\n    HTTPException: If the scenario is not found, the user doesn't have\n        access to it, or there's an error processing the request.",
+        "operationId": "set_current_scenario_by_id_api_v1_scenario_set_current_by_id_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Scenario"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/scenario/{scenario_id}/agents": {
+      "get": {
+        "tags": [
+          "scenario"
+        ],
+        "summary": "Get Scenario Agents",
+        "description": "Get all agents for a specific scenario.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    scenario_id: The ID of the scenario to get agents for.\n    user: The optional authenticated user.\n    database_service: The database service instance.\n\nReturns:\n    List[AgentResponse]: A list of agents belonging to the scenario.\n\nRaises:\n    HTTPException: If the scenario is not found or user doesn't have access.",
+        "operationId": "get_scenario_agents_api_v1_scenario__scenario_id__agents_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Scenario Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgentResponse"
+                  },
+                  "title": "Response Get Scenario Agents Api V1 Scenario  Scenario Id  Agents Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/users": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Users",
+        "description": "List all users in the system.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    List of user information (without passwords).",
+        "operationId": "list_users_api_v1_admin_users_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UserResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Users Api V1 Admin Users Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Create User",
+        "description": "Create a new user (admin only).\n\nUsers created by an admin are automatically approved.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    user_data: User creation data.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    Created user information.",
+        "operationId": "create_user_api_v1_admin_users_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/users/pending": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Pending Users",
+        "description": "List all users pending approval.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    List of pending user information (without passwords).",
+        "operationId": "list_pending_users_api_v1_admin_users_pending_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UserResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Pending Users Api V1 Admin Users Pending Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/users/{user_id}": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Get User",
+        "description": "Get a specific user by ID.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    user_id: The ID of the user to retrieve.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    User information (without password).",
+        "operationId": "get_user_api_v1_admin_users__user_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Update User",
+        "description": "Update a user (admin only).\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    user_id: The ID of the user to update.\n    email: New email address (optional).\n    is_admin: New admin status (optional).\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    Updated user information.",
+        "operationId": "update_user_api_v1_admin_users__user_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "email",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "Email"
+            }
+          },
+          {
+            "name": "is_admin",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "title": "Is Admin"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Delete User",
+        "description": "Delete a user and all their sessions (admin only).\n\nThis endpoint first deletes all sessions associated with the user,\nthen deletes the user account itself.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    user_id: The ID of the user to delete.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    Success message.",
+        "operationId": "delete_user_api_v1_admin_users__user_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteUserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/users/{user_id}/approve": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Approve User",
+        "description": "Approve a pending user account (admin only).\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    user_id: The ID of the user to approve.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    Approved user information.",
+        "operationId": "approve_user_api_v1_admin_users__user_id__approve_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/users/{user_id}/reject": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Reject User",
+        "description": "Reject and delete a pending user account (admin only).\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    user_id: The ID of the user to reject.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    Success message.",
+        "operationId": "reject_user_api_v1_admin_users__user_id__reject_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteUserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/agent-personalities": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Agent Personalities",
+        "description": "List all agent personalities in the system.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    List of agent personalities.",
+        "operationId": "list_agent_personalities_api_v1_admin_agent_personalities_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentPersonalityResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Agent Personalities Api V1 Admin Agent Personalities Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Create Agent Personality",
+        "description": "Create a new agent personality (admin only).\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    personality_data: Agent personality creation data.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    Created agent personality information.",
+        "operationId": "create_agent_personality_api_v1_admin_agent_personalities_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentPersonalityCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentPersonalityResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/agent-personalities/{personality_id}": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Get Agent Personality",
+        "description": "Get a specific agent personality by ID.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    personality_id: The ID of the personality to retrieve.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    Agent personality information.",
+        "operationId": "get_agent_personality_api_v1_admin_agent_personalities__personality_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "personality_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Personality Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentPersonalityResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Update Agent Personality",
+        "description": "Update an agent personality (admin only).\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    personality_id: The ID of the personality to update.\n    personality_data: Updated personality data.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    Updated agent personality information.",
+        "operationId": "update_agent_personality_api_v1_admin_agent_personalities__personality_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "personality_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Personality Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentPersonalityUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentPersonalityResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Delete Agent Personality",
+        "description": "Delete an agent personality (admin only).\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    personality_id: The ID of the personality to delete.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    Success message.",
+        "operationId": "delete_agent_personality_api_v1_admin_agent_personalities__personality_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "personality_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Personality Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteAgentPersonalityResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/agents": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Agents",
+        "description": "List all agents in the system.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    List of agents.",
+        "operationId": "list_agents_api_v1_admin_agents_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Agents Api V1 Admin Agents Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Create Agent",
+        "description": "Create a new agent (admin only).\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    agent_data: Agent creation data.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    Created agent information.",
+        "operationId": "create_agent_api_v1_admin_agents_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/agents/{agent_id}": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Get Agent",
+        "description": "Get a specific agent by ID.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    agent_id: The ID of the agent to retrieve.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    Agent information.",
+        "operationId": "get_agent_api_v1_admin_agents__agent_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Agent Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Update Agent",
+        "description": "Update an agent (admin only).\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    agent_id: The ID of the agent to update.\n    agent_data: Updated agent data.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    Updated agent information.",
+        "operationId": "update_agent_api_v1_admin_agents__agent_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Agent Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Delete Agent",
+        "description": "Delete an agent (admin only).\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    agent_id: The ID of the agent to delete.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    Success message.",
+        "operationId": "delete_agent_api_v1_admin_agents__agent_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Agent Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteAgentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/scenarios": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Scenarios",
+        "description": "List all scenarios in the system.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    List of scenarios.",
+        "operationId": "list_scenarios_api_v1_admin_scenarios_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ScenarioAdminResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Scenarios Api V1 Admin Scenarios Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Create Scenario",
+        "description": "Create a new scenario (admin only).\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    scenario_data: Scenario creation data.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    Created scenario information.",
+        "operationId": "create_scenario_api_v1_admin_scenarios_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioAdminResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/scenarios/{scenario_id}": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Get Scenario",
+        "description": "Get a specific scenario by ID.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    scenario_id: The ID of the scenario to retrieve.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    Scenario information.",
+        "operationId": "get_scenario_api_v1_admin_scenarios__scenario_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Scenario Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioAdminResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Update Scenario",
+        "description": "Update a scenario (admin only).\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    scenario_id: The ID of the scenario to update.\n    scenario_data: Updated scenario data.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    Updated scenario information.",
+        "operationId": "update_scenario_api_v1_admin_scenarios__scenario_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Scenario Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioAdminResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Delete Scenario",
+        "description": "Delete a scenario (admin only).\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    scenario_id: The ID of the scenario to delete.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    Success message.",
+        "operationId": "delete_scenario_api_v1_admin_scenarios__scenario_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Scenario Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteScenarioResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/feedback": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Feedback",
+        "description": "List all feedback in the system.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    List of feedback.",
+        "operationId": "list_feedback_api_v1_admin_feedback_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FeedbackResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Feedback Api V1 Admin Feedback Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Create Feedback",
+        "description": "Create a new feedback (admin only).\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    feedback_data: Feedback creation data.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    Created feedback information.",
+        "operationId": "create_feedback_api_v1_admin_feedback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/feedback/{feedback_id}": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Get Feedback",
+        "description": "Get a specific feedback by ID.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    feedback_id: The ID of the feedback to retrieve.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    Feedback information.",
+        "operationId": "get_feedback_api_v1_admin_feedback__feedback_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "feedback_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Feedback Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Update Feedback",
+        "description": "Update a feedback (admin only).\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    feedback_id: The ID of the feedback to update.\n    feedback_data: Updated feedback data.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    Updated feedback information.",
+        "operationId": "update_feedback_api_v1_admin_feedback__feedback_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "feedback_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Feedback Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Delete Feedback",
+        "description": "Delete a feedback (admin only).\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    feedback_id: The ID of the feedback to delete.\n    admin_user: The authenticated admin user.\n    database_service: The database service instance.\n\nReturns:\n    Success message.",
+        "operationId": "delete_feedback_api_v1_admin_feedback__feedback_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "feedback_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Feedback Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteFeedbackResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/user-content/agent-voices": {
+      "get": {
+        "tags": [
+          "user-content",
+          "agents"
+        ],
+        "summary": "Get Agent Voices",
+        "description": "Get all available agent voices.\n\nThis endpoint returns all voice options that can be assigned to agents.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    user: The authenticated user.\n    database_service: The database service instance.\n\nReturns:\n    List[AgentVoiceResponse]: List of all available agent voices.",
+        "operationId": "get_agent_voices_api_v1_user_content_agent_voices_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentVoiceResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Get Agent Voices Api V1 User Content Agent Voices Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/user-content/scenarios": {
+      "get": {
+        "tags": [
+          "user-content"
+        ],
+        "summary": "List My Scenarios",
+        "description": "List user's local scenarios only.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    user: The authenticated user.\n    database_service: The database service instance.\n\nReturns:\n    List of user's local scenarios.",
+        "operationId": "list_my_scenarios_api_v1_user_content_scenarios_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ScenarioAdminResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List My Scenarios Api V1 User Content Scenarios Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "user-content"
+        ],
+        "summary": "Create Scenario",
+        "description": "Create a new user-local scenario.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    scenario_data: Scenario creation data.\n    user: The authenticated user.\n    database_service: The database service instance.\n\nReturns:\n    Created scenario information.",
+        "operationId": "create_scenario_api_v1_user_content_scenarios_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioAdminResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/user-content/scenarios/{scenario_id}": {
+      "put": {
+        "tags": [
+          "user-content"
+        ],
+        "summary": "Update Scenario",
+        "description": "Update a user's local scenario.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    scenario_id: The ID of the scenario to update.\n    scenario_data: Updated scenario data.\n    user: The authenticated user.\n    database_service: The database service instance.\n\nReturns:\n    Updated scenario information.",
+        "operationId": "update_scenario_api_v1_user_content_scenarios__scenario_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Scenario Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioAdminResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "user-content"
+        ],
+        "summary": "Delete Scenario",
+        "description": "Delete a user's local scenario.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    scenario_id: The ID of the scenario to delete.\n    user: The authenticated user.\n    database_service: The database service instance.\n\nReturns:\n    Success message.",
+        "operationId": "delete_scenario_api_v1_user_content_scenarios__scenario_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Scenario Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteScenarioResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/user-content/scenarios/{scenario_id}/copy": {
+      "post": {
+        "tags": [
+          "user-content"
+        ],
+        "summary": "Copy Scenario To Local",
+        "description": "Copy a global scenario to user's local scenarios.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    scenario_id: The ID of the scenario to copy.\n    user: The authenticated user.\n    database_service: The database service instance.\n\nReturns:\n    The new local copy of the scenario.",
+        "operationId": "copy_scenario_to_local_api_v1_user_content_scenarios__scenario_id__copy_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Scenario Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioAdminResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/user-content/agent-personalities": {
+      "get": {
+        "tags": [
+          "user-content"
+        ],
+        "summary": "List My Agent Personalities",
+        "description": "List user's local agent personalities only.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    user: The authenticated user.\n    database_service: The database service instance.\n\nReturns:\n    List of user's local agent personalities.",
+        "operationId": "list_my_agent_personalities_api_v1_user_content_agent_personalities_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentPersonalityResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List My Agent Personalities Api V1 User Content Agent Personalities Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "user-content"
+        ],
+        "summary": "Create Agent Personality",
+        "description": "Create a new user-local agent personality.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    personality_data: Agent personality creation data.\n    user: The authenticated user.\n    database_service: The database service instance.\n\nReturns:\n    Created agent personality information.",
+        "operationId": "create_agent_personality_api_v1_user_content_agent_personalities_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentPersonalityCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentPersonalityResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/user-content/agent-personalities/{personality_id}": {
+      "put": {
+        "tags": [
+          "user-content"
+        ],
+        "summary": "Update Agent Personality",
+        "description": "Update a user's local agent personality.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    personality_id: The ID of the personality to update.\n    personality_data: Updated personality data.\n    user: The authenticated user.\n    database_service: The database service instance.\n\nReturns:\n    Updated agent personality information.",
+        "operationId": "update_agent_personality_api_v1_user_content_agent_personalities__personality_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "personality_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Personality Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentPersonalityUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentPersonalityResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "user-content"
+        ],
+        "summary": "Delete Agent Personality",
+        "description": "Delete a user's local agent personality.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    personality_id: The ID of the personality to delete.\n    user: The authenticated user.\n    database_service: The database service instance.\n\nReturns:\n    Success message.",
+        "operationId": "delete_agent_personality_api_v1_user_content_agent_personalities__personality_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "personality_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Personality Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteAgentPersonalityResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/user-content/agent-personalities/{personality_id}/copy": {
+      "post": {
+        "tags": [
+          "user-content"
+        ],
+        "summary": "Copy Agent Personality To Local",
+        "description": "Copy a global agent personality to user's local personalities.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    personality_id: The ID of the personality to copy.\n    user: The authenticated user.\n    database_service: The database service instance.\n\nReturns:\n    The new local copy of the agent personality.",
+        "operationId": "copy_agent_personality_to_local_api_v1_user_content_agent_personalities__personality_id__copy_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "personality_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Personality Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentPersonalityResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/user-content/agents": {
+      "get": {
+        "tags": [
+          "user-content"
+        ],
+        "summary": "List My Agents",
+        "description": "List user's local agents only.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    user: The authenticated user.\n    database_service: The database service instance.\n\nReturns:\n    List of user's local agents.",
+        "operationId": "list_my_agents_api_v1_user_content_agents_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List My Agents Api V1 User Content Agents Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "user-content"
+        ],
+        "summary": "Create Agent",
+        "description": "Create a new user-local agent.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    agent_data: Agent creation data.\n    user: The authenticated user.\n    database_service: The database service instance.\n\nReturns:\n    Created agent information.",
+        "operationId": "create_agent_api_v1_user_content_agents_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/user-content/agents/{agent_id}": {
+      "put": {
+        "tags": [
+          "user-content"
+        ],
+        "summary": "Update Agent",
+        "description": "Update a user's local agent.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    agent_id: The ID of the agent to update.\n    agent_data: Updated agent data.\n    user: The authenticated user.\n    database_service: The database service instance.\n\nReturns:\n    Updated agent information.",
+        "operationId": "update_agent_api_v1_user_content_agents__agent_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Agent Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "user-content"
+        ],
+        "summary": "Delete Agent",
+        "description": "Delete a user's local agent.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    agent_id: The ID of the agent to delete.\n    user: The authenticated user.\n    database_service: The database service instance.\n\nReturns:\n    Success message.",
+        "operationId": "delete_agent_api_v1_user_content_agents__agent_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Agent Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteAgentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/user-content/agents/{agent_id}/copy": {
+      "post": {
+        "tags": [
+          "user-content"
+        ],
+        "summary": "Copy Agent To Local",
+        "description": "Copy a global agent to user's local agents.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    agent_id: The ID of the agent to copy.\n    target_scenario_id: The scenario ID to assign the copied agent to.\n    user: The authenticated user.\n    database_service: The database service instance.\n\nReturns:\n    The new local copy of the agent.",
+        "operationId": "copy_agent_to_local_api_v1_user_content_agents__agent_id__copy_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Agent Id"
+            }
+          },
+          {
+            "name": "target_scenario_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Target Scenario Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/user-content/feedback": {
+      "get": {
+        "tags": [
+          "user-content"
+        ],
+        "summary": "List My Feedback",
+        "description": "List user's local feedback only.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    user: The authenticated user.\n    database_service: The database service instance.\n\nReturns:\n    List of user's local feedback.",
+        "operationId": "list_my_feedback_api_v1_user_content_feedback_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FeedbackResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List My Feedback Api V1 User Content Feedback Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "user-content"
+        ],
+        "summary": "Create Feedback",
+        "description": "Create a new user-local feedback.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    feedback_data: Feedback creation data.\n    user: The authenticated user.\n    database_service: The database service instance.\n\nReturns:\n    Created feedback information.",
+        "operationId": "create_feedback_api_v1_user_content_feedback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/user-content/feedback/{feedback_id}": {
+      "put": {
+        "tags": [
+          "user-content"
+        ],
+        "summary": "Update Feedback",
+        "description": "Update a user's local feedback.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    feedback_id: The ID of the feedback to update.\n    feedback_data: Updated feedback data.\n    user: The authenticated user.\n    database_service: The database service instance.\n\nReturns:\n    Updated feedback information.",
+        "operationId": "update_feedback_api_v1_user_content_feedback__feedback_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "feedback_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Feedback Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "user-content"
+        ],
+        "summary": "Delete Feedback",
+        "description": "Delete a user's local feedback.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    feedback_id: The ID of the feedback to delete.\n    user: The authenticated user.\n    database_service: The database service instance.\n\nReturns:\n    Success message.",
+        "operationId": "delete_feedback_api_v1_user_content_feedback__feedback_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "feedback_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Feedback Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteFeedbackResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/user-content/feedback/{feedback_id}/copy": {
+      "post": {
+        "tags": [
+          "user-content"
+        ],
+        "summary": "Copy Feedback To Local",
+        "description": "Copy a global feedback to user's local feedback.\n\nArgs:\n    request: The FastAPI request object for rate limiting.\n    feedback_id: The ID of the feedback to copy.\n    user: The authenticated user.\n    database_service: The database service instance.\n\nReturns:\n    The new local copy of the feedback.",
+        "operationId": "copy_feedback_to_local_api_v1_user_content_feedback__feedback_id__copy_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "feedback_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Feedback Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tts/{audio_id}": {
+      "get": {
+        "tags": [
+          "tts"
+        ],
+        "summary": "Get Tts Audio",
+        "description": "Fetch generated TTS audio for the given audio_id.\n\nReturns:\n- 202 + {status: \"pending\"} while audio is still generating\n- 200 + {status: \"ready\", audio_base64: \"...\"} when available\n- 404 if not found / not owned by session\n- 500 + {status: \"failed\"} if generation failed (still not exposing internal error)",
+        "operationId": "get_tts_audio_api_v1_tts__audio_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "audio_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Audio Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/llm-models": {
+      "get": {
+        "tags": [
+          "llm-models"
+        ],
+        "summary": "Get Llm Models",
+        "description": "Get all available LLM models.",
+        "operationId": "get_llm_models_api_v1_llm_models_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LlmModelResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Get Llm Models Api V1 Llm Models Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/llm-config": {
+      "get": {
+        "tags": [
+          "llm-config"
+        ],
+        "summary": "Get Agent Llm Configs",
+        "description": "Get all agent-to-LLM configurations.",
+        "operationId": "get_agent_llm_configs_api_v1_llm_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentLlmConfigResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Get Agent Llm Configs Api V1 Llm Config Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "llm-config"
+        ],
+        "summary": "Update Agent Llm Config",
+        "description": "Update the LLM model for a specific agent type.\n\nThis also invalidates any cached LLM instances so the change\ntakes effect on the next request.",
+        "operationId": "update_agent_llm_config_api_v1_llm_config_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentLlmConfigUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentLlmConfigResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/avatars": {
+      "get": {
+        "tags": [
+          "avatars"
+        ],
+        "summary": "Get Avatars",
+        "description": "Get all available student avatars.",
+        "operationId": "get_avatars_api_v1_avatars_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AvatarResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Get Avatars Api V1 Avatars Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Health check endpoint.\n\nReturns:\n    dict: Health status information.",
+        "operationId": "health_check_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "summary": "Root",
+        "description": "Root endpoint returning basic API information.",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Health check endpoint with environment-specific information.\n\nReturns:\n    Dict[str, Any]: Health status information",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Health Check Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Agent": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "default": ""
+          },
+          "scenario_id": {
+            "type": "integer",
+            "title": "Scenario Id"
+          },
+          "voice_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voice Id"
+          },
+          "display_text_color": {
+            "type": "string",
+            "title": "Display Text Color",
+            "default": ""
+          },
+          "avatar_gcs_uri": {
+            "type": "string",
+            "title": "Avatar Gcs Uri",
+            "default": ""
+          },
+          "objective": {
+            "type": "string",
+            "title": "Objective",
+            "default": ""
+          },
+          "instructions": {
+            "type": "string",
+            "title": "Instructions",
+            "default": ""
+          },
+          "constraints": {
+            "type": "string",
+            "title": "Constraints",
+            "default": ""
+          },
+          "context": {
+            "type": "string",
+            "title": "Context",
+            "default": ""
+          },
+          "agent_personality_id": {
+            "type": "integer",
+            "title": "Agent Personality Id"
+          },
+          "owner_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "scenario_id",
+          "agent_personality_id"
+        ],
+        "title": "Agent",
+        "description": "Agent model for storing chat agent prompts and metadata.\n\nAttributes:\n    id: The primary key\n    name: Name of the session (defaults to empty string)\n    created_at: When the session was created\n    messages: Relationship to session messages\n    user: Relationship to the session owner"
+      },
+      "AgentCreate": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 2,
+            "title": "Id",
+            "description": "Agent ID (unique identifier)"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "title": "Name",
+            "description": "Name of the agent"
+          },
+          "scenario_id": {
+            "type": "integer",
+            "title": "Scenario Id",
+            "description": "ID of the scenario this agent belongs to"
+          },
+          "agent_personality_id": {
+            "type": "integer",
+            "title": "Agent Personality Id",
+            "description": "ID of the agent's personality"
+          },
+          "voice": {
+            "type": "string",
+            "title": "Voice",
+            "description": "Voice identifier for TTS",
+            "default": ""
+          },
+          "display_text_color": {
+            "type": "string",
+            "title": "Display Text Color",
+            "description": "Color for display",
+            "default": ""
+          },
+          "avatar_gcs_uri": {
+            "type": "string",
+            "title": "Avatar Gcs Uri",
+            "description": "Avatar image file path",
+            "default": ""
+          },
+          "objective": {
+            "type": "string",
+            "title": "Objective",
+            "description": "Agent's objective",
+            "default": ""
+          },
+          "instructions": {
+            "type": "string",
+            "title": "Instructions",
+            "description": "Agent's instructions",
+            "default": ""
+          },
+          "constraints": {
+            "type": "string",
+            "title": "Constraints",
+            "description": "Agent's constraints",
+            "default": ""
+          },
+          "context": {
+            "type": "string",
+            "title": "Context",
+            "description": "Agent's context",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "scenario_id",
+          "agent_personality_id"
+        ],
+        "title": "AgentCreate",
+        "description": "Request model for creating an agent.\n\nAttributes:\n    id: Agent ID (unique identifier)\n    name: Name of the agent\n    scenario_id: ID of the scenario this agent belongs to\n    agent_personality_id: ID of the agent's personality\n    voice: Voice identifier for TTS\n    display_text_color: Color for display\n    objective: Agent's objective\n    instructions: Agent's instructions\n    constraints: Agent's constraints\n    context: Agent's context"
+      },
+      "AgentLlmConfigResponse": {
+        "properties": {
+          "agent_type": {
+            "type": "string",
+            "title": "Agent Type"
+          },
+          "llm_model_id": {
+            "type": "integer",
+            "title": "Llm Model Id"
+          },
+          "llm_model_name": {
+            "type": "string",
+            "title": "Llm Model Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "agent_type",
+          "llm_model_id",
+          "llm_model_name"
+        ],
+        "title": "AgentLlmConfigResponse",
+        "description": "Response model for an agent-to-LLM configuration."
+      },
+      "AgentLlmConfigUpdateRequest": {
+        "properties": {
+          "agent_type": {
+            "type": "string",
+            "title": "Agent Type"
+          },
+          "llm_model_id": {
+            "type": "integer",
+            "title": "Llm Model Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "agent_type",
+          "llm_model_id"
+        ],
+        "title": "AgentLlmConfigUpdateRequest",
+        "description": "Request model for updating an agent-to-LLM configuration."
+      },
+      "AgentPersonality": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "personality_description": {
+            "type": "string",
+            "title": "Personality Description"
+          },
+          "owner_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "personality_description"
+        ],
+        "title": "AgentPersonality",
+        "description": "Database model for agent personality configurations."
+      },
+      "AgentPersonalityCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "title": "Name",
+            "description": "Name of the personality"
+          },
+          "personality_description": {
+            "type": "string",
+            "minLength": 10,
+            "title": "Personality Description",
+            "description": "Description of the personality traits"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "personality_description"
+        ],
+        "title": "AgentPersonalityCreate",
+        "description": "Request model for creating an agent personality.\n\nAttributes:\n    name: Name of the personality\n    personality_description: Description of the personality traits"
+      },
+      "AgentPersonalityResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "Personality ID"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Name of the personality"
+          },
+          "personality_description": {
+            "type": "string",
+            "title": "Personality Description",
+            "description": "Description of the personality traits"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "When the personality was created"
+          },
+          "owner_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Id",
+            "description": "Owner user ID (None means global)"
+          },
+          "is_global": {
+            "type": "boolean",
+            "title": "Is Global",
+            "description": "Whether this is a global personality",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "personality_description",
+          "created_at"
+        ],
+        "title": "AgentPersonalityResponse",
+        "description": "Response model for agent personality operations.\n\nAttributes:\n    id: Personality ID\n    name: Name of the personality\n    personality_description: Description of the personality traits\n    created_at: When the personality was created\n    owner_id: Owner user ID (None means global)\n    is_global: Whether this is a global personality"
+      },
+      "AgentPersonalityUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Name of the personality"
+          },
+          "personality_description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 10
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Personality Description",
+            "description": "Description of the personality traits"
+          }
+        },
+        "type": "object",
+        "title": "AgentPersonalityUpdate",
+        "description": "Request model for updating an agent personality.\n\nAttributes:\n    name: Optional new name\n    personality_description: Optional new description"
+      },
+      "AgentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Agent ID"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Name of the agent"
+          },
+          "scenario_id": {
+            "type": "integer",
+            "title": "Scenario Id",
+            "description": "ID of the scenario this agent belongs to"
+          },
+          "agent_personality_id": {
+            "type": "integer",
+            "title": "Agent Personality Id",
+            "description": "ID of the agent's personality"
+          },
+          "agent_personality": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentPersonalityResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Agent personality object"
+          },
+          "voice": {
+            "type": "string",
+            "title": "Voice",
+            "description": "Voice identifier for TTS"
+          },
+          "display_text_color": {
+            "type": "string",
+            "title": "Display Text Color",
+            "description": "Color for display"
+          },
+          "avatar_gcs_uri": {
+            "type": "string",
+            "title": "Avatar Gcs Uri",
+            "description": "GCS URI for agent avatar image",
+            "default": ""
+          },
+          "objective": {
+            "type": "string",
+            "title": "Objective",
+            "description": "Agent's objective"
+          },
+          "instructions": {
+            "type": "string",
+            "title": "Instructions",
+            "description": "Agent's instructions"
+          },
+          "constraints": {
+            "type": "string",
+            "title": "Constraints",
+            "description": "Agent's constraints"
+          },
+          "context": {
+            "type": "string",
+            "title": "Context",
+            "description": "Agent's context"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "When the agent was created"
+          },
+          "owner_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Id",
+            "description": "Owner user ID (None means global)"
+          },
+          "is_global": {
+            "type": "boolean",
+            "title": "Is Global",
+            "description": "Whether this is a global agent",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "scenario_id",
+          "agent_personality_id",
+          "voice",
+          "display_text_color",
+          "objective",
+          "instructions",
+          "constraints",
+          "context",
+          "created_at"
+        ],
+        "title": "AgentResponse",
+        "description": "Response model for agent operations.\n\nAttributes:\n    id: Agent ID\n    name: Name of the agent\n    scenario_id: ID of the scenario this agent belongs to\n    agent_personality_id: ID of the agent's personality\n    agent_personality: Optional agent personality object\n    voice: Voice identifier for TTS\n    display_text_color: Color for display\n    objective: Agent's objective\n    instructions: Agent's instructions\n    constraints: Agent's constraints\n    context: Agent's context\n    created_at: When the agent was created\n    owner_id: Owner user ID (None means global)\n    is_global: Whether this is a global agent"
+      },
+      "AgentUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Name of the agent"
+          },
+          "scenario_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario Id",
+            "description": "ID of the scenario this agent belongs to"
+          },
+          "agent_personality_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Personality Id",
+            "description": "ID of the agent's personality"
+          },
+          "voice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voice",
+            "description": "Voice identifier for TTS"
+          },
+          "display_text_color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Text Color",
+            "description": "Color for display"
+          },
+          "avatar_gcs_uri": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Gcs Uri",
+            "description": "Avatar image file path"
+          },
+          "objective": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objective",
+            "description": "Agent's objective"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions",
+            "description": "Agent's instructions"
+          },
+          "constraints": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Constraints",
+            "description": "Agent's constraints"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context",
+            "description": "Agent's context"
+          }
+        },
+        "type": "object",
+        "title": "AgentUpdate",
+        "description": "Request model for updating an agent.\n\nAttributes:\n    name: Optional new name\n    scenario_id: Optional new scenario ID\n    agent_personality_id: Optional new personality ID\n    voice: Optional new voice\n    display_text_color: Optional new display color\n    objective: Optional new objective\n    instructions: Optional new instructions\n    constraints: Optional new constraints\n    context: Optional new context"
+      },
+      "AgentVoiceResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "Voice ID"
+          },
+          "voice_name": {
+            "type": "string",
+            "title": "Voice Name",
+            "description": "Name of the voice"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "voice_name"
+        ],
+        "title": "AgentVoiceResponse",
+        "description": "Response model for agent voice.\n\nAttributes:\n    id: Voice ID\n    voice_name: Name of the voice"
+      },
+      "AvatarResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "file_path": {
+            "type": "string",
+            "title": "File Path"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "file_path"
+        ],
+        "title": "AvatarResponse",
+        "description": "Response model for avatars."
+      },
+      "Body_login_api_v1_auth_login_post": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          },
+          "grant_type": {
+            "type": "string",
+            "title": "Grant Type",
+            "default": "password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "Body_login_api_v1_auth_login_post"
+      },
+      "Body_update_session_name_api_v1_auth_session__session_id__name_patch": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "Body_update_session_name_api_v1_auth_session__session_id__name_patch"
+      },
+      "ChatRequest": {
+        "properties": {
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/Message"
+            },
+            "type": "array",
+            "title": "Messages",
+            "description": "List of messages in the conversation"
+          },
+          "is_resumption": {
+            "type": "boolean",
+            "title": "Is Resumption",
+            "description": "Whether the conversation is being resumed",
+            "default": false
+          },
+          "resumption_text": {
+            "type": "string",
+            "title": "Resumption Text",
+            "description": "The text to resume the conversation",
+            "default": ""
+          },
+          "audio_base64": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Base64",
+            "description": "Optional base64-encoded audio bytes for speech-to-text transcription"
+          }
+        },
+        "type": "object",
+        "required": [
+          "messages"
+        ],
+        "title": "ChatRequest",
+        "description": "Request model for chat endpoint.\n\nAttributes:\n    messages: List of messages in the conversation.\n    is_resumption: Whether the conversation is being resumed.\n    resumption_text: The text to resume the conversation.\n    audio_base64: Optional base64-encoded audio bytes for speech-to-text transcription."
+      },
+      "ChatResponse": {
+        "properties": {
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/Message"
+            },
+            "type": "array",
+            "title": "Messages",
+            "description": "List of messages in the conversation"
+          },
+          "interrupt_task": {
+            "type": "string",
+            "title": "Interrupt Task",
+            "description": "The task to interrupt the conversation",
+            "default": ""
+          },
+          "interrupt_value": {
+            "type": "string",
+            "title": "Interrupt Value",
+            "description": "The value to interrupt the conversation",
+            "default": ""
+          },
+          "interrupt_value_type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "image",
+              "audio",
+              "video"
+            ],
+            "title": "Interrupt Value Type",
+            "description": "The type of the interrupt value",
+            "default": "text"
+          },
+          "student_responses": {
+            "items": {
+              "$ref": "#/components/schemas/StudentResponse"
+            },
+            "type": "array",
+            "title": "Student Responses",
+            "description": "List of student responses"
+          },
+          "inline_feedback": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Inline Feedback",
+            "description": "List of inline feedback"
+          },
+          "feedback_request_id": {
+            "type": "string",
+            "title": "Feedback Request Id",
+            "description": "ID to poll for async inline feedback if not immediately available",
+            "default": ""
+          },
+          "summary_feedback": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SummaryFeedbackResponse"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Summary Feedback",
+            "description": "The summary feedback for the student responses",
+            "default": ""
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary",
+            "description": "The summary of the student responses",
+            "default": ""
+          },
+          "answering_student": {
+            "type": "integer",
+            "title": "Answering Student",
+            "description": "The student number that is answering",
+            "default": 0
+          },
+          "appropriate_response": {
+            "type": "boolean",
+            "title": "Appropriate Response",
+            "description": "Whether the response is appropriate",
+            "default": false
+          },
+          "appropriate_explanation": {
+            "type": "string",
+            "title": "Appropriate Explanation",
+            "description": "The explanation for why the response is appropriate",
+            "default": ""
+          },
+          "learning_goals_achieved": {
+            "type": "boolean",
+            "title": "Learning Goals Achieved",
+            "description": "Whether the learning goals were achieved",
+            "default": false
+          },
+          "transcribed_text": {
+            "type": "string",
+            "title": "Transcribed Text",
+            "description": "The transcribed text from audio input",
+            "default": ""
+          },
+          "interrupt": {
+            "items": {
+              "$ref": "#/components/schemas/Interrupt"
+            },
+            "type": "array",
+            "title": "Interrupt",
+            "description": "List of interrupts"
+          }
+        },
+        "type": "object",
+        "title": "ChatResponse",
+        "description": "Response model for chat endpoint.\n\nAttributes:\n    messages: List of messages in the conversation."
+      },
+      "DeleteAgentPersonalityResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Success message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "DeleteAgentPersonalityResponse",
+        "description": "Response model for agent personality deletion.\n\nAttributes:\n    message: Success message"
+      },
+      "DeleteAgentResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Success message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "DeleteAgentResponse",
+        "description": "Response model for agent deletion.\n\nAttributes:\n    message: Success message"
+      },
+      "DeleteFeedbackResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Success message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "DeleteFeedbackResponse",
+        "description": "Response model for feedback deletion.\n\nAttributes:\n    message: Success message"
+      },
+      "DeleteScenarioResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Success message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "DeleteScenarioResponse",
+        "description": "Response model for scenario deletion.\n\nAttributes:\n    message: Success message"
+      },
+      "DeleteUserResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "The success message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "DeleteUserResponse",
+        "description": "Response model for user deletion.\n\nAttributes:\n    message: The success message"
+      },
+      "FeedbackCreate": {
+        "properties": {
+          "feedback_type": {
+            "$ref": "#/components/schemas/FeedbackType",
+            "description": "Type of feedback (inline or summary)"
+          },
+          "scenario_id": {
+            "type": "integer",
+            "title": "Scenario Id",
+            "description": "The scenario this feedback belongs to"
+          },
+          "objective": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Objective",
+            "description": "The objective of the feedback"
+          },
+          "instructions": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Instructions",
+            "description": "The instructions for the feedback"
+          },
+          "constraints": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Constraints",
+            "description": "The constraints for the feedback"
+          },
+          "context": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Context",
+            "description": "The context for the feedback"
+          },
+          "output_format": {
+            "type": "string",
+            "title": "Output Format",
+            "description": "The output format for the feedback",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "feedback_type",
+          "scenario_id",
+          "objective",
+          "instructions",
+          "constraints",
+          "context"
+        ],
+        "title": "FeedbackCreate",
+        "description": "Request model for creating a feedback.\n\nAttributes:\n    feedback_type: Type of feedback (\"inline\" or \"summary\")\n    scenario_id: The scenario this feedback belongs to\n    objective: The objective of the feedback\n    instructions: The instructions for the feedback\n    constraints: The constraints for the feedback\n    context: The context for the feedback\n    output_format: The output format for the feedback (optional)"
+      },
+      "FeedbackResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "Feedback ID"
+          },
+          "feedback_type": {
+            "$ref": "#/components/schemas/FeedbackType",
+            "description": "Type of feedback"
+          },
+          "scenario_id": {
+            "type": "integer",
+            "title": "Scenario Id",
+            "description": "The scenario this feedback belongs to"
+          },
+          "objective": {
+            "type": "string",
+            "title": "Objective",
+            "description": "The objective of the feedback"
+          },
+          "instructions": {
+            "type": "string",
+            "title": "Instructions",
+            "description": "The instructions for the feedback"
+          },
+          "constraints": {
+            "type": "string",
+            "title": "Constraints",
+            "description": "The constraints for the feedback"
+          },
+          "context": {
+            "type": "string",
+            "title": "Context",
+            "description": "The context for the feedback"
+          },
+          "output_format": {
+            "type": "string",
+            "title": "Output Format",
+            "description": "The output format for the feedback"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "When the feedback was created"
+          },
+          "owner_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Id",
+            "description": "Owner user ID (None means global)"
+          },
+          "is_global": {
+            "type": "boolean",
+            "title": "Is Global",
+            "description": "Whether this is global feedback",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "feedback_type",
+          "scenario_id",
+          "objective",
+          "instructions",
+          "constraints",
+          "context",
+          "output_format",
+          "created_at"
+        ],
+        "title": "FeedbackResponse",
+        "description": "Response model for feedback operations.\n\nAttributes:\n    id: Feedback ID\n    feedback_type: Type of feedback\n    scenario_id: The scenario this feedback belongs to\n    objective: The objective of the feedback\n    instructions: The instructions for the feedback\n    constraints: The constraints for the feedback\n    context: The context for the feedback\n    output_format: The output format for the feedback\n    created_at: When the feedback was created\n    owner_id: Owner user ID (None means global)\n    is_global: Whether this is global feedback"
+      },
+      "FeedbackType": {
+        "type": "string",
+        "enum": [
+          "inline",
+          "summary"
+        ],
+        "title": "FeedbackType",
+        "description": "Enumeration of feedback types."
+      },
+      "FeedbackUpdate": {
+        "properties": {
+          "feedback_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FeedbackType"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Type of feedback (inline or summary)"
+          },
+          "scenario_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario Id",
+            "description": "The scenario this feedback belongs to"
+          },
+          "objective": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objective",
+            "description": "The objective of the feedback"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions",
+            "description": "The instructions for the feedback"
+          },
+          "constraints": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Constraints",
+            "description": "The constraints for the feedback"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context",
+            "description": "The context for the feedback"
+          },
+          "output_format": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Format",
+            "description": "The output format for the feedback"
+          }
+        },
+        "type": "object",
+        "title": "FeedbackUpdate",
+        "description": "Request model for updating a feedback.\n\nAttributes:\n    feedback_type: Optional new feedback type\n    scenario_id: Optional new scenario ID\n    objective: Optional new objective\n    instructions: Optional new instructions\n    constraints: Optional new constraints\n    context: Optional new context\n    output_format: Optional new output format"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Interrupt": {
+        "properties": {
+          "value": {
+            "title": "Value"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value",
+          "id"
+        ],
+        "title": "Interrupt"
+      },
+      "LlmModelResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "LlmModelResponse",
+        "description": "Response model for LLM models."
+      },
+      "Message": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant",
+              "system"
+            ],
+            "title": "Role",
+            "description": "The role of the message sender"
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 3000,
+            "minLength": 1,
+            "title": "Content",
+            "description": "The content of the message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role",
+          "content"
+        ],
+        "title": "Message",
+        "description": "Message model for chat endpoint.\n\nAttributes:\n    role: The role of the message sender (user or assistant).\n    content: The content of the message."
+      },
+      "RegistrationResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Success message"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email",
+            "description": "The registered email address"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "email"
+        ],
+        "title": "RegistrationResponse",
+        "description": "Response model for user registration.\n\nAttributes:\n    message: Success message\n    email: The registered email address"
+      },
+      "Scenario": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "overview": {
+            "type": "string",
+            "title": "Overview"
+          },
+          "system_instructions": {
+            "type": "string",
+            "title": "System Instructions"
+          },
+          "initial_prompt": {
+            "type": "string",
+            "title": "Initial Prompt"
+          },
+          "teaching_objectives": {
+            "type": "string",
+            "title": "Teaching Objectives"
+          },
+          "owner_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Id"
+          }
+        },
+        "type": "object",
+        "title": "Scenario",
+        "description": "Database model for scenario configurations."
+      },
+      "ScenarioAdminResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "Scenario ID"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Name of the scenario"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Description of the scenario"
+          },
+          "overview": {
+            "type": "string",
+            "title": "Overview",
+            "description": "Overview of the scenario"
+          },
+          "system_instructions": {
+            "type": "string",
+            "title": "System Instructions",
+            "description": "System instructions for the scenario"
+          },
+          "initial_prompt": {
+            "type": "string",
+            "title": "Initial Prompt",
+            "description": "Initial prompt for the scenario"
+          },
+          "teaching_objectives": {
+            "type": "string",
+            "title": "Teaching Objectives",
+            "description": "Teaching objectives for the scenario"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "When the scenario was created"
+          },
+          "owner_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Id",
+            "description": "Owner user ID (None means global)"
+          },
+          "is_global": {
+            "type": "boolean",
+            "title": "Is Global",
+            "description": "Whether this is a global scenario",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "overview",
+          "system_instructions",
+          "initial_prompt",
+          "teaching_objectives",
+          "created_at"
+        ],
+        "title": "ScenarioAdminResponse",
+        "description": "Response model for scenario operations.\n\nAttributes:\n    id: Scenario ID\n    name: Name of the scenario\n    description: Description of the scenario\n    overview: Overview of the scenario\n    system_instructions: System instructions for the scenario\n    initial_prompt: Initial prompt for the scenario\n    teaching_objectives: Teaching objectives for the scenario\n    created_at: When the scenario was created\n    owner_id: Owner user ID (None means global)\n    is_global: Whether this is a global scenario"
+      },
+      "ScenarioCreateRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "title": "Name",
+            "description": "Name of the scenario"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 10,
+            "title": "Description",
+            "description": "Description of the scenario"
+          },
+          "overview": {
+            "type": "string",
+            "minLength": 10,
+            "title": "Overview",
+            "description": "Overview of the scenario"
+          },
+          "system_instructions": {
+            "type": "string",
+            "minLength": 10,
+            "title": "System Instructions",
+            "description": "System instructions for the scenario"
+          },
+          "initial_prompt": {
+            "type": "string",
+            "minLength": 5,
+            "title": "Initial Prompt",
+            "description": "Initial prompt for the scenario"
+          },
+          "teaching_objectives": {
+            "type": "string",
+            "minLength": 5,
+            "title": "Teaching Objectives",
+            "description": "Teaching objectives for the scenario"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "overview",
+          "system_instructions",
+          "initial_prompt",
+          "teaching_objectives"
+        ],
+        "title": "ScenarioCreateRequest",
+        "description": "Request model for creating a scenario.\n\nAttributes:\n    name: Name of the scenario\n    description: Description of the scenario\n    overview: Overview of the scenario\n    system_instructions: System instructions for the scenario\n    initial_prompt: Initial prompt for the scenario\n    teaching_objectives: Teaching objectives for the scenario"
+      },
+      "ScenarioRequest": {
+        "properties": {
+          "scenario_id": {
+            "type": "integer",
+            "title": "Scenario Id",
+            "description": "The ID of the scenario to get"
+          }
+        },
+        "type": "object",
+        "title": "ScenarioRequest",
+        "description": "Request model for scenario endpoint.\n\nAttributes:\n    scenario_id: The ID of the scenario to get."
+      },
+      "ScenarioUpdateRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Name of the scenario"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 10
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Description of the scenario"
+          },
+          "overview": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 10
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overview",
+            "description": "Overview of the scenario"
+          },
+          "system_instructions": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 10
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "System Instructions",
+            "description": "System instructions for the scenario"
+          },
+          "initial_prompt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 5
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initial Prompt",
+            "description": "Initial prompt for the scenario"
+          },
+          "teaching_objectives": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 5
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Teaching Objectives",
+            "description": "Teaching objectives for the scenario"
+          }
+        },
+        "type": "object",
+        "title": "ScenarioUpdateRequest",
+        "description": "Request model for updating a scenario.\n\nAttributes:\n    name: Optional new name\n    description: Optional new description\n    overview: Optional new overview\n    system_instructions: Optional new system instructions\n    initial_prompt: Optional new initial prompt\n    teaching_objectives: Optional new teaching objectives"
+      },
+      "ScenarioWithOwnerResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "Scenario ID"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Name of the scenario"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Description of the scenario"
+          },
+          "overview": {
+            "type": "string",
+            "title": "Overview",
+            "description": "Overview of the scenario"
+          },
+          "system_instructions": {
+            "type": "string",
+            "title": "System Instructions",
+            "description": "System instructions for the scenario"
+          },
+          "initial_prompt": {
+            "type": "string",
+            "title": "Initial Prompt",
+            "description": "Initial prompt for the scenario"
+          },
+          "teaching_objectives": {
+            "type": "string",
+            "title": "Teaching Objectives",
+            "description": "Teaching objectives for the scenario"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At",
+            "description": "When the scenario was created"
+          },
+          "owner_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Id",
+            "description": "Owner user ID (None means global)"
+          },
+          "is_global": {
+            "type": "boolean",
+            "title": "Is Global",
+            "description": "Whether this is a global scenario",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "overview",
+          "system_instructions",
+          "initial_prompt",
+          "teaching_objectives"
+        ],
+        "title": "ScenarioWithOwnerResponse",
+        "description": "Response model for scenario with ownership info (for scenario selection).\n\nAttributes:\n    id: Scenario ID\n    name: Name of the scenario\n    description: Description of the scenario\n    overview: Overview of the scenario\n    system_instructions: System instructions for the scenario\n    initial_prompt: Initial prompt for the scenario\n    teaching_objectives: Teaching objectives for the scenario\n    created_at: When the scenario was created\n    owner_id: Owner user ID (None means global)\n    is_global: Whether this is a global scenario"
+      },
+      "SessionListItem": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "The unique identifier for the chat session"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Name",
+            "description": "Name of the session",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ],
+        "title": "SessionListItem",
+        "description": "Response model for session list items (no token)."
+      },
+      "SessionResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "The unique identifier for the chat session"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Name",
+            "description": "Name of the session",
+            "default": ""
+          },
+          "token": {
+            "$ref": "#/components/schemas/Token",
+            "description": "The authentication token for the session"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "token"
+        ],
+        "title": "SessionResponse",
+        "description": "Response model for session creation.\n\nAttributes:\n    session_id: The unique identifier for the chat session\n    name: Name of the session (defaults to empty string)\n    token: The authentication token for the session"
+      },
+      "StudentResponse": {
+        "properties": {
+          "student_response": {
+            "type": "string",
+            "title": "Student Response",
+            "description": "The response from the student"
+          },
+          "student_details": {
+            "$ref": "#/components/schemas/Agent"
+          },
+          "student_personality": {
+            "$ref": "#/components/schemas/AgentPersonality"
+          },
+          "audio_base64": {
+            "type": "string",
+            "title": "Audio Base64",
+            "description": "Base64-encoded audio bytes for the student response",
+            "default": ""
+          },
+          "audio_id": {
+            "type": "string",
+            "title": "Audio Id",
+            "description": "Identifier for fetching audio lazily",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "student_response",
+          "student_details",
+          "student_personality"
+        ],
+        "title": "StudentResponse",
+        "description": "Model for the student response."
+      },
+      "SummaryFeedbackApiResponse": {
+        "properties": {
+          "summary_feedback": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SummaryFeedbackResponse"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Summary Feedback"
+          }
+        },
+        "type": "object",
+        "required": [
+          "summary_feedback"
+        ],
+        "title": "SummaryFeedbackApiResponse",
+        "description": "Response model for summary feedback endpoint."
+      },
+      "SummaryFeedbackRequest": {
+        "properties": {
+          "scenario_id": {
+            "type": "integer",
+            "title": "Scenario Id"
+          },
+          "transcript": {
+            "items": {
+              "$ref": "#/components/schemas/TranscriptMessage"
+            },
+            "type": "array",
+            "title": "Transcript"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scenario_id",
+          "transcript"
+        ],
+        "title": "SummaryFeedbackRequest",
+        "description": "Request model for summary feedback endpoint."
+      },
+      "SummaryFeedbackResponse": {
+        "properties": {
+          "lesson_summary": {
+            "type": "string",
+            "title": "Lesson Summary",
+            "description": "What happened in the lesson"
+          },
+          "key_moments": {
+            "type": "string",
+            "title": "Key Moments",
+            "description": "Two to three things they did excellent in the lesson"
+          },
+          "overall_feedback": {
+            "type": "string",
+            "title": "Overall Feedback",
+            "description": "Briefly describe how they did overall in the lesson"
+          },
+          "your_strengths": {
+            "type": "string",
+            "title": "Your Strengths",
+            "description": "What they did well in the lesson"
+          },
+          "areas_for_growth": {
+            "type": "string",
+            "title": "Areas For Growth",
+            "description": "What they could improve in the lesson"
+          },
+          "next_steps": {
+            "type": "string",
+            "title": "Next Steps",
+            "description": "What they should try next in the lesson to demonstrate the skill in the future"
+          },
+          "celebration": {
+            "type": "string",
+            "title": "Celebration",
+            "description": "What they should celebrate in the lesson"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lesson_summary",
+          "key_moments",
+          "overall_feedback",
+          "your_strengths",
+          "areas_for_growth",
+          "next_steps",
+          "celebration"
+        ],
+        "title": "SummaryFeedbackResponse",
+        "description": "Model for the summary feedback response."
+      },
+      "Token": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token",
+            "description": "The JWT access token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "description": "The type of token",
+            "default": "bearer"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At",
+            "description": "The token expiration timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "expires_at"
+        ],
+        "title": "Token",
+        "description": "Token model for authentication.\n\nAttributes:\n    access_token: The JWT access token.\n    token_type: The type of token (always \"bearer\").\n    expires_at: The token expiration timestamp."
+      },
+      "TokenResponse": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token",
+            "description": "The JWT access token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "description": "The type of token",
+            "default": "bearer"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At",
+            "description": "When the token expires"
+          },
+          "is_admin": {
+            "type": "boolean",
+            "title": "Is Admin",
+            "description": "Whether the user is an admin",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "expires_at"
+        ],
+        "title": "TokenResponse",
+        "description": "Response model for login endpoint.\n\nAttributes:\n    access_token: The JWT access token\n    token_type: The type of token (always \"bearer\")\n    expires_at: When the token expires\n    is_admin: Whether the user is an admin"
+      },
+      "TranscriptMessage": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "description": "'user' or 'agent'"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role",
+          "text"
+        ],
+        "title": "TranscriptMessage",
+        "description": "Message model for Gemini Live conversation transcript."
+      },
+      "UserCreate": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email",
+            "description": "User's email address"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 8,
+            "format": "password",
+            "title": "Password",
+            "description": "User's password",
+            "writeOnly": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "UserCreate",
+        "description": "Request model for user registration.\n\nAttributes:\n    email: User's email address\n    password: User's password"
+      },
+      "UserResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "User's ID"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email",
+            "description": "User's email address"
+          },
+          "token": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Token"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Authentication token"
+          },
+          "is_admin": {
+            "type": "boolean",
+            "title": "Is Admin",
+            "description": "Whether the user is an admin",
+            "default": false
+          },
+          "is_approved": {
+            "type": "boolean",
+            "title": "Is Approved",
+            "description": "Whether the user's account has been approved",
+            "default": false
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "When the user was created"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "created_at"
+        ],
+        "title": "UserResponse",
+        "description": "Response model for user operations.\n\nAttributes:\n    id: User's ID\n    email: User's email address\n    token: Authentication token\n    is_admin: Whether the user is an admin\n    is_approved: Whether the user's account has been approved\n    created_at: When the user was created"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

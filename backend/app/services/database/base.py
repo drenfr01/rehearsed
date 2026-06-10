@@ -144,6 +144,8 @@ class DatabaseService:
             SQLModel Engine instance
         """
         self._initialize_engine()
+        if self._engine is None:
+            raise RuntimeError("Database engine is not initialized")
         return self._engine
     
     @engine.setter

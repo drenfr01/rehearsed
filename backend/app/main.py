@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import (
     Any,
-    Dict,
+    cast,
 )
 
 from dotenv import load_dotenv
@@ -77,7 +77,7 @@ app.add_middleware(MetricsMiddleware)
 
 # Set up rate limiter exception handler
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, cast(Any, _rate_limit_exceeded_handler))
 
 
 # Add validation exception handler
@@ -153,11 +153,11 @@ async def root(request: Request):
 
 @app.get("/health")
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["health"][0])
-async def health_check(request: Request) -> Dict[str, Any]:
+async def health_check(request: Request) -> JSONResponse:
     """Health check endpoint with environment-specific information.
 
     Returns:
-        Dict[str, Any]: Health status information
+        JSONResponse: Health status information
     """
     logger.info("health_check_called")
 

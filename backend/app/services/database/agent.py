@@ -1,12 +1,12 @@
 """Agent database repository."""
 
-from typing import List, Optional
+from typing import Any, List, Optional, cast
 
 from fastapi import HTTPException
 from sqlalchemy import or_
 from sqlalchemy.engine import Engine
-from sqlalchemy.orm import selectinload
-from sqlmodel import Session, select
+from sqlalchemy.orm import QueryableAttribute, selectinload
+from sqlmodel import Session, col, select
 
 from app.core.logging import logger
 from app.models.agent import Agent, AgentPersonality, AgentVoice
@@ -37,9 +37,9 @@ class AgentRepository:
             List[AgentVoice]: List of all agent voices
         """
         with Session(self.engine) as session:
-            statement = select(AgentVoice).order_by(AgentVoice.voice_name)
+            statement = select(AgentVoice).order_by(col(AgentVoice.voice_name))
             voices = session.exec(statement).all()
-            return voices
+            return list(voices)
 
     async def get_agent_voice_by_name(self, voice_name: str) -> Optional[AgentVoice]:
         """Get an agent voice by name.
@@ -122,8 +122,8 @@ class AgentRepository:
         """
         with Session(self.engine) as session:
             statement = select(Agent).where(Agent.id == agent_id).options(
-                selectinload(Agent.agent_personality),
-                selectinload(Agent.voice)
+                selectinload(cast("QueryableAttribute[Any]", Agent.agent_personality)),
+                selectinload(cast("QueryableAttribute[Any]", Agent.voice))
             )
             agent = session.exec(statement).first()
             return agent
@@ -136,11 +136,11 @@ class AgentRepository:
         """
         with Session(self.engine) as session:
             statement = select(Agent).options(
-                selectinload(Agent.agent_personality),
-                selectinload(Agent.voice)
-            ).order_by(Agent.created_at)
+                selectinload(cast("QueryableAttribute[Any]", Agent.agent_personality)),
+                selectinload(cast("QueryableAttribute[Any]", Agent.voice))
+            ).order_by(col(Agent.created_at))
             agents = session.exec(statement).all()
-            return agents
+            return list(agents)
 
     async def get_agents_by_scenario(self, scenario_id: int) -> List[Agent]:
         """Get all agents for a specific scenario.
@@ -153,11 +153,11 @@ class AgentRepository:
         """
         with Session(self.engine) as session:
             statement = select(Agent).where(Agent.scenario_id == scenario_id).options(
-                selectinload(Agent.agent_personality),
-                selectinload(Agent.voice)
-            ).order_by(Agent.created_at)
+                selectinload(cast("QueryableAttribute[Any]", Agent.agent_personality)),
+                selectinload(cast("QueryableAttribute[Any]", Agent.voice))
+            ).order_by(col(Agent.created_at))
             agents = session.exec(statement).all()
-            return agents
+            return list(agents)
 
     async def update_agent(
         self,
@@ -262,11 +262,11 @@ class AgentRepository:
         """
         with Session(self.engine) as session:
             statement = select(Agent).where(
-                or_(Agent.owner_id.is_(None), Agent.owner_id == user_id)
+                or_(col(Agent.owner_id).is_(None), col(Agent.owner_id) == user_id)
             ).options(
-                selectinload(Agent.agent_personality),
-                selectinload(Agent.voice)
-            ).order_by(Agent.created_at)
+                selectinload(cast("QueryableAttribute[Any]", Agent.agent_personality)),
+                selectinload(cast("QueryableAttribute[Any]", Agent.voice))
+            ).order_by(col(Agent.created_at))
             agents = session.exec(statement).all()
             return list(agents)
 
@@ -283,9 +283,9 @@ class AgentRepository:
             statement = select(Agent).where(
                 Agent.owner_id == user_id
             ).options(
-                selectinload(Agent.agent_personality),
-                selectinload(Agent.voice)
-            ).order_by(Agent.created_at)
+                selectinload(cast("QueryableAttribute[Any]", Agent.agent_personality)),
+                selectinload(cast("QueryableAttribute[Any]", Agent.voice))
+            ).order_by(col(Agent.created_at))
             agents = session.exec(statement).all()
             return list(agents)
 
@@ -460,10 +460,12 @@ class AgentRepository:
             session.commit()
             # Re-query with eager loading to avoid lazy load issues after session closes
             statement = select(Agent).where(Agent.id == agent_id).options(
-                selectinload(Agent.voice),
-                selectinload(Agent.agent_personality)
+                selectinload(cast("QueryableAttribute[Any]", Agent.voice)),
+                selectinload(cast("QueryableAttribute[Any]", Agent.agent_personality))
             )
             updated_agent = session.exec(statement).first()
+            if updated_agent is None:
+                raise HTTPException(status_code=404, detail="Agent not found after update")
             logger.info("user_agent_updated", agent_id=agent_id, user_id=user_id)
             return updated_agent
 
@@ -539,9 +541,9 @@ class AgentRepository:
             List[AgentPersonality]: List of all agent personalities
         """
         with Session(self.engine) as session:
-            statement = select(AgentPersonality).order_by(AgentPersonality.created_at)
+            statement = select(AgentPersonality).order_by(col(AgentPersonality.created_at))
             agent_personalities = session.exec(statement).all()
-            return agent_personalities
+            return list(agent_personalities)
 
     async def update_agent_personality(
         self,
@@ -608,8 +610,8 @@ class AgentRepository:
         """
         with Session(self.engine) as session:
             statement = select(AgentPersonality).where(
-                or_(AgentPersonality.owner_id.is_(None), AgentPersonality.owner_id == user_id)
-            ).order_by(AgentPersonality.created_at)
+                or_(col(AgentPersonality.owner_id).is_(None), col(AgentPersonality.owner_id) == user_id)
+            ).order_by(col(AgentPersonality.created_at))
             personalities = session.exec(statement).all()
             return list(personalities)
 
@@ -625,7 +627,7 @@ class AgentRepository:
         with Session(self.engine) as session:
             statement = select(AgentPersonality).where(
                 AgentPersonality.owner_id == user_id
-            ).order_by(AgentPersonality.created_at)
+            ).order_by(col(AgentPersonality.created_at))
             personalities = session.exec(statement).all()
             return list(personalities)
 

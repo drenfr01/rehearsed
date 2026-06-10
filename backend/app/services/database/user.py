@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from fastapi import HTTPException
 from sqlalchemy.engine import Engine
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from app.core.logging import logger
 from app.models.user import User
@@ -98,7 +98,7 @@ class UserRepository:
             List[User]: List of unapproved users
         """
         with Session(self.engine) as session:
-            statement = select(User).where(~User.is_approved).order_by(User.created_at)
+            statement = select(User).where(~col(User.is_approved)).order_by(col(User.created_at))
             users = list(session.exec(statement).all())
             return users
 
@@ -133,9 +133,9 @@ class UserRepository:
             List[User]: List of all users
         """
         with Session(self.engine) as session:
-            statement = select(User).order_by(User.created_at)
+            statement = select(User).order_by(col(User.created_at))
             users = session.exec(statement).all()
-            return users
+            return list(users)
 
     async def update_user_email(self, user_id: int, email: str) -> User:
         """Update a user's email address.

@@ -5,7 +5,7 @@ from typing import List, Optional
 from fastapi import HTTPException
 from sqlalchemy import or_
 from sqlalchemy.engine import Engine
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from app.core.logging import logger
 from app.models.scenario import Scenario
@@ -36,7 +36,7 @@ class ScenarioRepository:
         with Session(self.engine) as session:
             statement = select(Scenario)
             scenarios = session.exec(statement).all()
-            return scenarios
+            return list(scenarios)
 
     async def create_scenario(
         self,
@@ -169,8 +169,8 @@ class ScenarioRepository:
         """
         with Session(self.engine) as session:
             statement = select(Scenario).where(
-                or_(Scenario.owner_id.is_(None), Scenario.owner_id == user_id)
-            ).order_by(Scenario.created_at)
+                or_(col(Scenario.owner_id).is_(None), col(Scenario.owner_id) == user_id)
+            ).order_by(col(Scenario.created_at))
             scenarios = session.exec(statement).all()
             return list(scenarios)
 
@@ -186,7 +186,7 @@ class ScenarioRepository:
         with Session(self.engine) as session:
             statement = select(Scenario).where(
                 Scenario.owner_id == user_id
-            ).order_by(Scenario.created_at)
+            ).order_by(col(Scenario.created_at))
             scenarios = session.exec(statement).all()
             return list(scenarios)
 

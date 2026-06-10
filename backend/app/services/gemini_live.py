@@ -11,9 +11,11 @@ from typing import AsyncGenerator
 
 from google import genai
 from google.genai.types import (
+    AudioTranscriptionConfig,
     Blob,
     Content,
     LiveConnectConfig,
+    Modality,
     Part,
     PrebuiltVoiceConfig,
     SpeechConfig,
@@ -46,10 +48,10 @@ class GeminiLiveSession:
 
     def _build_config(self) -> LiveConnectConfig:
         return LiveConnectConfig(
-            response_modalities=["AUDIO"],
+            response_modalities=[Modality.AUDIO],
             system_instruction=self.system_instruction,
-            input_audio_transcription={},
-            output_audio_transcription={},
+            input_audio_transcription=AudioTranscriptionConfig(),
+            output_audio_transcription=AudioTranscriptionConfig(),
             speech_config=SpeechConfig(
                 voice_config=VoiceConfig(
                     prebuilt_voice_config=PrebuiltVoiceConfig(

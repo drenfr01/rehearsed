@@ -4,7 +4,7 @@ This module provides endpoints for administrators to manage users.
 All endpoints require admin authentication.
 """
 
-from typing import List
+from typing import List, Optional
 
 from fastapi import (
     APIRouter,
@@ -299,8 +299,8 @@ async def create_user(
 async def update_user(
     request: Request,
     user_id: int,
-    email: str = None,
-    is_admin: bool = None,
+    email: Optional[str] = None,
+    is_admin: Optional[bool] = None,
     admin_user: User = Depends(get_current_admin_user),
     database_service: DatabaseService = Depends(get_database_service),
 ) -> UserResponse:

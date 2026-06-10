@@ -3,10 +3,12 @@
 import asyncio
 import uuid
 from typing import (
+    Any,
     AsyncGenerator,
     Dict,
     Literal,
     Optional,
+    cast,
 )
 from urllib.parse import quote_plus
 
@@ -17,10 +19,12 @@ from langchain_core.messages import (
     convert_to_openai_messages,
 )
 from langchain_core.language_models import BaseChatModel
+from langchain_core.runnables import RunnableConfig
 from langfuse import observe, propagate_attributes
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command, StateSnapshot
 import psycopg
+from psycopg import sql
 from psycopg_pool import AsyncConnectionPool
 
 from app.core.config import (
@@ -64,7 +68,7 @@ class LangGraphAgent:
         self.tools_by_name = {tool.name: tool for tool in tools}
         self._connection_pool: Optional[AsyncConnectionPool] = None
         # Store graphs per scenario_id for dynamic agent support
-        self._graphs: Dict[int, CompiledStateGraph] = {}
+        self._graphs: Dict[int, Optional[CompiledStateGraph]] = {}
         # Keep _graph for backwards compatibility (default scenario)
         self._current_scenario_id: Optional[int] = None
 
@@ -167,11 +171,12 @@ class LangGraphAgent:
         self._graphs.clear()
 
     @observe(name="get_connection_pool")
-    async def _get_connection_pool(self) -> AsyncConnectionPool:
+    async def _get_connection_pool(self) -> Optional[AsyncConnectionPool]:
         """Get a PostgreSQL connection pool using environment-specific settings.
 
         Returns:
-            AsyncConnectionPool: A connection pool for PostgreSQL database.
+            Optional[AsyncConnectionPool]: A connection pool for PostgreSQL database,
+            or None if pool creation fails in production.
         """
         if self._connection_pool is None:
             try:
@@ -233,13 +238,14 @@ class LangGraphAgent:
         for attempt in range(max_retries):
             try:
                 messages = prepare_messages(state.messages, current_llm)
-                with llm_inference_duration_seconds.labels(model=current_llm.model).time():
+                model_name = getattr(current_llm, "model", "unknown")
+                with llm_inference_duration_seconds.labels(model=model_name).time():
                     generated_state = {"messages": [await current_llm.ainvoke(dump_messages(messages))]}
                 logger.info(
                     "llm_response_generated",
                     session_id=state.session_id,
                     attempt=attempt + 1,
-                    model=current_llm.model,
+                    model=model_name,
                     environment=settings.ENVIRONMENT.value,
                 )
                 return generated_state
@@ -265,7 +271,7 @@ class LangGraphAgent:
         raise Exception(f"Failed to get a response from the LLM after {max_retries} attempts")
 
     # Define our tool node
-    async def _tool_call(self, state: GraphState) -> GraphState:
+    async def _tool_call(self, state: GraphState) -> dict[str, Any]:
         """Process tool calls from the last message.
 
         Args:
@@ -394,7 +400,7 @@ class LangGraphAgent:
             logger.info("graph_cache_invalidated", scenario_id=scenario_id)
             
 
-    def _hydrate_chat_response(self, response: GraphState) -> ChatResponse:
+    def _hydrate_chat_response(self, response: dict[str, Any]) -> ChatResponse:
         response_interrupt = response.get('__interrupt__')
         chat_response = ChatResponse(
             messages = self.__process_messages(response['messages']),
@@ -444,7 +450,7 @@ class LangGraphAgent:
                 if graph is None:
                     raise Exception("Failed to create graph")
                     
-                config = {
+                config: RunnableConfig = {
                     "configurable": {"thread_id": session_id},
                     "metadata": {
                         "user_id": user_id,
@@ -482,7 +488,7 @@ class LangGraphAgent:
                     # Will fall back to starting feedback after execution
                 
                 # Execute graph (feedback may be running in parallel)
-                response: GraphState = await graph.ainvoke(
+                response: dict[str, Any] = await graph.ainvoke(
                     Command(
                         resume={"response": resumption_text}
                     ), config
@@ -547,7 +553,9 @@ class LangGraphAgent:
                 feedback_id=feedback_id,
                 session_id=session_id,
                 scenario_id=scenario_id,
-                messages=langchain_messages,
+                # cast: dump_messages produces message dicts, which the cache
+                # handles at runtime just like BaseMessage instances.
+                messages=cast(list[BaseMessage], langchain_messages),
             )
             # Fire feedback task immediately (runs in parallel with graph)
             _ = asyncio.create_task(
@@ -555,7 +563,7 @@ class LangGraphAgent:
             )
             logger.info("async_feedback_started_early", feedback_id=feedback_id, session_id=session_id)
             
-            config = {
+            config: RunnableConfig = {
                 "configurable": {"thread_id": session_id},
                 "metadata": {
                     "user_id": user_id,
@@ -573,7 +581,7 @@ class LangGraphAgent:
                     if graph is None:
                         raise Exception("Failed to create graph")
 
-                    response: GraphState = await graph.ainvoke(
+                    response: dict[str, Any] = await graph.ainvoke(
                         {"messages": langchain_messages, "session_id": session_id}, config
                     )
 
@@ -591,7 +599,9 @@ class LangGraphAgent:
                 except Exception as e:
                     logger.error(f"Error getting response: {str(e)}")
                     raise e
-            raise last_error  # should not reach here
+            if last_error is not None:  # should not reach here
+                raise last_error
+            raise RuntimeError("unreachable: retry loop exited without an error")
 
     async def get_stream_response(
         self, 
@@ -619,7 +629,7 @@ class LangGraphAgent:
             user_id=user_id,
             tags=["stream", "graph_execution"],
         ):
-            config = {
+            config: RunnableConfig = {
                 "configurable": {"thread_id": session_id},
             }
             if scenario_id is None or tts_service is None:
@@ -635,7 +645,7 @@ class LangGraphAgent:
                         {"messages": dump_messages(messages), "session_id": session_id}, config, stream_mode="messages"
                     ):
                         try:
-                            yield token.content
+                            yield token if isinstance(token, str) else token.content
                         except Exception as token_error:
                             logger.error("Error processing token", error=str(token_error), session_id=session_id)
                             continue
@@ -669,6 +679,8 @@ class LangGraphAgent:
         """
         if tts_service is None:
             raise ValueError("tts_service is required for get_chat_history")
+        if scenario_id is None:
+            raise ValueError("scenario_id is required for get_chat_history")
         
         graph = await self.create_graph(scenario_id, tts_service)
         if graph is None:
@@ -700,12 +712,17 @@ class LangGraphAgent:
         try:
             # Make sure the pool is initialized in the current event loop
             conn_pool = await self._get_connection_pool()
+            if conn_pool is None:
+                raise Exception("Connection pool is unavailable; cannot clear chat history")
 
             # Use a new connection for this specific operation
             async with conn_pool.connection() as conn:
                 for table in settings.CHECKPOINT_TABLES:
                     try:
-                        await conn.execute(f"DELETE FROM {table} WHERE thread_id = %s", (session_id,))
+                        await conn.execute(
+                            sql.SQL("DELETE FROM {} WHERE thread_id = %s").format(sql.Identifier(table)),
+                            (session_id,),
+                        )
                         logger.info(f"Cleared {table} for session {session_id}")
                     except Exception as e:
                         logger.error(f"Error clearing {table}", error=str(e))

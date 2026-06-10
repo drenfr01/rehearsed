@@ -5,6 +5,7 @@ streaming chat, message history management, and chat history clearing.
 """
 
 import base64
+import binascii
 import json
 from typing import List
 
@@ -114,7 +115,7 @@ async def chat(
                         status_code=400, 
                         detail="Could not transcribe audio. Please try again or type your message."
                     )
-            except base64.binascii.Error as e:
+            except binascii.Error as e:
                 logger.error(
                     "audio_decode_failed",
                     session_id=session.id,
@@ -128,7 +129,7 @@ async def chat(
             result: ChatResponse = await agent.get_resumption_response(
                 resumption_text, 
                 session.id, 
-                user_id=session.user_id, 
+                user_id=str(session.user_id), 
                 scenario_id=scenario_id,
                 tts_service=text_to_speech_service
                 )
@@ -136,7 +137,7 @@ async def chat(
             result: ChatResponse = await agent.get_response(
                 chat_request.messages, 
                 session.id, 
-                user_id=session.user_id, 
+                user_id=str(session.user_id), 
                 scenario_id=scenario_id,
                 tts_service=text_to_speech_service
                 )
@@ -238,7 +239,7 @@ async def chat_stream(
                 full_response = ""
                 with llm_stream_duration_seconds.labels(model=agent.llm.model_name).time():
                     async for chunk in agent.get_stream_response(
-                        chat_request.messages, session.id, user_id=session.user_id, scenario_id=scenario_id, tts_service=text_to_speech_service
+                        chat_request.messages, session.id, user_id=str(session.user_id), scenario_id=scenario_id, tts_service=text_to_speech_service
                     ):
                         full_response += chunk
                         response = StreamResponse(content=chunk, done=False)

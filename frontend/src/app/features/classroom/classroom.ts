@@ -411,7 +411,6 @@ export class Classroom implements OnInit {
     const newChatRequest: ChatRequest = {
       is_resumption: true,
       resumption_text: '', // Will be filled by speech-to-text on backend
-      resumption_approved: this.isApproved(),
       messages: [],
       audio_base64: audioBase64,
     };
@@ -437,7 +436,6 @@ export class Classroom implements OnInit {
     const newChatRequest: ChatRequest = {
       is_resumption: true,
       resumption_text: this.userInput()!,
-      resumption_approved: this.isApproved()!,
       messages: [],
     }
     const subscription = this.chatGraphService.sendGraphRequest(newChatRequest, false).subscribe({
@@ -462,7 +460,6 @@ export class Classroom implements OnInit {
     const endScenarioRequest: ChatRequest = {
       is_resumption: true,
       resumption_text: 'goals achieved',
-      resumption_approved: this.isApproved()!,
       messages: [],
     }
     const subscription = this.chatGraphService.sendGraphRequest(endScenarioRequest, false).subscribe({

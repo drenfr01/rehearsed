@@ -132,7 +132,7 @@ feedback_cache = FeedbackCache()
 async def generate_feedback_and_store(
     feedback_id: str,
     llm,
-    session_id: str = None,
+    session_id: Optional[str] = None,
 ) -> None:
     """Background task: generate inline feedback and store in cache.
     
@@ -193,7 +193,7 @@ async def generate_feedback_and_store(
             )
             
             # Build messages with system instructions
-            llm_messages = [SystemMessage(content=system_instructions)]
+            llm_messages: List[BaseMessage] = [SystemMessage(content=system_instructions)]
             llm_messages.extend(messages)
             
             # Call LLM - traced via propagate_attributes

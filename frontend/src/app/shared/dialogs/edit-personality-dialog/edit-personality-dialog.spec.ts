@@ -11,6 +11,7 @@ describe('EditPersonalityDialog', () => {
   const mockData: EditPersonalityDialogData = {
     personality: {
       id: 1, name: 'Curious', personality_description: 'Always asking questions',
+      created_at: '2024-01-01T00:00:00Z',
     },
   };
 

@@ -52,7 +52,7 @@ class JsonlFileHandler(logging.Handler):
     def emit(self, record: logging.LogRecord) -> None:
         """Emit a record to the JSONL file."""
         try:
-            log_entry = {
+            log_entry: Dict[str, Any] = {
                 "timestamp": datetime.fromtimestamp(record.created).isoformat(),
                 "level": record.levelname,
                 "message": record.getMessage(),
@@ -62,8 +62,9 @@ class JsonlFileHandler(logging.Handler):
                 "line": record.lineno,
                 "environment": settings.ENVIRONMENT.value,
             }
-            if hasattr(record, "extra"):
-                log_entry.update(record.extra)
+            extra = getattr(record, "extra", None)
+            if extra is not None:
+                log_entry.update(extra)
 
             with open(self.file_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(log_entry) + "\n")
@@ -85,7 +86,7 @@ def get_structlog_processors(include_file_info: bool = True) -> List[Any]:
         List[Any]: List of structlog processors
     """
     # Set up processors that are common to both outputs
-    processors = [
+    processors: List[Any] = [
         structlog.stdlib.filter_by_level,
         structlog.stdlib.add_logger_name,
         structlog.stdlib.add_log_level,

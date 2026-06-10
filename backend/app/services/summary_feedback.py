@@ -3,9 +3,9 @@
 Used by both the langgraph classroom flow and one-on-one Gemini Live sessions.
 """
 
-from typing import Union
+from typing import Any, Union, cast
 
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from app.core.config import settings
 from app.core.llm import create_chat_llm
 from app.core.logging import logger
@@ -47,7 +47,7 @@ async def generate_summary_feedback(
         output_format=feedback.output_format,
     )
 
-    langchain_messages = [SystemMessage(content=system_instructions)]
+    langchain_messages: list[BaseMessage] = [SystemMessage(content=system_instructions)]
     for msg in conversation_messages:
         text = msg.get("text", "")
         if not text:
@@ -71,9 +71,12 @@ async def generate_summary_feedback(
             )
         llm = create_chat_llm(model_name)
 
-    response = await llm.with_structured_output(
-        SummaryFeedbackResponse, method="json_schema", include_raw=True
-    ).ainvoke(langchain_messages)
+    response = cast(
+        dict[str, Any],
+        await llm.with_structured_output(
+            SummaryFeedbackResponse, method="json_schema", include_raw=True
+        ).ainvoke(langchain_messages),
+    )
 
     if response["parsed"] is None:
         logger.error(

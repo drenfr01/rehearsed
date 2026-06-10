@@ -5,7 +5,7 @@ so that Vertex kwargs, environment-specific tuning, and tool binding
 are configured in one place.
 """
 
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 from langchain_core.language_models import BaseChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -52,5 +52,7 @@ def create_chat_llm(
         **_get_model_kwargs(),
     )
     if bind_tools:
-        llm = llm.bind_tools(tools)
+        # bind_tools returns a Runnable that still supports the BaseChatModel
+        # API callers rely on at runtime.
+        return cast(BaseChatModel, llm.bind_tools(tools))
     return llm

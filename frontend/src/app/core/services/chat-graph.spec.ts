@@ -93,7 +93,6 @@ describe('ChatGraphService', () => {
         messages: [{ role: 'user', content: 'Hello' }],
         is_resumption: false,
         resumption_text: '',
-        resumption_approved: false,
       };
 
       service.sendGraphRequest(chatRequest, true).subscribe();
@@ -109,7 +108,6 @@ describe('ChatGraphService', () => {
         messages: [{ role: 'user', content: 'Hello' }],
         is_resumption: false,
         resumption_text: '',
-        resumption_approved: false,
       };
 
       service.sendGraphRequest(chatRequest, true).subscribe();
@@ -126,7 +124,6 @@ describe('ChatGraphService', () => {
         messages: [],
         is_resumption: true,
         resumption_text: 'Continue',
-        resumption_approved: true,
       };
 
       service.sendGraphRequest(chatRequest, false).subscribe();
@@ -144,7 +141,6 @@ describe('ChatGraphService', () => {
         messages: [{ role: 'user', content: 'Hello' }],
         is_resumption: false,
         resumption_text: '',
-        resumption_approved: false,
       };
 
       service.sendGraphRequest(chatRequest, true).subscribe();
@@ -164,8 +160,8 @@ describe('ChatGraphService', () => {
         interrupt_value_type: 'text',
         student_responses: [{
           student_response: 'Answer',
-          student_details: { id: 'a1', name: 'Alice', objective: '', instructions: '', constraints: '' },
-          student_personality: { id: '1', name: 'Curious', personality_description: '' },
+          student_details: { id: 'a1', name: 'Alice', scenario_id: 1, agent_personality_id: 1, objective: '', instructions: '', constraints: '' },
+          student_personality: { id: 1, name: 'Curious', personality_description: '' },
           audio_base64: '',
         }],
       };
@@ -174,7 +170,6 @@ describe('ChatGraphService', () => {
         messages: [{ role: 'user', content: 'Hello' }],
         is_resumption: false,
         resumption_text: '',
-        resumption_approved: false,
       };
 
       service.sendGraphRequest(chatRequest, true).subscribe();

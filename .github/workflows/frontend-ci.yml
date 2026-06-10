@@ -62,3 +62,63 @@ jobs:
         run: |
           npm run test -- --watch=false --browsers=ChromeHeadless
 
+  e2e:
+    name: E2E Tests (Playwright)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: |
+          npm ci
+
+      - name: Generate environment files
+        working-directory: frontend
+        run: |
+          cat > src/environments/environment.development.ts << EOF
+          export const environment = {
+            baseUrl: 'http://localhost:8000',
+            firebaseConfig: {
+              apiKey: '',
+              authDomain: '',
+              projectId: '',
+              storageBucket: '',
+              messagingSenderId: '',
+              appId: '',
+              measurementId: ''
+            }
+          };
+          EOF
+          cp src/environments/environment.development.ts src/environments/environment.ts
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: |
+          npx playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        working-directory: frontend
+        run: |
+          npm run e2e
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7
+

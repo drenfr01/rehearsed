@@ -19,7 +19,7 @@ class ScenarioRequest(BaseModel):
         scenario_id: The ID of the scenario to get.
     """
 
-    scenario_id: int = Field(default=None, description="The ID of the scenario to get")
+    scenario_id: Optional[int] = Field(default=None, description="The ID of the scenario to get")
 
 class ScenarioResponse(BaseModel):
     """Response model for scenario endpoint.
@@ -28,7 +28,7 @@ class ScenarioResponse(BaseModel):
         scenario: The scenario to get.
     """
 
-    scenarios: Scenario = Field(default=None, description="A scenario")
+    scenarios: Optional[Scenario] = Field(default=None, description="A scenario")
 
 class AddScenarioRequest(BaseModel):
     """Request model for scenario endpoint.
@@ -37,7 +37,7 @@ class AddScenarioRequest(BaseModel):
         scenario: The scenario to add.
     """
 
-    scenario: Scenario = Field(default=None, description="The scenario to add")
+    scenario: Optional[Scenario] = Field(default=None, description="The scenario to add")
 
 class AddScenarioResponse(BaseModel):
     """Response model for scenario endpoint.
@@ -46,7 +46,7 @@ class AddScenarioResponse(BaseModel):
         scenario: The scenario to add.
     """
 
-    scenario_id: int = Field(default=None, description="The ID of the scenario that was added")
+    scenario_id: Optional[int] = Field(default=None, description="The ID of the scenario that was added")
 
 
 # ========== Admin Scenario Schemas ==========

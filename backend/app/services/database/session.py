@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from fastapi import HTTPException
 from sqlalchemy.engine import Engine
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from app.core.logging import logger
 from app.models.session import Session as ChatSession
@@ -87,9 +87,9 @@ class SessionRepository:
             List[ChatSession]: List of user's sessions
         """
         with Session(self.engine) as session:
-            statement = select(ChatSession).where(ChatSession.user_id == user_id).order_by(ChatSession.created_at)
+            statement = select(ChatSession).where(ChatSession.user_id == user_id).order_by(col(ChatSession.created_at))
             sessions = session.exec(statement).all()
-            return sessions
+            return list(sessions)
 
     async def set_session_scenario(self, session_id: str, scenario_id: int) -> ChatSession:
         """Set the active scenario for a session.

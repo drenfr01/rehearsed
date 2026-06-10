@@ -1,13 +1,16 @@
 """This file contains the graph utilities for the application."""
 
+from collections.abc import Sequence
+
 from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import BaseMessage
 from langchain_core.messages import trim_messages as _trim_messages
 
 from app.core.config import settings
 from app.schemas import Message
 
 
-def dump_messages(messages: list[Message]) -> list[dict]:
+def dump_messages(messages: Sequence[Message | BaseMessage]) -> list[dict]:
     """Dump the messages to a list of dictionaries.
 
     Args:
@@ -19,7 +22,7 @@ def dump_messages(messages: list[Message]) -> list[dict]:
     return [message.model_dump() for message in messages]
 
 
-def prepare_messages(messages: list[Message], llm: BaseChatModel) -> list[Message]:
+def prepare_messages(messages: list[Message], llm: BaseChatModel) -> list[BaseMessage]:
     """Prepare the messages for the LLM.
 
     Args:
@@ -28,7 +31,7 @@ def prepare_messages(messages: list[Message], llm: BaseChatModel) -> list[Messag
         system_prompt (str): The system prompt to use.
 
     Returns:
-        list[Message]: The prepared messages.
+        list[BaseMessage]: The prepared messages.
     """
     return _trim_messages(
         dump_messages(messages),
